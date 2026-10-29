@@ -1,11 +1,14 @@
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { formatMoney, formatMoneyCompact } from '../db/money'
+import { TableDisclosure } from './TableDisclosure'
 
 interface Props {
   /** Running total per day for the month being viewed; null after the last elapsed day. */
   current: (number | null)[]
   /** Running total per day for the previous month (a full month). */
   previous: (number | null)[]
+  /** The month in view, YYYY-MM; used to name each weekday in the table. */
+  monthKey: string
   currentLabel: string
   previousLabel: string
   budgetMinor: number | null
@@ -27,7 +30,7 @@ function niceCeil(value: number): number {
  * view; the gray line is the previous month for reference. Touch, hover or arrow keys move a
  * crosshair, and the legend rows double as the readout for the chosen day.
  */
-export function PaceChart({ current, previous, currentLabel, previousLabel, budgetMinor, lastDay, currency }: Props) {
+export function PaceChart({ current, previous, monthKey, currentLabel, previousLabel, budgetMinor, lastDay, currency }: Props) {
   const plot = useRef<HTMLDivElement>(null)
   const [selected, setSelected] = useState<number | null>(null)
   const n = current.length
@@ -175,37 +178,105 @@ export function PaceChart({ current, previous, currentLabel, previousLabel, budg
         </div>
       </div>
 
-      <details className="mt-2">
-        <summary className="min-h-11 cursor-pointer py-2.5 text-sm font-medium underline underline-offset-2">
-          Show as table
-        </summary>
-        <table className="w-full text-sm">
-          <caption className="sr-only">
-            Running total by day, {currentLabel}
-            {hasPrevious ? ` and ${previousLabel}` : ''}
-          </caption>
-          <thead>
-            <tr className="text-left text-ink-2">
-              <th scope="col" className="py-2 font-normal">Day</th>
-              <th scope="col" className="py-2 text-right font-normal">{currentLabel}</th>
-              {hasPrevious && <th scope="col" className="py-2 text-right font-normal">{previousLabel}</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {current.slice(0, lastDay).map((v, i) => (
-              <tr key={i} className="border-t border-line">
-                <th scope="row" className="py-2 text-left font-normal text-ink-2">{i + 1}</th>
-                <td className="py-2 text-right tabular-nums">{formatMoney(v ?? 0, currency)}</td>
-                {hasPrevious && (
-                  <td className="py-2 text-right tabular-nums">
-                    {i < previous.length ? formatMoney(previous[i] ?? 0, currency) : 'No data'}
-                  </td>
+      <TableDisclosure>
+        <PaceTable
+          current={current}
+          previous={previous}
+          lastDay={lastDay}
+          monthKey={monthKey}
+          currentLabel={currentLabel}
+          previousLabel={previousLabel}
+          currency={currency}
+        />
+      </TableDisclosure>
+    </div>
+  )
+}
+
+const FIRST_ROWS = 10
+
+// Building an Intl formatter is slow, so make it once and only when the table is first opened.
+let weekdayFormat: Intl.DateTimeFormat | undefined
+
+interface TableProps {
+  current: (number | null)[]
+  previous: (number | null)[]
+  lastDay: number
+  monthKey: string
+  currentLabel: string
+  previousLabel: string
+  currency: string
+}
+
+/**
+ * The chart's data, one row per day, newest first. Each row gives what was spent that day and
+ * the running total, and sets that total against the same day last month in words ("more" or
+ * "less"), so the comparison never depends on colour alone.
+ */
+export function PaceTable({ current, previous, lastDay, monthKey, currentLabel, previousLabel, currency }: TableProps) {
+  const [showAll, setShowAll] = useState(false)
+  const hasPrevious = previous.length > 0
+  const [year, month] = monthKey.split('-').map(Number)
+  weekdayFormat ??= new Intl.DateTimeFormat(undefined, { weekday: 'short' })
+
+  const rows = Array.from({ length: lastDay }, (_, i) => {
+    const total = current[i] ?? 0
+    const before = i > 0 ? (current[i - 1] ?? 0) : 0
+    const prevTotal = hasPrevious ? (previous[Math.min(i, previous.length - 1)] ?? 0) : null
+    return { day: i + 1, spent: total - before, total, prevTotal, diff: prevTotal === null ? 0 : total - prevTotal }
+  }).reverse()
+
+  const shown = showAll ? rows : rows.slice(0, FIRST_ROWS)
+
+  return (
+    <div>
+      <table className="w-full text-sm">
+        <caption className="sr-only">
+          Spending by day in {currentLabel}, newest first, with the running total
+          {hasPrevious ? ` and the running total for ${previousLabel}` : ''}
+        </caption>
+        <thead>
+          <tr className="text-left text-xs text-ink-2">
+            <th scope="col" className="pb-2 pr-2 font-normal">Day</th>
+            <th scope="col" className="pb-2 pr-2 text-right font-normal">That day</th>
+            <th scope="col" className="pb-2 pr-2 text-right font-normal">{currentLabel} total</th>
+            {hasPrevious && <th scope="col" className="pb-2 text-right font-normal">{previousLabel} total</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((r) => (
+            <tr key={r.day} className="border-t border-line align-top">
+              <th scope="row" className="whitespace-nowrap py-2 pr-2 text-left font-normal">
+                <span className="font-medium">{r.day}</span>{' '}
+                <span className="text-ink-2">{weekdayFormat!.format(new Date(year, month - 1, r.day))}</span>
+              </th>
+              <td className={`py-2 pr-2 text-right tabular-nums ${r.spent === 0 ? 'text-ink-2' : ''}`}>
+                {r.spent === 0 ? '–' : formatMoney(r.spent, currency)}
+              </td>
+              <td className="py-2 pr-2 text-right tabular-nums">
+                <span className="block font-medium">{formatMoney(r.total, currency)}</span>
+                {hasPrevious && r.diff !== 0 && (
+                  <span className={`block text-xs ${r.diff > 0 ? 'text-critical' : 'text-good'}`}>
+                    {formatMoney(Math.abs(r.diff), currency)} {r.diff > 0 ? 'more' : 'less'}
+                  </span>
                 )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </details>
+              </td>
+              {hasPrevious && (
+                <td className="py-2 text-right tabular-nums text-ink-2">{formatMoney(r.prevTotal ?? 0, currency)}</td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {rows.length > FIRST_ROWS && (
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          className="mt-2 min-h-11 w-full rounded-full bg-surface-2 font-medium"
+        >
+          {showAll ? 'Show fewer days' : `Show all ${rows.length} days`}
+        </button>
+      )}
     </div>
   )
 }

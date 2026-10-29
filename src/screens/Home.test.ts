@@ -3,7 +3,6 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import type { Category, Transaction } from '../db/schema'
 import { balanceFrom } from '../insights/aggregates'
-import type { Suggestion } from '../insights/suggestions'
 import { Home } from './Home'
 
 const today = new Date(2026, 9, 28)
@@ -24,12 +23,7 @@ const txs = [
   tx('expense', '2026-10-20', 230, 1, 'Uber'),
 ]
 
-const regular: Suggestion = {
-  key: 'expense:cafe', kind: 'expense', merchant: 'Cafe', amountMinor: 45000, categoryId: 1,
-  paymentMethod: '', reason: 'Usually on Wednesdays', count: 3,
-}
-
-function render(balanceShown: boolean, opening = 100_000_00, suggestions: Suggestion[] = [], month = '2026-10') {
+function render(balanceShown: boolean, opening = 100_000_00) {
   const summary = balanceFrom(txs, opening)
   const ledger = {
     loading: false,
@@ -47,9 +41,8 @@ function render(balanceShown: boolean, opening = 100_000_00, suggestions: Sugges
   }
   return renderToStaticMarkup(
     createElement(Home, {
-      ledger, month, onMonth: () => {}, today, onPickCategory: () => {}, onEdit: () => {},
+      ledger, month: '2026-10', onMonth: () => {}, today, onPickCategory: () => {}, onEdit: () => {},
       onExample: () => {}, onOpenSettings: () => {}, onSeeAll: () => {}, balanceShown, onToggleBalance: () => {},
-      suggestions, onSuggestion: () => {},
     }),
   )
 }
@@ -73,15 +66,6 @@ describe('Home', () => {
     const shown = render(true)
     expect(shown).toContain('Hide balance')
     expect(shown).toMatch(/1,79,320|179,320/)
-  })
-
-  it('offers regulars for the current month only, with the reason they are suggested', () => {
-    const html = render(false, 0, [regular])
-    expect(html).toContain('Suggested for now')
-    expect(html).toContain('Usually on Wednesdays')
-    expect(html).toContain('₹450')
-    expect(render(false, 0, [])).not.toContain('Suggested for now')
-    expect(render(false, 0, [regular], '2026-09')).not.toContain('Suggested for now') // a past month
   })
 
   it('lists received money in Latest with a plus sign, not just spending', () => {

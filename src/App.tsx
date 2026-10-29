@@ -19,6 +19,7 @@ import { AddSheet } from './ui/AddSheet'
 import { BottomNav, TABS, type Tab } from './ui/BottomNav'
 import { ChatBar } from './ui/ChatBar'
 import { PwaBanner } from './ui/PwaBanner'
+import { SuggestionList } from './ui/SuggestionList'
 import { ToastProvider, useToast } from './ui/toast'
 
 export default function App() {
@@ -177,8 +178,6 @@ function Shell() {
             onSeeAll={seeAll}
             balanceShown={balanceShown}
             onToggleBalance={toggleBalance}
-            suggestions={suggestions}
-            onSuggestion={openSuggestion}
           />
         )}
         {tab === 'activity' && (
@@ -197,7 +196,22 @@ function Shell() {
       </main>
 
       <div ref={bottomStack}>
-        <div className="pb-2 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-2 short:pt-1">
+        <div className="group pb-2 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-2 short:pt-1">
+          {/* Regulars for right now, one swipe away. Hidden only while the chat box itself has focus
+              (the keyboard is up) and on short screens. Not group-focus-within: focusing a chip would
+              then hide the row mid-tap and swallow the tap. */}
+          {suggestions.length > 0 && (
+            <section aria-label="Suggested for now" className="mb-2 group-has-[textarea:focus]:hidden short:hidden">
+              <SuggestionList
+                items={suggestions}
+                categoryById={ledger.categoryById}
+                currency={ledger.currency}
+                onPick={openSuggestion}
+                tone="page"
+                className="-mx-3 scroll-px-3 px-3 [mask-image:linear-gradient(to_right,black_calc(100%-1.25rem),transparent)]"
+              />
+            </section>
+          )}
           <ChatBar key={draft.n} initialText={draft.text} onSubmit={logFromChat} onOpenForm={openAdd} />
         </div>
         <BottomNav current={tab} onSelect={go} />

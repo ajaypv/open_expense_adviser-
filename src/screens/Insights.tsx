@@ -130,6 +130,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
             <PaceChart
               current={cumulative(monthTxs, month, isCurrent ? elapsed : null)}
               previous={hasPrevious ? cumulative(prevTxs, prevKey, null) : []}
+              monthKey={month}
               currentLabel={name}
               previousLabel={prevName}
               budgetMinor={budgetMinor}

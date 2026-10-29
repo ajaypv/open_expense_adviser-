@@ -16,10 +16,8 @@ import {
   type MonthKey,
 } from '../insights/aggregates'
 import { newestFirst } from '../insights/order'
-import type { Suggestion } from '../insights/suggestions'
 import { Icon } from '../ui/Icon'
 import { MonthSwitcher } from '../ui/MonthSwitcher'
-import { SuggestionList } from '../ui/SuggestionList'
 import { TxRow } from '../ui/TxRow'
 import { WalletPanel } from '../ui/WalletPanel'
 
@@ -38,9 +36,6 @@ interface Props {
   /** The estimated balance stays hidden until this is true; the app owns it so it survives tab changes. */
   balanceShown: boolean
   onToggleBalance: () => void
-  /** Regulars that fit right now; tapping one opens the add form filled in. */
-  suggestions: Suggestion[]
-  onSuggestion: (s: Suggestion) => void
 }
 
 const EXAMPLES = ['450 lunch at Cafe', 'Uber 230 yesterday', 'Salary 80,000']
@@ -59,8 +54,6 @@ export const Home = memo(function Home({
   onSeeAll,
   balanceShown,
   onToggleBalance,
-  suggestions,
-  onSuggestion,
 }: Props) {
   const { txs, expenses, income, categoryById, currency, budgetMinor, loading } = ledger
   const currentMonth = localDateString(today).slice(0, 7)
@@ -179,15 +172,6 @@ export const Home = memo(function Home({
         onToggle={onToggleBalance}
         onSetBalance={onOpenSettings}
       />
-
-      {isCurrent && suggestions.length > 0 && (
-        <section aria-labelledby="suggest-h" className="mt-8">
-          <h2 id="suggest-h" className="mb-3 px-1 text-lg font-semibold">
-            Suggested for now
-          </h2>
-          <SuggestionList items={suggestions.slice(0, 4)} categoryById={categoryById} currency={currency} onPick={onSuggestion} tone="page" />
-        </section>
-      )}
 
       {total > 0 && (
         <>

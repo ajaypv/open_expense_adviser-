@@ -1,6 +1,7 @@
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { formatMoney, formatMoneyCompact } from '../db/money'
 import { monthLabel, type MonthKey } from '../insights/aggregates'
+import { TableDisclosure } from './TableDisclosure'
 
 interface Props {
   /** Spend per calendar day; index 0 is day 1. */
@@ -95,10 +96,7 @@ export function DayChart({ values, monthKey, lastDay, currency }: Props) {
       </div>
       <p className="mt-1 text-sm text-ink-2">Highest day {formatMoneyCompact(max === 1 ? 0 : max, currency)}</p>
 
-      <details className="mt-3">
-        <summary className="min-h-11 cursor-pointer py-2.5 text-sm font-medium underline underline-offset-2">
-          Show as table
-        </summary>
+      <TableDisclosure>
         <table className="w-full text-sm">
           <caption className="sr-only">Spending by day in {monthLabel(monthKey)}</caption>
           <thead className="sr-only">
@@ -120,7 +118,7 @@ export function DayChart({ values, monthKey, lastDay, currency }: Props) {
             )}
           </tbody>
         </table>
-      </details>
+      </TableDisclosure>
     </div>
   )
 }
