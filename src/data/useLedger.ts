@@ -15,40 +15,31 @@ export function useLedger() {
   const budgetRow = useLiveQuery(() => db.budgets.filter((b) => b.categoryId === null).first(), [])
   const openingRow = useLiveQuery(() => db.settings.get('openingBalance'), [])
 
-  const txs = rows ?? NO_TXS
-  // Money sent drives every spending chart; money received only feeds the balance and lists.
-  const expenses = useMemo(() => txs.filter((t) => t.kind !== 'income'), [txs])
-  const income = useMemo(() => txs.filter((t) => t.kind === 'income'), [txs])
-
-  const categoryById = useMemo(
-    () => new Map((categories ?? NO_CATS).map((c) => [c.id, c])),
-    [categories],
-  )
-
-  const expenseCategories = useMemo(
-    () => (categories ?? NO_CATS).filter((c) => c.name !== INCOME_CATEGORY),
-    [categories],
-  )
-
-  const balanceSet = typeof openingRow?.value === 'number'
-  const balance = balanceFrom(txs, balanceSet ? (openingRow.value as number) : 0)
-
-  return {
-    loading: rows === undefined || categories === undefined,
-    txs,
-    expenses,
-    income,
-    categories: categories ?? NO_CATS,
-    /** Categories you can file an expense under (everything except "Income"). */
-    expenseCategories,
-    categoryById,
-    currency: typeof currencyRow?.value === 'string' ? currencyRow.value : 'INR',
-    budgetMinor: budgetRow?.monthlyLimitMinor ?? null,
-    /** True once the user has told the app their balance; otherwise the estimate starts from zero. */
-    balanceSet,
-    /** Opening balance + everything received - everything sent, over all time. */
-    estimatedBalanceMinor: balance.estimatedMinor,
-    /** Received minus sent over all time; used to calibrate the opening balance. */
-    netMinor: balance.netMinor,
-  }
+  // One memoized object: it keeps the same identity until the data actually changes, so screens
+  // wrapped in memo() skip re-rendering when something unrelated (a sheet, a tab) changes.
+  return useMemo(() => {
+    const txs = rows ?? NO_TXS
+    const cats = categories ?? NO_CATS
+    const balanceSet = typeof openingRow?.value === 'number'
+    const balance = balanceFrom(txs, balanceSet ? (openingRow.value as number) : 0)
+    return {
+      loading: rows === undefined || categories === undefined,
+      txs,
+      // Money sent drives every spending chart; money received only feeds the balance and lists.
+      expenses: txs.filter((t) => t.kind !== 'income'),
+      income: txs.filter((t) => t.kind === 'income'),
+      categories: cats,
+      /** Categories you can file an expense under (everything except "Income"). */
+      expenseCategories: cats.filter((c) => c.name !== INCOME_CATEGORY),
+      categoryById: new Map(cats.map((c) => [c.id, c])),
+      currency: typeof currencyRow?.value === 'string' ? currencyRow.value : 'INR',
+      budgetMinor: budgetRow?.monthlyLimitMinor ?? null,
+      /** True once the user has told the app their balance; otherwise the estimate starts from zero. */
+      balanceSet,
+      /** Opening balance + everything received - everything sent, over all time. */
+      estimatedBalanceMinor: balance.estimatedMinor,
+      /** Received minus sent over all time; used to calibrate the opening balance. */
+      netMinor: balance.netMinor,
+    }
+  }, [rows, categories, currencyRow, budgetRow, openingRow])
 }

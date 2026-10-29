@@ -1,16 +1,21 @@
-import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { memo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Icon } from './Icon'
 
 interface Props {
-  value: string
-  onChange: (value: string) => void
+  /** Text to start with. Give the bar a new `key` to fill it from outside (e.g. an example chip). */
+  initialText?: string
   /** Resolves true when the text was turned into an expense (the bar then clears). */
   onSubmit: (text: string) => Promise<boolean>
   onOpenForm: () => void
 }
 
-export function ChatBar({ value, onChange, onSubmit, onOpenForm }: Props) {
+/**
+ * Owns the text being typed. Keeping it here, rather than in App, means a keystroke re-renders
+ * only this bar and not the whole screen behind it.
+ */
+export const ChatBar = memo(function ChatBar({ initialText = '', onSubmit, onOpenForm }: Props) {
   const form = useRef<HTMLFormElement>(null)
+  const [value, setValue] = useState(initialText)
   const [busy, setBusy] = useState(false)
   const canSend = value.trim().length > 0 && !busy
 
@@ -20,7 +25,7 @@ export function ChatBar({ value, onChange, onSubmit, onOpenForm }: Props) {
     if (!text || busy) return
     setBusy(true)
     try {
-      if (await onSubmit(text)) onChange('')
+      if (await onSubmit(text)) setValue('')
     } finally {
       setBusy(false)
     }
@@ -57,7 +62,7 @@ export function ChatBar({ value, onChange, onSubmit, onOpenForm }: Props) {
         id="chat-input"
         rows={1}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => setValue(e.target.value)}
         onKeyDown={onKeyDown}
         enterKeyHint="send"
         autoComplete="off"
@@ -75,4 +80,4 @@ export function ChatBar({ value, onChange, onSubmit, onOpenForm }: Props) {
       </button>
     </form>
   )
-}
+})

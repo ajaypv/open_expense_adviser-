@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import { CategoryBars } from '../charts/CategoryBars'
 import { DayChart } from '../charts/DayChart'
 import { Meter } from '../charts/Meter'
@@ -14,6 +15,7 @@ import {
   sum,
   type MonthKey,
 } from '../insights/aggregates'
+import { newestFirst } from '../insights/order'
 import type { Suggestion } from '../insights/suggestions'
 import { Icon } from '../ui/Icon'
 import { MonthSwitcher } from '../ui/MonthSwitcher'
@@ -45,7 +47,7 @@ const EXAMPLES = ['450 lunch at Cafe', 'Uber 230 yesterday', 'Salary 80,000']
 
 const card = 'rounded-3xl bg-surface shadow-[0_0_0_1px_var(--ring)]'
 
-export function Home({
+export const Home = memo(function Home({
   ledger,
   month,
   onMonth,
@@ -62,15 +64,23 @@ export function Home({
 }: Props) {
   const { txs, expenses, income, categoryById, currency, budgetMinor, loading } = ledger
   const currentMonth = localDateString(today).slice(0, 7)
-  // Spending charts and totals use money sent only; the latest list shows both directions.
-  const monthTxs = inMonth(expenses, month)
-  const total = sum(monthTxs)
-  const received = sum(inMonth(income, month))
   const isCurrent = month === currentMonth
-  const comparison = compareToPrevious(expenses, month, today)
-  const recent = inMonth(txs, month)
-    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt)
-    .slice(0, 5)
+
+  // Everything below depends only on the data, the month and the day, so it is worked out once
+  // per change rather than on every render.
+  const view = useMemo(() => {
+    // Spending charts and totals use money sent only; the latest list shows both directions.
+    const monthTxs = inMonth(expenses, month)
+    return {
+      total: sum(monthTxs),
+      received: sum(inMonth(income, month)),
+      comparison: compareToPrevious(expenses, month, today),
+      daily: byDay(monthTxs, month),
+      categoryTotals: byCategory(monthTxs),
+      recent: inMonth(txs, month).sort(newestFirst).slice(0, 5),
+    }
+  }, [txs, expenses, income, month, today])
+  const { total, received, comparison, daily, categoryTotals, recent } = view
 
   if (loading) return <h1 className="sr-only">Home</h1>
 
@@ -187,7 +197,7 @@ export function Home({
             </h2>
             <div className={`${card} p-4`}>
               <DayChart
-                values={byDay(monthTxs, month)}
+                values={daily}
                 monthKey={month}
                 lastDay={isCurrent ? today.getDate() : null}
                 currency={currency}
@@ -201,7 +211,7 @@ export function Home({
             </h2>
             <div className={`${card} px-4 py-2`}>
               <CategoryBars
-                totals={byCategory(monthTxs)}
+                totals={categoryTotals}
                 categoryById={categoryById}
                 currency={currency}
                 limit={5}
@@ -231,4 +241,4 @@ export function Home({
       )}
     </div>
   )
-}
+})

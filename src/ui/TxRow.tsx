@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { formatMoney, parseLocalDate } from '../db/money'
 import type { Category, Transaction } from '../db/schema'
 import { Icon } from './Icon'
@@ -14,7 +15,7 @@ interface Props {
 const shortDate = (date: string) =>
   new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' }).format(parseLocalDate(date))
 
-export function TxRow({ tx, category, currency, showDate, onClick }: Props) {
+export const TxRow = memo(function TxRow({ tx, category, currency, showDate, onClick }: Props) {
   const received = tx.kind === 'income'
   const title = tx.merchant || category?.name || (received ? 'Income' : 'Expense')
   const color = category?.color ?? 'var(--other)'
@@ -61,4 +62,4 @@ export function TxRow({ tx, category, currency, showDate, onClick }: Props) {
       </span>
     </button>
   )
-}
+})

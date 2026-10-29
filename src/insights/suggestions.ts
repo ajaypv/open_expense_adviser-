@@ -1,5 +1,6 @@
 import { localDateString, parseLocalDate } from '../db/money'
 import type { Transaction } from '../db/schema'
+import { oldestFirst } from './order'
 
 export interface Suggestion {
   key: string
@@ -26,6 +27,18 @@ const ordinal = (n: number) => {
   return `${n}${({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th'}`
 }
 
+// Building an Intl formatter is slow, so make it once and only when first needed.
+let shortDate: Intl.DateTimeFormat | undefined
+
+function daysAgo(date: string, now: Date): string {
+  const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() - parseLocalDate(date).getTime()) / 86_400_000)
+  if (days <= 0) return 'today'
+  if (days === 1) return 'yesterday'
+  if (days < 31) return `${days} days ago`
+  shortDate ??= new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })
+  return shortDate.format(parseLocalDate(date))
+}
+
 /** The most common value; on a tie the one seen most recently (items are oldest first). */
 function mostCommon<T>(items: T[]): T {
   const counts = new Map<T, number>()
@@ -47,7 +60,8 @@ const dayGap = (a: number, b: number) => {
  * Regular transactions, ranked by how well they fit right now. A merchant needs at least two
  * entries to count as regular. Frequency sets the base score; matching today's weekday, the
  * current part of the day (from when entries were logged) or a monthly date adds to it.
- * Anything already logged today is left out.
+ * Merchants logged only once come after the regulars, newest first, so the list is never empty
+ * once there is any history. Anything already logged today goes last.
  */
 export function suggest(txs: Transaction[], now: Date, limit = 4, kind?: Transaction['kind']): Suggestion[] {
   const today = localDateString(now)
@@ -55,26 +69,56 @@ export function suggest(txs: Transaction[], now: Date, limit = 4, kind?: Transac
   const dayOfMonth = now.getDate()
   const part = partOfDay(now.getHours())
 
+  // Group first and sort each (small) group, rather than sorting every transaction up front.
   const groups = new Map<string, Transaction[]>()
-  for (const t of [...txs].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt)) {
+  for (const t of txs) {
     const name = t.merchant.trim().toLowerCase()
     if (!name || (kind && t.kind !== kind)) continue
     const key = `${t.kind}:${name}`
-    groups.set(key, [...(groups.get(key) ?? []), t])
+    const group = groups.get(key)
+    if (group) group.push(t)
+    else groups.set(key, [t])
   }
 
-  const out: (Suggestion & { score: number; last: string })[] = []
-  for (const [key, items] of groups) {
-    const n = items.length
-    if (n < 2 || items.some((t) => t.date === today)) continue
+  // Weekday of a date string, cached: a few hundred distinct dates cover thousands of transactions.
+  const weekdayOf = new Map<string, number>()
+  const weekdayFor = (date: string) => {
+    let w = weekdayOf.get(date)
+    if (w === undefined) weekdayOf.set(date, (w = parseLocalDate(date).getDay()))
+    return w
+  }
 
-    const share = (match: (t: Transaction) => boolean) => items.filter(match).length / n
-    const weekdayShare = share((t) => parseLocalDate(t.date).getDay() === weekday)
-    const partShare = share((t) => partOfDay(new Date(t.createdAt).getHours()) === part)
-    const days = items.map((t) => Number(t.date.slice(8, 10)))
-    const months = new Set(items.map((t) => t.date.slice(0, 7))).size
+  type Ranked = Suggestion & { score: number; last: string; fixedReason: string | null }
+  const out: Ranked[] = []
+  for (const [key, items] of groups) {
+    items.sort(oldestFirst)
+    const n = items.length
+
+    // One pass over the group for every signal. Weekday and time of day only count from three
+    // entries up, so smaller groups skip those lookups.
+    const timing = n >= 3
+    let loggedToday = false
+    let onWeekday = 0
+    let inPart = 0
+    let nearDay = 0
+    const days: number[] = []
+    const monthSet = new Set<string>()
+    for (const t of items) {
+      const day = Number(t.date.slice(8, 10))
+      days.push(day)
+      monthSet.add(t.date.slice(0, 7))
+      if (t.date === today) loggedToday = true
+      if (timing) {
+        if (weekdayFor(t.date) === weekday) onWeekday++
+        if (partOfDay(new Date(t.createdAt).getHours()) === part) inPart++
+      }
+      if (dayGap(day, dayOfMonth) <= 2) nearDay++
+    }
+    const weekdayShare = onWeekday / n
+    const partShare = inPart / n
+    const monthlyShare = nearDay / n
+    const months = monthSet.size
     const usualDay = median(days)
-    const monthlyShare = share((t) => dayGap(Number(t.date.slice(8, 10)), dayOfMonth) <= 2)
 
     // Each timing signal only counts when it is consistent enough to mean something.
     const hints: { score: number; reason: string }[] = []
@@ -94,15 +138,20 @@ export function suggest(txs: Transaction[], now: Date, limit = 4, kind?: Transac
       amountMinor: mostCommon(items.map((t) => t.amountMinor)),
       categoryId: mostCommon(items.map((t) => t.categoryId)),
       paymentMethod: methods.length ? mostCommon(methods) : '',
-      reason: hints[0]?.reason ?? `Logged ${n} times`,
+      reason: '',
+      fixedReason: loggedToday ? 'Added earlier today' : (hints[0]?.reason ?? null),
       count: n,
-      score: Math.log2(n) * 0.5 + hints.reduce((sum, h) => sum + h.score, 0),
+      score: Math.log2(n) * 0.5 + hints.reduce((sum, h) => sum + h.score, 0) - (loggedToday ? 10 : 0),
       last: last.date,
     })
   }
 
   return out
-    .sort((a, b) => b.score - a.score || b.last.localeCompare(a.last))
+    .sort((a, b) => b.score - a.score || (a.last < b.last ? 1 : a.last > b.last ? -1 : 0))
     .slice(0, limit)
-    .map(({ score: _score, last: _last, ...s }) => s)
+    // Wording is only worked out for the few suggestions that are actually shown.
+    .map(({ score: _score, last, fixedReason, ...s }) => ({
+      ...s,
+      reason: fixedReason ?? (s.count > 1 ? `Logged ${s.count} times` : `Last added ${daysAgo(last, now)}`),
+    }))
 }

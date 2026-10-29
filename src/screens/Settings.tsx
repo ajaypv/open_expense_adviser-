@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode, memo } from 'react'
 import { backupToJson, downloadFile, transactionsToCsv } from '../data/exporters'
 import { clearAllLocations, getPlace, permissionState, setRecordLocation } from '../data/location'
 import type { useLedger } from '../data/useLedger'
@@ -66,7 +66,7 @@ const LOCATION_PROBLEMS = {
   unsupported: 'This browser can’t share its location.',
 } as const
 
-export function Settings({ ledger, theme, onTheme }: Props) {
+export const Settings = memo(function Settings({ ledger, theme, onTheme }: Props) {
   const { txs, categories, categoryById, currency, budgetMinor, balanceSet, netMinor } = ledger
   const toast = useToast()
   const locationOn = useLiveQuery(async () => (await db.settings.get('recordLocation'))?.value === true, []) ?? false
@@ -396,4 +396,4 @@ export function Settings({ ledger, theme, onTheme }: Props) {
       </Group>
     </div>
   )
-}
+})

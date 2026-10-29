@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import type { useLedger } from '../data/useLedger'
 import { formatMoney, localDateString, parseLocalDate } from '../db/money'
 import type { Transaction } from '../db/schema'
 import { sum } from '../insights/aggregates'
+import { newestFirst } from '../insights/order'
 import { Icon } from '../ui/Icon'
 import { TxRow } from '../ui/TxRow'
 
@@ -35,7 +36,7 @@ function dayHeading(date: string, today: Date): string {
   )
 }
 
-export function Activity({ ledger, today, categoryFilter, onCategoryFilter, onEdit }: Props) {
+export const Activity = memo(function Activity({ ledger, today, categoryFilter, onCategoryFilter, onEdit }: Props) {
   const { txs, categories, categoryById, currency } = ledger
   const [query, setQuery] = useState('')
   const [limit, setLimit] = useState(PAGE)
@@ -60,26 +61,35 @@ export function Activity({ ledger, today, categoryFilter, onCategoryFilter, onEd
     row.scrollTo({ left: Math.max(0, left), behavior: reduce ? 'auto' : 'smooth' })
   }, [categoryFilter])
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return txs
-      .filter((t) => categoryFilter === null || t.categoryId === categoryFilter)
-      .filter(
-        (t) =>
-          !q ||
-          t.merchant.toLowerCase().includes(q) ||
-          t.note.toLowerCase().includes(q) ||
-          (categoryById.get(t.categoryId)?.name.toLowerCase().includes(q) ?? false),
-      )
-      .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt)
-  }, [txs, query, categoryFilter, categoryById])
+  // Sorted once per data change, and the lowercase search text built once per data change, so a
+  // keystroke only filters; it never re-sorts or re-lowercases thousands of rows.
+  const sorted = useMemo(() => [...txs].sort(newestFirst), [txs])
+  const searchText = useMemo(
+    () =>
+      new Map(
+        txs.map((t) => [t.id, `${t.merchant} ${t.note} ${categoryById.get(t.categoryId)?.name ?? ''}`.toLowerCase()]),
+      ),
+    [txs, categoryById],
+  )
 
-  const visible = filtered.slice(0, limit)
+  // The box updates immediately; the list catches up when the device has a moment to spare.
+  const deferredQuery = useDeferredValue(query)
+  const filtered = useMemo(() => {
+    const q = deferredQuery.trim().toLowerCase()
+    return sorted.filter(
+      (t) => (categoryFilter === null || t.categoryId === categoryFilter) && (!q || searchText.get(t.id)!.includes(q)),
+    )
+  }, [sorted, searchText, deferredQuery, categoryFilter])
+
   const groups = useMemo(() => {
     const map = new Map<string, Transaction[]>()
-    for (const t of visible) map.set(t.date, [...(map.get(t.date) ?? []), t])
+    for (const t of filtered.slice(0, limit)) {
+      const day = map.get(t.date)
+      if (day) day.push(t)
+      else map.set(t.date, [t])
+    }
     return [...map]
-  }, [visible])
+  }, [filtered, limit])
 
   const filtering = query.trim() !== '' || categoryFilter !== null
 
@@ -176,7 +186,11 @@ export function Activity({ ledger, today, categoryFilter, onCategoryFilter, onEd
       ) : (
         <div>
           {groups.map(([date, rows]) => (
-            <section key={date} aria-label={dayHeading(date, today)} className="mt-6">
+            <section
+              key={date}
+              aria-label={dayHeading(date, today)}
+              className="mt-6 [contain-intrinsic-size:auto_9rem] [content-visibility:auto]"
+            >
               <div className="mb-2 flex items-baseline justify-between px-1">
                 <h2 className="font-semibold">{dayHeading(date, today)}</h2>
                 <p className="text-[0.9375rem] text-ink-2 tabular-nums">
@@ -210,4 +224,4 @@ export function Activity({ ledger, today, categoryFilter, onCategoryFilter, onEd
       )}
     </div>
   )
-}
+})

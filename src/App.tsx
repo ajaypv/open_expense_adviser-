@@ -1,5 +1,5 @@
 import { flushSync } from 'react-dom'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { attachLocation } from './data/location'
 import { useLedger } from './data/useLedger'
 import { useToday } from './data/useToday'
@@ -40,7 +40,9 @@ function Shell() {
 
   const [tab, setTab] = useState<Tab>('home')
   const [month, setMonth] = useState<MonthKey>(currentMonth)
-  const [chat, setChat] = useState('')
+  // The chat bar owns what is being typed. This only carries text pushed in from outside
+  // (an example chip); a new `n` remounts the bar with that text.
+  const [draft, setDraft] = useState({ text: '', n: 0 })
   const [categoryFilter, setCategoryFilter] = useState<number | null>(null)
   const [sheet, setSheet] = useState<{ open: boolean; editing: Transaction | null; prefill: Suggestion | null }>({
     open: false,
@@ -84,16 +86,26 @@ function Shell() {
     return () => observer.disconnect()
   }, [])
 
-  /** Switch tabs with a directional slide where View Transitions are available. */
-  function go(next: Tab) {
-    if (next === tab) return
-    const direction = TABS.findIndex((t) => t.id === next) > TABS.findIndex((t) => t.id === tab) ? 'forward' : 'backward'
-    const update = () => flushSync(() => setTab(next))
+  /**
+   * Switch tabs with a directional slide where View Transitions are available. Reading the
+   * current tab from a ref keeps this function's identity stable, so memoized children that
+   * receive handlers built on it don't re-render.
+   */
+  const tabRef = useRef(tab)
+  const go = useCallback((next: Tab) => {
+    const current = tabRef.current
+    if (next === current) return
+    const direction = TABS.findIndex((t) => t.id === next) > TABS.findIndex((t) => t.id === current) ? 'forward' : 'backward'
+    const update = () => {
+      tabRef.current = next
+      flushSync(() => setTab(next))
+    }
     if (!document.startViewTransition) return update()
     document.startViewTransition({ update, types: [direction] } as unknown as () => void)
-  }
+  }, [])
 
-  async function logFromChat(text: string): Promise<boolean> {
+  const currency = ledger.currency
+  const logFromChat = useCallback(async (text: string): Promise<boolean> => {
     const parsed = parseExpense(text)
     if (!parsed) {
       toast({ message: 'No amount found. Try “450 lunch at Cafe”.' })
@@ -102,7 +114,7 @@ function Shell() {
     const id = await addTransaction({
       kind: parsed.kind,
       amountMinor: parsed.amountMinor,
-      currency: ledger.currency,
+      currency,
       categoryId: await categoryIdByName(parsed.categoryName),
       merchant: parsed.merchant,
       note: '',
@@ -116,18 +128,33 @@ function Shell() {
     toast({
       message:
         parsed.kind === 'income'
-          ? `Received ${formatMoney(parsed.amountMinor, ledger.currency)}`
-          : `Added ${formatMoney(parsed.amountMinor, ledger.currency)} to ${parsed.categoryName}`,
+          ? `Received ${formatMoney(parsed.amountMinor, currency)}`
+          : `Added ${formatMoney(parsed.amountMinor, currency)} to ${parsed.categoryName}`,
       actionLabel: 'Undo',
       onAction: () => void deleteTransaction(id),
     })
     return true
-  }
+  }, [currency, toast])
 
-  const openAdd = () => setSheet({ open: true, editing: null, prefill: null })
-  const openEdit = (tx: Transaction) => setSheet({ open: true, editing: tx, prefill: null })
-  const openSuggestion = (s: Suggestion) => setSheet({ open: true, editing: null, prefill: s })
-  const closeSheet = () => setSheet((s) => ({ ...s, open: false }))
+  // Stable handlers: the screens and the chat bar are memoized and skip renders they don't need.
+  const openAdd = useCallback(() => setSheet({ open: true, editing: null, prefill: null }), [])
+  const openEdit = useCallback((tx: Transaction) => setSheet({ open: true, editing: tx, prefill: null }), [])
+  const openSuggestion = useCallback((s: Suggestion) => setSheet({ open: true, editing: null, prefill: s }), [])
+  const closeSheet = useCallback(() => setSheet((s) => ({ ...s, open: false })), [])
+  const pickCategory = useCallback(
+    (id: number) => {
+      setCategoryFilter(id)
+      go('activity')
+    },
+    [go],
+  )
+  const seeAll = useCallback(() => {
+    setCategoryFilter(null)
+    go('activity')
+  }, [go])
+  const openSettings = useCallback(() => go('settings'), [go])
+  const toggleBalance = useCallback(() => setBalanceShown((s) => !s), [])
+  const fillChat = useCallback((text: string) => setDraft((d) => ({ text, n: d.n + 1 })), [])
 
   return (
     <div className="mx-auto flex h-dvh w-full max-w-xl flex-col pt-[env(safe-area-inset-top)] md:max-w-2xl">
@@ -143,19 +170,13 @@ function Shell() {
             month={month}
             onMonth={setMonth}
             today={today}
-            onPickCategory={(id) => {
-              setCategoryFilter(id)
-              go('activity')
-            }}
+            onPickCategory={pickCategory}
             onEdit={openEdit}
-            onExample={setChat}
-            onOpenSettings={() => go('settings')}
-            onSeeAll={() => {
-              setCategoryFilter(null)
-              go('activity')
-            }}
+            onExample={fillChat}
+            onOpenSettings={openSettings}
+            onSeeAll={seeAll}
             balanceShown={balanceShown}
-            onToggleBalance={() => setBalanceShown((s) => !s)}
+            onToggleBalance={toggleBalance}
             suggestions={suggestions}
             onSuggestion={openSuggestion}
           />
@@ -170,14 +191,14 @@ function Shell() {
           />
         )}
         {tab === 'insights' && (
-          <Insights ledger={ledger} month={month} onMonth={setMonth} today={today} onOpenSettings={() => go('settings')} />
+          <Insights ledger={ledger} month={month} onMonth={setMonth} today={today} onOpenSettings={openSettings} />
         )}
         {tab === 'settings' && <Settings ledger={ledger} theme={theme.pref} onTheme={theme.setPref} />}
       </main>
 
       <div ref={bottomStack}>
         <div className="pb-2 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-2 short:pt-1">
-          <ChatBar value={chat} onChange={setChat} onSubmit={logFromChat} onOpenForm={openAdd} />
+          <ChatBar key={draft.n} initialText={draft.text} onSubmit={logFromChat} onOpenForm={openAdd} />
         </div>
         <BottomNav current={tab} onSelect={go} />
       </div>

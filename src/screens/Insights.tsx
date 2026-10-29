@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { BarList } from '../charts/BarList'
 import { CategoryBars } from '../charts/CategoryBars'
 import { Movers } from '../charts/Movers'
@@ -51,7 +52,7 @@ function Section({ id, title, intro, children }: { id: string; title: string; in
 }
 
 /** What the logged expenses say, computed on the device. Each block answers one question. */
-export function Insights({ ledger, month, onMonth, today, onOpenSettings }: Props) {
+export const Insights = memo(function Insights({ ledger, month, onMonth, today, onOpenSettings }: Props) {
   // Insights describe spending, so they use money sent only; received money feeds the balance.
   const { expenses: txs, categoryById, currency, budgetMinor } = ledger
   const currentMonth = localDateString(today).slice(0, 7)
@@ -205,4 +206,4 @@ export function Insights({ ledger, month, onMonth, today, onOpenSettings }: Prop
       </section>
     </div>
   )
-}
+})

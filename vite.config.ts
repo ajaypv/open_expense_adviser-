@@ -10,6 +10,21 @@ const base = process.env.BASE_PATH ?? '/'
 // https://vite.dev/config/
 export default defineConfig({
   base,
+  build: {
+    rolldownOptions: {
+      output: {
+        // Libraries change far less often than app code. Separate chunks keep their hashes stable
+        // between deploys, so an update only re-downloads the small app chunk, and the browser can
+        // parse the chunks in parallel.
+        codeSplitting: {
+          groups: [
+            { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+            { name: 'dexie', test: /node_modules[\\/]dexie(-react-hooks)?[\\/]/ },
+          ],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),

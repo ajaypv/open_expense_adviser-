@@ -31,15 +31,23 @@ const tx = (
 }
 
 describe('suggest', () => {
-  it('only suggests merchants that repeat, and ignores blank merchants', () => {
+  it('puts merchants that repeat first, then one-offs, and ignores blank merchants', () => {
     const txs = [
+      tx('2026-10-03', 'Amazon'), // one-off
       tx('2026-10-01', 'Swiggy'),
       tx('2026-10-05', 'Swiggy'),
-      tx('2026-10-03', 'Amazon'), // one-off
       tx('2026-10-02', ''),
       tx('2026-10-04', ''),
     ]
-    expect(suggest(txs, wednesdayEvening).map((s) => s.merchant)).toEqual(['Swiggy'])
+    expect(suggest(txs, wednesdayEvening).map((s) => s.merchant)).toEqual(['Swiggy', 'Amazon'])
+  })
+
+  it('still suggests something from a single entry, and says when it was added', () => {
+    expect(suggest([tx('2026-10-27', 'Cafe')], wednesdayEvening)).toMatchObject([
+      { merchant: 'Cafe', count: 1, reason: 'Last added yesterday' },
+    ])
+    expect(suggest([tx('2026-10-20', 'Cafe')], wednesdayEvening)[0].reason).toBe('Last added 8 days ago')
+    expect(suggest([tx('2026-08-02', 'Cafe')], wednesdayEvening)[0].reason).toMatch(/^Last added /)
   })
 
   it('merges names case-insensitively and uses the usual amount, category and payment method', () => {
@@ -86,20 +94,29 @@ describe('suggest', () => {
     expect(suggest(txs, new Date(2026, 10, 15, 22, 0))[0].reason).toBe('Logged 3 times')
   })
 
-  it('leaves out anything already logged today', () => {
-    const txs = [tx('2026-10-01', 'Swiggy'), tx('2026-10-05', 'Swiggy'), tx('2026-10-28', 'Swiggy')]
-    expect(suggest(txs, wednesdayEvening)).toEqual([])
+  it('ranks anything already logged today last, and says so, instead of hiding it', () => {
+    const txs = [
+      tx('2026-10-01', 'Swiggy'),
+      tx('2026-10-05', 'Swiggy'),
+      tx('2026-10-28', 'Swiggy'),
+      tx('2026-10-10', 'Uber'),
+    ]
+    expect(suggest(txs, wednesdayEvening).map((s) => [s.merchant, s.reason])).toEqual([
+      ['Uber', 'Last added 18 days ago'],
+      ['Swiggy', 'Added earlier today'],
+    ])
   })
 
   it('keeps money sent and money received apart, and can filter by kind', () => {
     const txs = [
       tx('2026-09-01', 'Employer', 80000, { kind: 'income' }),
       tx('2026-10-01', 'Employer', 80000, { kind: 'income' }),
-      tx('2026-10-02', 'Employer', 50), // an expense to the same name is its own regular only if it repeats
+      tx('2026-10-02', 'Employer', 50), // an expense to the same name is kept apart from the income
       tx('2026-10-03', 'Swiggy'),
       tx('2026-10-04', 'Swiggy'),
     ]
     expect(suggest(txs, wednesdayEvening).map((s) => `${s.kind}:${s.merchant}`).sort()).toEqual([
+      'expense:Employer',
       'expense:Swiggy',
       'income:Employer',
     ])

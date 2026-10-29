@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, memo } from 'react'
 import { attachLocation, clearLocation } from '../data/location'
 import { INCOME_CATEGORY } from '../db/defaultCategories'
 import { localDateString, toMinor } from '../db/money'
@@ -38,7 +38,7 @@ const chip =
 
 const input = 'mt-1 min-h-12 w-full rounded-xl bg-surface-2 px-3.5'
 
-export function AddSheet({ open, editing, categories, currency, suggestions, prefill, onClose }: Props) {
+export const AddSheet = memo(function AddSheet({ open, editing, categories, currency, suggestions, prefill, onClose }: Props) {
   const dialog = useRef<HTMLDialogElement>(null)
   const amountInput = useRef<HTMLInputElement>(null)
   const toast = useToast()
@@ -197,12 +197,18 @@ export function AddSheet({ open, editing, categories, currency, suggestions, pre
           ))}
         </div>
 
-        {!editing && kindSuggestions.length > 0 && (
+        {!editing && (
           <section aria-labelledby="sheet-suggest-h">
             <h3 id="sheet-suggest-h" className="mb-2 text-sm text-ink-2">
               Suggested for now
             </h3>
-            <SuggestionList items={kindSuggestions} categoryById={categoryById} currency={currency} onPick={applySuggestion} tone="sheet" />
+            {kindSuggestions.length > 0 ? (
+              <SuggestionList items={kindSuggestions} categoryById={categoryById} currency={currency} onPick={applySuggestion} tone="sheet" />
+            ) : (
+              <p className="text-sm text-ink-2">
+                Merchants you add will show up here, so you can fill them in with one tap.
+              </p>
+            )}
           </section>
         )}
 
@@ -364,4 +370,4 @@ export function AddSheet({ open, editing, categories, currency, suggestions, pre
       </form>
     </dialog>
   )
-}
+})
