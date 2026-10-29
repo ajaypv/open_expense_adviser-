@@ -39,7 +39,8 @@ export function ChatBar({ value, onChange, onSubmit, onOpenForm }: Props) {
     <form
       ref={form}
       onSubmit={(e) => void submit(e)}
-      className="flex items-end gap-2 rounded-[1.75rem] bg-surface p-1.5 shadow-[0_0_0_1px_var(--ring)]"
+      // Focus is shown by the pill's own edge getting firmer: no outline, no blur, no glow.
+      className="flex items-end gap-2 rounded-[1.75rem] bg-surface p-1.5 shadow-[0_0_0_1px_var(--ring)] transition-shadow focus-within:shadow-[0_0_0_1.5px_var(--muted)]"
     >
       <button
         type="button"
@@ -62,7 +63,7 @@ export function ChatBar({ value, onChange, onSubmit, onOpenForm }: Props) {
         autoComplete="off"
         autoCapitalize="sentences"
         placeholder="Spent 450 on lunch…"
-        className="max-h-32 min-h-11 flex-1 resize-none bg-transparent px-1 py-[0.6875rem] leading-snug outline-none [field-sizing:content]"
+        className="max-h-32 min-h-11 flex-1 resize-none bg-transparent px-1 py-[0.6875rem] leading-snug outline-none focus-visible:outline-none [field-sizing:content]"
       />
       <button
         type="submit"

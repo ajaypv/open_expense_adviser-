@@ -11,7 +11,7 @@ export function csvCell(value: string | number): string {
 }
 
 export function transactionsToCsv(txs: Transaction[], categoryById: Map<number, Category>): string {
-  const header = ['date', 'type', 'amount', 'currency', 'category', 'merchant', 'note', 'payment_method', 'source']
+  const header = ['date', 'type', 'amount', 'currency', 'category', 'merchant', 'note', 'payment_method', 'source', 'latitude', 'longitude']
   const rows = [...txs]
     .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt - b.createdAt)
     .map((t) =>
@@ -25,6 +25,8 @@ export function transactionsToCsv(txs: Transaction[], categoryById: Map<number, 
         t.note,
         t.paymentMethod,
         t.source,
+        t.location?.lat ?? '',
+        t.location?.lon ?? '',
       ]
         .map(csvCell)
         .join(','),

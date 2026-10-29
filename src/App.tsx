@@ -1,11 +1,13 @@
 import { flushSync } from 'react-dom'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { attachLocation } from './data/location'
 import { useLedger } from './data/useLedger'
 import { useToday } from './data/useToday'
 import { formatMoney, localDateString } from './db/money'
 import { addTransaction, categoryIdByName, deleteTransaction, requestPersistentStorage } from './db/repo'
 import type { Transaction } from './db/schema'
 import { monthOf, type MonthKey } from './insights/aggregates'
+import { suggest, type Suggestion } from './insights/suggestions'
 import { parseExpense } from './ingest/localParser'
 import { usePwa } from './pwa/usePwa'
 import { Activity } from './screens/Activity'
@@ -40,10 +42,19 @@ function Shell() {
   const [month, setMonth] = useState<MonthKey>(currentMonth)
   const [chat, setChat] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<number | null>(null)
-  const [sheet, setSheet] = useState<{ open: boolean; editing: Transaction | null }>({
+  const [sheet, setSheet] = useState<{ open: boolean; editing: Transaction | null; prefill: Suggestion | null }>({
     open: false,
     editing: null,
+    prefill: null,
   })
+
+  // Regulars that fit the current weekday, time of day and date. Recomputed when the data changes,
+  // when a new day starts, and each time the form opens (so the time of day is current).
+  const suggestions = useMemo(
+    () => suggest(ledger.txs, new Date(), 8),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sheet.open only forces a fresh clock reading
+    [ledger.txs, today, sheet.open],
+  )
 
   useEffect(() => {
     void requestPersistentStorage()
@@ -99,6 +110,7 @@ function Shell() {
       paymentMethod: parsed.paymentMethod,
       source: 'chat',
     })
+    void attachLocation(id) // no-op unless the user turned location recording on
     // Show the month the expense landed in so the user sees it appear.
     setMonth(monthOf(parsed.date))
     toast({
@@ -112,8 +124,9 @@ function Shell() {
     return true
   }
 
-  const openAdd = () => setSheet({ open: true, editing: null })
-  const openEdit = (tx: Transaction) => setSheet({ open: true, editing: tx })
+  const openAdd = () => setSheet({ open: true, editing: null, prefill: null })
+  const openEdit = (tx: Transaction) => setSheet({ open: true, editing: tx, prefill: null })
+  const openSuggestion = (s: Suggestion) => setSheet({ open: true, editing: null, prefill: s })
   const closeSheet = () => setSheet((s) => ({ ...s, open: false }))
 
   return (
@@ -143,6 +156,8 @@ function Shell() {
             }}
             balanceShown={balanceShown}
             onToggleBalance={() => setBalanceShown((s) => !s)}
+            suggestions={suggestions}
+            onSuggestion={openSuggestion}
           />
         )}
         {tab === 'activity' && (
@@ -172,6 +187,8 @@ function Shell() {
         editing={sheet.editing}
         categories={ledger.categories}
         currency={ledger.currency}
+        suggestions={suggestions}
+        prefill={sheet.prefill}
         onClose={closeSheet}
       />
     </div>

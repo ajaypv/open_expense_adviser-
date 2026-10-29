@@ -1,5 +1,6 @@
 import { formatMoney, parseLocalDate } from '../db/money'
 import type { Category, Transaction } from '../db/schema'
+import { Icon } from './Icon'
 
 interface Props {
   tx: Transaction
@@ -22,7 +23,7 @@ export function TxRow({ tx, category, currency, showDate, onClick }: Props) {
       type="button"
       onClick={() => onClick(tx)}
       className="flex min-h-16 w-full items-center gap-3 py-2 text-left"
-      aria-label={`Edit ${received ? 'received' : 'sent'} ${title}, ${formatMoney(tx.amountMinor, currency)}`}
+      aria-label={`Edit ${received ? 'received' : 'sent'} ${title}, ${formatMoney(tx.amountMinor, currency)}${tx.location ? ', added with location' : ''}`}
     >
       <span
         aria-hidden="true"
@@ -40,6 +41,14 @@ export function TxRow({ tx, category, currency, showDate, onClick }: Props) {
             style={{ background: color }}
           />
           <span className="truncate">{category?.name ?? 'Uncategorised'}</span>
+          {tx.location && (
+            <>
+              <span aria-hidden="true" className="shrink-0">
+                <Icon name="pin" size={14} />
+              </span>
+              <span className="sr-only">Added with location</span>
+            </>
+          )}
         </span>
       </span>
       <span className="shrink-0 text-right">

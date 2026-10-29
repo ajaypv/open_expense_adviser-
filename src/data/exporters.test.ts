@@ -32,8 +32,15 @@ describe('transactionsToCsv', () => {
       [tx(2, 'income', '2026-10-05', 500000, 2, 'Employer'), tx(1, 'expense', '2026-10-01', 45050, 1, 'Cafe, Main St')],
       cats,
     ).split('\n')
-    expect(csv[0]).toBe('date,type,amount,currency,category,merchant,note,payment_method,source')
-    expect(csv[1]).toBe('2026-10-01,sent,450.50,INR,Food & Dining,"Cafe, Main St",,,manual')
-    expect(csv[2]).toBe('2026-10-05,received,5000.00,INR,Income,Employer,,,manual')
+    expect(csv[0]).toBe('date,type,amount,currency,category,merchant,note,payment_method,source,latitude,longitude')
+    expect(csv[1]).toBe('2026-10-01,sent,450.50,INR,Food & Dining,"Cafe, Main St",,,manual,,')
+    expect(csv[2]).toBe('2026-10-05,received,5000.00,INR,Income,Employer,,,manual,,')
+  })
+
+  it('exports the place a transaction was added, and leaves the columns empty without one', () => {
+    const withPlace = { ...tx(1, 'expense', '2026-10-01', 45000, 1, 'Cafe'), location: { lat: 12.9716, lon: 77.5946, accuracyM: 20 } }
+    const csv = transactionsToCsv([withPlace, tx(2, 'expense', '2026-10-02', 100, 1, 'Bus')], cats).split('\n')
+    expect(csv[1]).toBe('2026-10-01,sent,450.00,INR,Food & Dining,Cafe,,,manual,12.9716,77.5946')
+    expect(csv[2]).toMatch(/,manual,,$/)
   })
 })

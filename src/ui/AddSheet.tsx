@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { attachLocation, clearLocation } from '../data/location'
 import { INCOME_CATEGORY } from '../db/defaultCategories'
 import { localDateString, toMinor } from '../db/money'
 import { addTransaction, deleteTransaction, restoreTransaction, updateTransaction } from '../db/repo'
-import type { Category, Transaction } from '../db/schema'
+import type { Category, Place, Transaction } from '../db/schema'
+import type { Suggestion } from '../insights/suggestions'
 import { Icon } from './Icon'
+import { SuggestionList } from './SuggestionList'
 import { useToast } from './toast'
 
 interface Props {
@@ -13,6 +16,10 @@ interface Props {
   /** Every category; the sheet picks the right ones for sent or received money. */
   categories: Category[]
   currency: string
+  /** Regulars that fit right now, shown as one-tap fills when adding. */
+  suggestions: Suggestion[]
+  /** A regular to fill in as soon as the sheet opens (picked from Home). */
+  prefill: Suggestion | null
   onClose: () => void
 }
 
@@ -31,7 +38,7 @@ const chip =
 
 const input = 'mt-1 min-h-12 w-full rounded-xl bg-surface-2 px-3.5'
 
-export function AddSheet({ open, editing, categories, currency, onClose }: Props) {
+export function AddSheet({ open, editing, categories, currency, suggestions, prefill, onClose }: Props) {
   const dialog = useRef<HTMLDialogElement>(null)
   const amountInput = useRef<HTMLInputElement>(null)
   const toast = useToast()
@@ -43,6 +50,7 @@ export function AddSheet({ open, editing, categories, currency, onClose }: Props
   const [date, setDate] = useState(localDateString())
   const [payment, setPayment] = useState('')
   const [note, setNote] = useState('')
+  const [place, setPlace] = useState<Place | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   // Open/close the native dialog and (re)load the form each time it opens.
@@ -50,20 +58,33 @@ export function AddSheet({ open, editing, categories, currency, onClose }: Props
     const el = dialog.current
     if (!el) return
     if (open && !el.open) {
-      setKind(editing?.kind ?? 'expense')
-      setAmount(editing ? String(editing.amountMinor / 100) : '')
-      setMerchant(editing?.merchant ?? '')
-      setCategoryId(editing?.categoryId ?? null)
-      setDate(editing?.date ?? localDateString())
-      setPayment(editing?.paymentMethod ?? '')
-      setNote(editing?.note ?? '')
+      const start = editing ?? null
+      setKind(start?.kind ?? prefill?.kind ?? 'expense')
+      setAmount(start ? String(start.amountMinor / 100) : prefill ? String(prefill.amountMinor / 100) : '')
+      setMerchant(start?.merchant ?? prefill?.merchant ?? '')
+      setCategoryId(start?.categoryId ?? prefill?.categoryId ?? null)
+      setDate(start?.date ?? localDateString())
+      setPayment(start?.paymentMethod ?? prefill?.paymentMethod ?? '')
+      setNote(start?.note ?? '')
+      setPlace(start?.location ?? null)
       setError(null)
       el.showModal()
-      if (!editing) requestAnimationFrame(() => amountInput.current?.focus())
+      // A filled-in form doesn't need the keyboard up; an empty one does.
+      if (!start && !prefill) requestAnimationFrame(() => amountInput.current?.focus())
     } else if (!open && el.open) {
       el.close()
     }
-  }, [open, editing])
+  }, [open, editing, prefill])
+
+  /** Fill the form from a regular. The date stays as chosen (today by default). */
+  function applySuggestion(s: Suggestion) {
+    setKind(s.kind)
+    setAmount(String(s.amountMinor / 100))
+    setMerchant(s.merchant)
+    setCategoryId(s.categoryId)
+    setPayment(s.paymentMethod)
+    setError(null)
+  }
 
   // Dialogs use closedby="any" where supported; light-dismiss is added by hand for Safari.
   useEffect(() => {
@@ -82,6 +103,8 @@ export function AddSheet({ open, editing, categories, currency, onClose }: Props
         : fallbackExpenseId
 
   const received = kind === 'income'
+  const categoryById = new Map(categories.map((c) => [c.id, c]))
+  const kindSuggestions = suggestions.filter((s) => s.kind === kind).slice(0, 4)
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -108,7 +131,7 @@ export function AddSheet({ open, editing, categories, currency, onClose }: Props
         await updateTransaction(editing.id, fields)
         toast({ message: 'Changes saved' })
       } else {
-        await addTransaction({ ...fields, currency, source: 'manual' })
+        void attachLocation(await addTransaction({ ...fields, currency, source: 'manual' }))
         toast({ message: received ? 'Received money added' : 'Expense added' })
       }
       onClose()
@@ -173,6 +196,15 @@ export function AddSheet({ open, editing, categories, currency, onClose }: Props
             </label>
           ))}
         </div>
+
+        {!editing && kindSuggestions.length > 0 && (
+          <section aria-labelledby="sheet-suggest-h">
+            <h3 id="sheet-suggest-h" className="mb-2 text-sm text-ink-2">
+              Suggested for now
+            </h3>
+            <SuggestionList items={kindSuggestions} categoryById={categoryById} currency={currency} onPick={applySuggestion} tone="sheet" />
+          </section>
+        )}
 
         <div>
           <label htmlFor="amount" className="text-sm text-ink-2">
@@ -280,6 +312,37 @@ export function AddSheet({ open, editing, categories, currency, onClose }: Props
             />
           </div>
         </div>
+
+        {editing && place && (
+          <div className="flex items-center gap-3 rounded-xl bg-surface-2 px-3.5 py-2.5">
+            <Icon name="pin" size={20} />
+            <div className="min-w-0 flex-1 text-sm">
+              <p className="font-medium">Added at this location</p>
+              <p className="text-ink-2">
+                {place.lat.toFixed(4)}, {place.lon.toFixed(4)}
+                {place.accuracyM > 0 && ` · within ${place.accuracyM} m`}
+              </p>
+            </div>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lon}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex min-h-11 items-center px-1 text-sm font-medium underline underline-offset-2"
+            >
+              View map
+            </a>
+            <button
+              type="button"
+              onClick={() => {
+                void clearLocation(editing.id)
+                setPlace(null)
+              }}
+              className="min-h-11 px-1 text-sm font-medium text-critical"
+            >
+              Remove
+            </button>
+          </div>
+        )}
 
         <div className="flex items-center gap-3">
           {editing && (

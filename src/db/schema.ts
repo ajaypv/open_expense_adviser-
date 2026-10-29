@@ -1,6 +1,14 @@
 import Dexie, { type EntityTable } from 'dexie'
 import { DEFAULT_CATEGORIES, INCOME_CATEGORY } from './defaultCategories'
 
+/** Where a transaction was added. Coordinates are rounded to 4 decimals (about 11 m). */
+export interface Place {
+  lat: number
+  lon: number
+  /** Accuracy radius reported by the device, in metres. */
+  accuracyM: number
+}
+
 /** Amounts are stored as integer minor units (e.g. paise/cents) to avoid float drift. */
 export interface Transaction {
   id: number
@@ -16,6 +24,8 @@ export interface Transaction {
   paymentMethod: string
   source: 'manual' | 'chat' | 'import'
   createdAt: number
+  /** Only set when the user turned location recording on; never sent anywhere. */
+  location?: Place
 }
 
 export interface Category {

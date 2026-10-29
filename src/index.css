@@ -153,9 +153,16 @@ body {
   overscroll-behavior-y: none;
 }
 
-:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
+/*
+ * Default keyboard focus ring. It must live in the base layer: unlayered CSS beats every Tailwind
+ * utility, which is how an unlayered rule here overrode `outline-none` on the chat box and drew
+ * a bright rectangle around it. In the base layer, utilities can restyle or remove it.
+ */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
 }
 
 ::placeholder {
