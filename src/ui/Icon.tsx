@@ -1,0 +1,40 @@
+const PATHS = {
+  home: 'M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
+  list: 'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01',
+  bars: 'M5 20v-9M12 20V4M19 20v-6',
+  sliders: 'M4 7h9m4 0h3M4 17h3m4 0h9M15 4v6M9 14v6',
+  plus: 'M12 5v14M5 12h14',
+  send: 'M12 19V5M6 11l6-6 6 6',
+  chevLeft: 'M15 6l-6 6 6 6',
+  chevRight: 'M9 6l6 6-6 6',
+  close: 'M6 6l12 12M18 6 6 18',
+  warn: 'M12 4 3 20h18zM12 10v4M12 17h.01',
+  check: 'M5 12.5l4.5 4.5L19 7.5',
+  download: 'M12 4v11m-5-5 5 5 5-5M5 20h14',
+  eye: 'M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12zM12 9.25a2.75 2.75 0 1 0 0 5.5 2.75 2.75 0 0 0 0-5.5z',
+  eyeOff: 'M4 4l16 16M9.9 5.7A9.8 9.8 0 0 1 12 5.5c6.5 0 10 6.5 10 6.5a17 17 0 0 1-3 3.8M6.3 7.2A17 17 0 0 0 2 12s3.5 6.5 10 6.5c1.5 0 2.8-.3 4-.8M10 10a2.75 2.75 0 0 0 3.9 3.9',
+  arrowUp:'M12 19V6M6 12l6-6 6 6',
+  arrowDown: 'M12 5v13M6 12l6 6 6-6',
+  search:'M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4.2-4.2',
+} as const
+
+export type IconName = keyof typeof PATHS
+
+export function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d={PATHS[name]} />
+    </svg>
+  )
+}

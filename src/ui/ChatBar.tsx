@@ -1,0 +1,77 @@
+import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { Icon } from './Icon'
+
+interface Props {
+  value: string
+  onChange: (value: string) => void
+  /** Resolves true when the text was turned into an expense (the bar then clears). */
+  onSubmit: (text: string) => Promise<boolean>
+  onOpenForm: () => void
+}
+
+export function ChatBar({ value, onChange, onSubmit, onOpenForm }: Props) {
+  const form = useRef<HTMLFormElement>(null)
+  const [busy, setBusy] = useState(false)
+  const canSend = value.trim().length > 0 && !busy
+
+  async function submit(e?: FormEvent) {
+    e?.preventDefault()
+    const text = value.trim()
+    if (!text || busy) return
+    setBusy(true)
+    try {
+      if (await onSubmit(text)) onChange('')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key !== 'Enter' || e.shiftKey) return
+    e.preventDefault()
+    // Enter confirms a candidate for IME users (Japanese, Chinese, Korean); don't send mid-composition.
+    // keyCode 229 catches Safari, which reports isComposing=false for that confirming keydown.
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return
+    form.current?.requestSubmit()
+  }
+
+  return (
+    <form
+      ref={form}
+      onSubmit={(e) => void submit(e)}
+      className="flex items-end gap-2 rounded-[1.75rem] bg-surface p-1.5 shadow-[0_0_0_1px_var(--ring)]"
+    >
+      <button
+        type="button"
+        onClick={onOpenForm}
+        aria-label="Add with the full form"
+        className="flex size-11 shrink-0 items-center justify-center rounded-full text-ink-2 hover:bg-surface-2"
+      >
+        <Icon name="plus" />
+      </button>
+      <label htmlFor="chat-input" className="sr-only">
+        Log an expense
+      </label>
+      <textarea
+        id="chat-input"
+        rows={1}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
+        enterKeyHint="send"
+        autoComplete="off"
+        autoCapitalize="sentences"
+        placeholder="Spent 450 on lunch…"
+        className="max-h-32 min-h-11 flex-1 resize-none bg-transparent px-1 py-[0.6875rem] leading-snug outline-none [field-sizing:content]"
+      />
+      <button
+        type="submit"
+        disabled={!canSend}
+        aria-label="Add expense"
+        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-btn text-btn-ink transition-opacity disabled:opacity-30"
+      >
+        <Icon name="send" />
+      </button>
+    </form>
+  )
+}

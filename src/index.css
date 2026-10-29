@@ -1,0 +1,312 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. Surfaces, ink and the eight categorical hues come from the validated
+ * data-viz palette (both modes pass the adjacent-pair CVD and normal-vision checks).
+ * Color is reserved for data: buttons and chrome are monochrome ink.
+ *
+ * Dark values are declared twice on purpose: once for the OS setting (unless the user forced
+ * light) and once for a forced dark choice via [data-theme]. light-dark() is avoided so
+ * older Safari versions still theme correctly.
+ */
+:root {
+  color-scheme: light dark;
+
+  /* Light: white surfaces sit on a warm-gray page so inputs, panels and chips visibly separate. */
+  --bg: #f2f1ed;
+  --surface: #ffffff;
+  --surface-2: #e9e8e3;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #6b6a65;
+  --line: #dcdbd3;
+  --axis: #c3c2b7;
+  --ring: rgba(11, 11, 11, 0.16);
+  --scrim: rgba(11, 11, 11, 0.45);
+  --btn: #0b0b0b;
+  --btn-ink: #ffffff;
+
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --s4: #eda100;
+  --s5: #e87ba4;
+  --s6: #008300;
+  --s7: #6250d6;
+  --s8: #e34948;
+  --other: #9a9892;
+
+  --warn: #fab219;
+  --critical: #d03b3b;
+  --good-text: #006300;
+  --critical-text: #b32d2d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-2: #262624;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --muted: #9b9a93;
+    --line: #2c2c2a;
+    --axis: #383835;
+    --ring: rgba(255, 255, 255, 0.1);
+    --scrim: rgba(0, 0, 0, 0.6);
+    --btn: #f0efec;
+    --btn-ink: #0d0d0d;
+
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --s4: #c98500;
+    --s5: #d55181;
+    --s6: #008300;
+    --s7: #9085e9;
+    --s8: #e66767;
+    --other: #7a7973;
+
+    --good-text: #0ca30c;
+    --critical-text: #ec7a7a;
+  }
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #0d0d0d;
+  --surface: #1a1a19;
+  --surface-2: #262624;
+  --ink: #f0efec;
+  --ink-2: #c3c2b7;
+  --muted: #9b9a93;
+  --line: #2c2c2a;
+  --axis: #383835;
+  --ring: rgba(255, 255, 255, 0.1);
+  --scrim: rgba(0, 0, 0, 0.6);
+  --btn: #f0efec;
+  --btn-ink: #0d0d0d;
+
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --s4: #c98500;
+  --s5: #d55181;
+  --s6: #008300;
+  --s7: #9085e9;
+  --s8: #e66767;
+  --other: #7a7973;
+
+  --good-text: #0ca30c;
+  --critical-text: #ec7a7a;
+}
+
+@theme inline {
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-axis: var(--axis);
+  --color-btn: var(--btn);
+  --color-btn-ink: var(--btn-ink);
+  --color-good: var(--good-text);
+  --color-critical: var(--critical-text);
+}
+
+/* Short screens, such as a phone held sideways. */
+@custom-variant short (@media (max-height: 30rem));
+
+html {
+  accent-color: var(--ink);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* No visible scrollbars anywhere; scrolling still works by touch, wheel and keyboard. */
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+/* Native form controls should not zoom the page on iOS (needs >= 16px). */
+input,
+select,
+textarea {
+  font-size: 1rem;
+}
+
+/* ---------- Bottom sheet (native <dialog>) ---------- */
+
+dialog.sheet {
+  margin: auto auto 0;
+  width: min(100%, 36rem);
+  max-width: none;
+  max-height: min(92dvh, 46rem);
+  padding: 0;
+  border: 0;
+  border-radius: 24px 24px 0 0;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 -1px 0 var(--ring);
+  overflow-y: auto;
+
+  translate: 0 100%;
+  opacity: 0;
+  transition:
+    translate 0.32s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.2s ease-out,
+    overlay 0.32s allow-discrete,
+    display 0.32s allow-discrete;
+
+  /* Stop scroll gestures chaining to the page behind the sheet. */
+  &:modal {
+    overscroll-behavior: contain;
+  }
+}
+
+dialog.sheet[open] {
+  translate: 0 0;
+  opacity: 1;
+}
+
+@starting-style {
+  dialog.sheet[open] {
+    translate: 0 100%;
+    opacity: 0;
+  }
+}
+
+dialog.sheet::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background: var(--scrim);
+  opacity: 0;
+  transition:
+    opacity 0.25s ease-out,
+    overlay 0.25s allow-discrete,
+    display 0.25s allow-discrete;
+}
+
+dialog.sheet[open]::backdrop {
+  opacity: 1;
+}
+
+@starting-style {
+  dialog.sheet[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog.sheet {
+    translate: 0 0;
+    transition:
+      opacity 0.15s ease-out,
+      overlay 0.15s allow-discrete,
+      display 0.15s allow-discrete;
+  }
+}
+
+/* ---------- Directional tab transitions (View Transitions, progressive enhancement) ---------- */
+
+@keyframes slide-to-left {
+  to {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+@keyframes slide-from-right {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@keyframes slide-to-right {
+  to {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@keyframes slide-from-left {
+  from {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+
+::view-transition-group(tab) {
+  animation-duration: 0.25s;
+  animation-timing-function: ease-out;
+}
+
+html:active-view-transition-type(forward)::view-transition-old(tab) {
+  animation-name: slide-to-left;
+}
+html:active-view-transition-type(forward)::view-transition-new(tab) {
+  animation-name: slide-from-right;
+}
+html:active-view-transition-type(backward)::view-transition-old(tab) {
+  animation-name: slide-to-right;
+}
+html:active-view-transition-type(backward)::view-transition-new(tab) {
+  animation-name: slide-from-left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(tab),
+  ::view-transition-old(tab),
+  ::view-transition-new(tab) {
+    animation: none !important;
+  }
+}
+
+/* ---------- Small helpers ---------- */
+
+
+@keyframes toast-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
+.toast {
+  animation: toast-in 0.2s ease-out;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
