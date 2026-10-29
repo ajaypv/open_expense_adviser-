@@ -3,8 +3,13 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// A project site on GitHub Pages is served from /<repo>/, so the deploy workflow sets BASE_PATH.
+// Locally it stays '/'. It must start and end with a slash.
+const base = process.env.BASE_PATH ?? '/'
+
 // https://vite.dev/config/
 export default defineConfig({
+  base,
   plugins: [
     react(),
     tailwindcss(),
@@ -18,8 +23,8 @@ export default defineConfig({
         name: 'Expense Tracker',
         short_name: 'Expenses',
         description: 'Local-first AI expense tracker. Your data stays on your device.',
-        start_url: '/',
-        scope: '/',
+        start_url: base,
+        scope: base,
         display: 'standalone',
         orientation: 'portrait',
         background_color: '#0d0d0d',
