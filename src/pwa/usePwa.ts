@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { registerSW } from 'virtual:pwa-register'
+import { checkForUpdate } from './checkForUpdate'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -11,11 +12,15 @@ export function usePwa() {
   const [updateReady, setUpdateReady] = useState(false)
   const [offlineReady, setOfflineReady] = useState(false)
   const [applyUpdate, setApplyUpdate] = useState<(() => void) | null>(null)
+  const registration = useRef<ServiceWorkerRegistration | undefined>(undefined)
 
   useEffect(() => {
     const update = registerSW({
       onNeedRefresh: () => setUpdateReady(true),
       onOfflineReady: () => setOfflineReady(true),
+      onRegisteredSW: (_url, reg) => {
+        registration.current = reg
+      },
     })
     setApplyUpdate(() => () => void update(true))
 
@@ -39,6 +44,9 @@ export function usePwa() {
     setInstallEvent(null)
   }, [installEvent])
 
+  /** Look for a newer version now, rather than waiting for the browser's own schedule. */
+  const checkNow = useCallback(() => checkForUpdate(registration.current), [])
+
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent)
   const isStandalone =
     window.matchMedia('(display-mode: standalone)').matches ||
@@ -51,6 +59,7 @@ export function usePwa() {
     showIosHint: isIos && !isStandalone,
     updateReady,
     applyUpdate,
+    checkNow,
     offlineReady,
   }
 }

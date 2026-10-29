@@ -5,7 +5,7 @@ import type { Transaction } from '../db/schema'
 import { sum } from '../insights/aggregates'
 import { newestFirst } from '../insights/order'
 import { Icon } from '../ui/Icon'
-import { TxRow } from '../ui/TxRow'
+import { TxList } from '../ui/TxList'
 
 type Ledger = ReturnType<typeof useLedger>
 
@@ -26,14 +26,24 @@ const chip =
 const sentOf = (rows: Transaction[]) => sum(rows.filter((t) => t.kind !== 'income'))
 const receivedOf = (rows: Transaction[]) => sum(rows.filter((t) => t.kind === 'income'))
 
-function dayHeading(date: string, today: Date): string {
+// Intl formatters are slow to build; make each once and reuse it for every day heading.
+let longDay: Intl.DateTimeFormat | undefined
+let shortDay: Intl.DateTimeFormat | undefined
+
+/** "Today" and "Yesterday" get the full date beside them; any other day is its own date. */
+function dayHeading(date: string, today: Date): { label: string; detail: string | null } {
+  const day = parseLocalDate(date)
+  const full = (longDay ??= new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' })).format(day)
   const todayKey = localDateString(today)
   const yesterdayKey = localDateString(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1))
-  if (date === todayKey) return 'Today'
-  if (date === yesterdayKey) return 'Yesterday'
-  return new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).format(
-    parseLocalDate(date),
-  )
+  if (date === todayKey) return { label: 'Today', detail: full }
+  if (date === yesterdayKey) return { label: 'Yesterday', detail: full }
+  // Older days: weekday and date in the heading itself, plus the year once it isn't this year.
+  const sameYear = day.getFullYear() === today.getFullYear()
+  return {
+    label: sameYear ? full : (shortDay ??= new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })).format(day),
+    detail: null,
+  }
 }
 
 export const Activity = memo(function Activity({ ledger, today, categoryFilter, onCategoryFilter, onEdit }: Props) {
@@ -185,32 +195,32 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
         </p>
       ) : (
         <div>
-          {groups.map(([date, rows]) => (
-            <section
-              key={date}
-              aria-label={dayHeading(date, today)}
-              className="mt-6 [contain-intrinsic-size:auto_9rem] [content-visibility:auto]"
-            >
-              <div className="mb-2 flex items-baseline justify-between px-1">
-                <h2 className="font-semibold">{dayHeading(date, today)}</h2>
-                <p className="text-[0.9375rem] text-ink-2 tabular-nums">
-                  {sentOf(rows) > 0 && formatMoney(sentOf(rows), currency)}
-                  {receivedOf(rows) > 0 && (
-                    <span className={`text-good ${sentOf(rows) > 0 ? 'ml-2' : ''}`}>
-                      +{formatMoney(receivedOf(rows), currency)}
-                    </span>
-                  )}
-                </p>
-              </div>
-              <ul className="divide-y divide-line rounded-2xl bg-surface px-4 shadow-[0_0_0_1px_var(--ring)]">
-                {rows.map((t) => (
-                  <li key={t.id}>
-                    <TxRow tx={t} category={categoryById.get(t.categoryId)} currency={currency} onClick={onEdit} />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+          {groups.map(([date, rows]) => {
+            const heading = dayHeading(date, today)
+            const sent = sentOf(rows)
+            const received = receivedOf(rows)
+            return (
+              <section
+                key={date}
+                aria-label={heading.label}
+                className="mt-6 [contain-intrinsic-size:auto_9rem] [content-visibility:auto]"
+              >
+                <div className="mb-2 flex items-baseline justify-between gap-3 px-1">
+                  <h2 className="min-w-0 font-semibold">
+                    {heading.label}
+                    {heading.detail && <span className="ml-2 text-sm font-normal text-ink-2">{heading.detail}</span>}
+                  </h2>
+                  <p className="shrink-0 text-[0.9375rem] text-ink-2 tabular-nums">
+                    {sent > 0 && formatMoney(sent, currency)}
+                    {received > 0 && (
+                      <span className={`text-good ${sent > 0 ? 'ml-2' : ''}`}>+{formatMoney(received, currency)}</span>
+                    )}
+                  </p>
+                </div>
+                <TxList rows={rows} categoryById={categoryById} currency={currency} showTime onEdit={onEdit} />
+              </section>
+            )
+          })}
           {filtered.length > limit && (
             <button
               type="button"

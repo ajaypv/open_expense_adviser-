@@ -2,10 +2,13 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState, type FormEvent, type ReactNode, memo } from 'react'
 import { backupToJson, downloadFile, transactionsToCsv } from '../data/exporters'
 import { clearAllLocations, getPlace, permissionState, setRecordLocation } from '../data/location'
+import { setSuggestionPlacement, useSuggestionPlacement, type SuggestionPlacement } from '../data/preferences'
 import type { useLedger } from '../data/useLedger'
 import { localDateString, toMinor } from '../db/money'
 import { setCurrency, setOpeningBalance, setOverallBudget } from '../db/repo'
 import { db } from '../db/schema'
+import { APP_BUILD, APP_BUILD_DATE, APP_VERSION } from '../pwa/version'
+import type { UpdateCheck } from '../pwa/checkForUpdate'
 import type { ThemePref } from '../theme/useTheme'
 import { Icon, type IconName } from '../ui/Icon'
 import { useToast } from '../ui/toast'
@@ -16,6 +19,10 @@ interface Props {
   ledger: Ledger
   theme: ThemePref
   onTheme: (theme: ThemePref) => void
+  /** A newer version has already downloaded and is waiting to take over. */
+  updateReady: boolean
+  onApplyUpdate: (() => void) | null
+  onCheckUpdate: () => Promise<UpdateCheck>
 }
 
 // Currencies with two decimal places only; amounts are stored as hundredths.
@@ -26,6 +33,22 @@ const THEMES: { id: ThemePref; label: string; icon: IconName }[] = [
   { id: 'light', label: 'Light', icon: 'sun' },
   { id: 'dark', label: 'Dark', icon: 'moon' },
 ]
+
+const PLACEMENTS: { id: SuggestionPlacement; label: string; detail: string }[] = [
+  { id: 'input', label: 'Above the input bar', detail: 'A swipeable row of your regulars, right where you type.' },
+  { id: 'home', label: 'On the Home screen', detail: 'A section on Home, under your summary.' },
+  { id: 'off', label: 'Off', detail: 'No suggestions anywhere, including the add form.' },
+]
+
+const UPDATE_MESSAGES: Record<UpdateCheck | 'idle' | 'checking', string> = {
+  idle: 'New versions download in the background. Check now to get the latest one.',
+  checking: 'Checking for updates…',
+  latest: 'You’re on the latest version.',
+  available: 'A new version is ready. Updating reloads the app, and your data stays on this device.',
+  offline: 'You’re offline. Connect to the internet and try again.',
+  unsupported: 'Updates apply when you reload. This browser isn’t running the installed app, so there is nothing to update here.',
+  error: 'Couldn’t check for updates. Try again in a moment.',
+}
 
 const card = 'rounded-3xl bg-surface shadow-[0_0_0_1px_var(--ring)]'
 const field =
@@ -66,10 +89,12 @@ const LOCATION_PROBLEMS = {
   unsupported: 'This browser can’t share its location.',
 } as const
 
-export const Settings = memo(function Settings({ ledger, theme, onTheme }: Props) {
+export const Settings = memo(function Settings({ ledger, theme, onTheme, updateReady, onApplyUpdate, onCheckUpdate }: Props) {
   const { txs, categories, categoryById, currency, budgetMinor, balanceSet, netMinor } = ledger
   const toast = useToast()
   const locationOn = useLiveQuery(async () => (await db.settings.get('recordLocation'))?.value === true, []) ?? false
+  const placement = useSuggestionPlacement()
+  const [update, setUpdate] = useState<UpdateCheck | 'idle' | 'checking'>('idle')
   const [locating, setLocating] = useState(false)
   const [locationError, setLocationError] = useState<string | null>(null)
   const [blocked, setBlocked] = useState(false)
@@ -99,6 +124,13 @@ export const Settings = memo(function Settings({ ledger, theme, onTheme }: Props
     await setRecordLocation(true)
     toast({ message: 'Location will be saved with new transactions' })
   }
+
+  async function checkForUpdates() {
+    setUpdate('checking')
+    setUpdate(await onCheckUpdate())
+  }
+
+  const updateWaiting = updateReady || update === 'available'
 
   async function removeLocations() {
     if (!window.confirm(`Remove the saved location from ${withLocation} transaction${withLocation === 1 ? '' : 's'}?`)) return
@@ -186,6 +218,39 @@ export const Settings = memo(function Settings({ ledger, theme, onTheme }: Props
               />
               <Icon name={t.icon} size={20} />
               {t.label}
+            </label>
+          ))}
+        </div>
+      </Group>
+
+      <Group id="suggest-h" title="Suggestions">
+        <div
+          role="radiogroup"
+          aria-label="Where to show suggestions"
+          className={`${card} divide-y divide-line overflow-hidden`}
+        >
+          {PLACEMENTS.map((p) => (
+            <label
+              key={p.id}
+              className="flex min-h-16 cursor-pointer items-center gap-3 px-4 py-3 has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2"
+            >
+              <input
+                type="radio"
+                name="suggestion-placement"
+                className="peer sr-only"
+                checked={placement === p.id}
+                onChange={() => void setSuggestionPlacement(p.id)}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium">{p.label}</span>
+                <span className="block text-sm text-ink-2">{p.detail}</span>
+              </span>
+              <span
+                aria-hidden="true"
+                className="flex size-6 shrink-0 items-center justify-center rounded-full text-transparent shadow-[inset_0_0_0_1.5px_var(--axis)] peer-checked:bg-btn peer-checked:text-btn-ink peer-checked:shadow-none"
+              >
+                <Icon name="check" size={16} />
+              </span>
             </label>
           ))}
         </div>
@@ -387,6 +452,41 @@ export const Settings = memo(function Settings({ ledger, theme, onTheme }: Props
             </li>
           ))}
         </ul>
+      </Group>
+
+      <Group
+        id="update-h"
+        title="App updates"
+        status={updateWaiting ? <Status on>Update ready</Status> : undefined}
+      >
+        <div className={`${card} p-4`}>
+          <p className="font-medium">Version {APP_VERSION}</p>
+          <p className="text-sm text-ink-2">
+            Build {APP_BUILD}
+            {APP_BUILD_DATE && `, ${APP_BUILD_DATE}`}
+          </p>
+          <p role="status" aria-live="polite" className="mt-3 text-sm text-ink-2">
+            {UPDATE_MESSAGES[updateWaiting ? 'available' : update]}
+          </p>
+          {updateWaiting ? (
+            <button
+              type="button"
+              onClick={() => (onApplyUpdate ? onApplyUpdate() : window.location.reload())}
+              className="mt-3 min-h-12 w-full rounded-full bg-btn font-semibold text-btn-ink"
+            >
+              Update now
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void checkForUpdates()}
+              disabled={update === 'checking'}
+              className="mt-3 min-h-12 w-full rounded-full bg-surface-2 font-medium disabled:opacity-50"
+            >
+              {update === 'checking' ? 'Checking…' : 'Check for updates'}
+            </button>
+          )}
+        </div>
       </Group>
 
       <Group id="ai-h" title="AI assistant" status={<Status on={false}>Coming soon</Status>}>

@@ -1,6 +1,7 @@
 import { flushSync } from 'react-dom'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { attachLocation } from './data/location'
+import { useSuggestionPlacement } from './data/preferences'
 import { useLedger } from './data/useLedger'
 import { useToday } from './data/useToday'
 import { formatMoney, localDateString } from './db/money'
@@ -21,6 +22,8 @@ import { ChatBar } from './ui/ChatBar'
 import { PwaBanner } from './ui/PwaBanner'
 import { SuggestionList } from './ui/SuggestionList'
 import { ToastProvider, useToast } from './ui/toast'
+
+const NO_SUGGESTIONS: Suggestion[] = []
 
 export default function App() {
   return (
@@ -51,12 +54,16 @@ function Shell() {
     prefill: null,
   })
 
+  // The user chooses where suggestions appear (or turns them off) in Settings.
+  const placement = useSuggestionPlacement()
+
   // Regulars that fit the current weekday, time of day and date. Recomputed when the data changes,
-  // when a new day starts, and each time the form opens (so the time of day is current).
+  // when a new day starts, and each time the form opens (so the time of day is current). Not
+  // computed at all while suggestions are off.
   const suggestions = useMemo(
-    () => suggest(ledger.txs, new Date(), 8),
+    () => (placement === 'off' ? NO_SUGGESTIONS : suggest(ledger.txs, new Date(), 8)),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sheet.open only forces a fresh clock reading
-    [ledger.txs, today, sheet.open],
+    [ledger.txs, today, sheet.open, placement],
   )
 
   useEffect(() => {
@@ -178,6 +185,8 @@ function Shell() {
             onSeeAll={seeAll}
             balanceShown={balanceShown}
             onToggleBalance={toggleBalance}
+            suggestions={placement === 'home' ? suggestions : NO_SUGGESTIONS}
+            onSuggestion={openSuggestion}
           />
         )}
         {tab === 'activity' && (
@@ -192,7 +201,16 @@ function Shell() {
         {tab === 'insights' && (
           <Insights ledger={ledger} month={month} onMonth={setMonth} today={today} onOpenSettings={openSettings} />
         )}
-        {tab === 'settings' && <Settings ledger={ledger} theme={theme.pref} onTheme={theme.setPref} />}
+        {tab === 'settings' && (
+          <Settings
+            ledger={ledger}
+            theme={theme.pref}
+            onTheme={theme.setPref}
+            updateReady={pwa.updateReady}
+            onApplyUpdate={pwa.applyUpdate}
+            onCheckUpdate={pwa.checkNow}
+          />
+        )}
       </main>
 
       <div ref={bottomStack}>
@@ -200,7 +218,7 @@ function Shell() {
           {/* Regulars for right now, one swipe away. Hidden only while the chat box itself has focus
               (the keyboard is up) and on short screens. Not group-focus-within: focusing a chip would
               then hide the row mid-tap and swallow the tap. */}
-          {suggestions.length > 0 && (
+          {placement === 'input' && suggestions.length > 0 && (
             <section aria-label="Suggested for now" className="mb-2 group-has-[textarea:focus]:hidden short:hidden">
               <SuggestionList
                 items={suggestions}
@@ -223,6 +241,7 @@ function Shell() {
         categories={ledger.categories}
         currency={ledger.currency}
         suggestions={suggestions}
+        showSuggestions={placement !== 'off'}
         prefill={sheet.prefill}
         onClose={closeSheet}
       />

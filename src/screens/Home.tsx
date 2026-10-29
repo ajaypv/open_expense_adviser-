@@ -16,9 +16,11 @@ import {
   type MonthKey,
 } from '../insights/aggregates'
 import { newestFirst } from '../insights/order'
+import type { Suggestion } from '../insights/suggestions'
 import { Icon } from '../ui/Icon'
 import { MonthSwitcher } from '../ui/MonthSwitcher'
-import { TxRow } from '../ui/TxRow'
+import { SuggestionList } from '../ui/SuggestionList'
+import { TxList } from '../ui/TxList'
 import { WalletPanel } from '../ui/WalletPanel'
 
 type Ledger = ReturnType<typeof useLedger>
@@ -36,6 +38,9 @@ interface Props {
   /** The estimated balance stays hidden until this is true; the app owns it so it survives tab changes. */
   balanceShown: boolean
   onToggleBalance: () => void
+  /** Regulars for the "On the Home screen" choice; empty when suggestions live elsewhere or are off. */
+  suggestions: Suggestion[]
+  onSuggestion: (s: Suggestion) => void
 }
 
 const EXAMPLES = ['450 lunch at Cafe', 'Uber 230 yesterday', 'Salary 80,000']
@@ -54,6 +59,8 @@ export const Home = memo(function Home({
   onSeeAll,
   balanceShown,
   onToggleBalance,
+  suggestions,
+  onSuggestion,
 }: Props) {
   const { txs, expenses, income, categoryById, currency, budgetMinor, loading } = ledger
   const currentMonth = localDateString(today).slice(0, 7)
@@ -173,6 +180,15 @@ export const Home = memo(function Home({
         onSetBalance={onOpenSettings}
       />
 
+      {isCurrent && suggestions.length > 0 && (
+        <section aria-labelledby="suggest-h" className="mt-8">
+          <h2 id="suggest-h" className="mb-3 px-1 text-lg font-semibold">
+            Suggested for now
+          </h2>
+          <SuggestionList items={suggestions} categoryById={categoryById} currency={currency} onPick={onSuggestion} tone="page" />
+        </section>
+      )}
+
       {total > 0 && (
         <>
           <section aria-labelledby="daily-h" className="mt-8">
@@ -213,13 +229,7 @@ export const Home = memo(function Home({
                 See all
               </button>
             </div>
-            <ul className={`${card} divide-y divide-line px-4`}>
-              {recent.map((t) => (
-                <li key={t.id}>
-                  <TxRow tx={t} category={categoryById.get(t.categoryId)} currency={currency} showDate onClick={onEdit} />
-                </li>
-              ))}
-            </ul>
+            <TxList rows={recent} categoryById={categoryById} currency={currency} showDate onEdit={onEdit} />
           </section>
         </>
       )}

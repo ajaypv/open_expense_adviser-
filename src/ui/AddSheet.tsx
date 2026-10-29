@@ -18,6 +18,8 @@ interface Props {
   currency: string
   /** Regulars that fit right now, shown as one-tap fills when adding. */
   suggestions: Suggestion[]
+  /** False when the user turned suggestions off in Settings. */
+  showSuggestions: boolean
   /** A regular to fill in as soon as the sheet opens (picked from Home). */
   prefill: Suggestion | null
   onClose: () => void
@@ -38,7 +40,7 @@ const chip =
 
 const input = 'mt-1 min-h-12 w-full rounded-xl bg-surface-2 px-3.5'
 
-export const AddSheet = memo(function AddSheet({ open, editing, categories, currency, suggestions, prefill, onClose }: Props) {
+export const AddSheet = memo(function AddSheet({ open, editing, categories, currency, suggestions, showSuggestions, prefill, onClose }: Props) {
   const dialog = useRef<HTMLDialogElement>(null)
   const amountInput = useRef<HTMLInputElement>(null)
   const toast = useToast()
@@ -197,7 +199,7 @@ export const AddSheet = memo(function AddSheet({ open, editing, categories, curr
           ))}
         </div>
 
-        {!editing && (
+        {!editing && showSuggestions && (
           <section aria-labelledby="sheet-suggest-h">
             <h3 id="sheet-suggest-h" className="mb-2 text-sm text-ink-2">
               Suggested for now

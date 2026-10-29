@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
@@ -7,9 +8,20 @@ import { VitePWA } from 'vite-plugin-pwa'
 // Locally it stays '/'. It must start and end with a slash.
 const base = process.env.BASE_PATH ?? '/'
 
+// Shown in Settings so people can tell which version they are running. The commit comes from the
+// deploy workflow (GITHUB_SHA); local builds say "local".
+const version: string = JSON.parse(readFileSync('./package.json', 'utf8')).version
+const build = process.env.GITHUB_SHA?.slice(0, 7) ?? 'local'
+const buildDate = new Date().toISOString().slice(0, 10)
+
 // https://vite.dev/config/
 export default defineConfig({
   base,
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+    __APP_BUILD__: JSON.stringify(build),
+    __APP_BUILD_DATE__: JSON.stringify(buildDate),
+  },
   build: {
     rolldownOptions: {
       output: {
