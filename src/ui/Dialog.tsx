@@ -1,7 +1,8 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { useBackClose } from './backStack'
 
 /**
- * A bottom sheet built on the native <dialog>: focus is trapped, Escape closes it, and the page
+ * A bottom sheet built on the native <dialog>: focus is trapped, Escape and the phone's back button close it, and the page
  * behind can't be scrolled. Styled by the `sheet` class in index.css.
  */
 export function Dialog({
@@ -16,6 +17,8 @@ export function Dialog({
   children: ReactNode
 }) {
   const ref = useRef<HTMLDialogElement>(null)
+  // Back closes the sheet that is open on top, and only that one.
+  useBackClose(open, onClose)
 
   useEffect(() => {
     const el = ref.current

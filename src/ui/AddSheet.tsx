@@ -17,6 +17,7 @@ import { db, type Account, type Category, type Place, type Transaction } from '.
 import { defaultAccountId } from '../insights/accounts'
 import { nextDueAfter } from '../insights/recurring'
 import type { Suggestion } from '../insights/suggestions'
+import { useBackClose } from './backStack'
 import { Icon } from './Icon'
 import { PickerField, type PickerOption } from './PickerField'
 import { SuggestionList } from './SuggestionList'
@@ -118,6 +119,8 @@ export const AddSheet = memo(function AddSheet({
   open, editing, categories, accounts, currency, suggestions, showSuggestions, prefill, startKind, onClose,
 }: Props) {
   useDisplay() // the suggestions show amounts, so redraw when display settings change
+  // The phone's back button closes the form, as the Close button does.
+  useBackClose(open, onClose)
   const dialog = useRef<HTMLDialogElement>(null)
   const amountInput = useRef<HTMLInputElement>(null)
   const amountCard = useRef<HTMLDivElement>(null)

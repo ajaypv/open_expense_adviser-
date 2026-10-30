@@ -32,6 +32,7 @@ import { LockScreen } from './security/LockScreen'
 import { useLockState, watchVisibility } from './security/lock'
 import { useTheme } from './theme/useTheme'
 import { AddSheet } from './ui/AddSheet'
+import { useBackClose } from './ui/backStack'
 import { BottomNav, TABS, type Tab } from './ui/BottomNav'
 import { ChatBar } from './ui/ChatBar'
 import { GoalMoneySheet, GoalSheet } from './ui/GoalSheets'
@@ -221,6 +222,9 @@ function Shell() {
     if (!document.startViewTransition) return update()
     document.startViewTransition({ update, types: [direction] } as unknown as () => void)
   }, [])
+
+  // On any tab but Home, the phone's back button goes to Home rather than out of the app.
+  useBackClose(tab !== 'home', () => go('home'))
 
   // The input bar reads the latest data through refs, so its handler keeps the same identity and the
   // bar doesn't re-render every time a transaction is added.

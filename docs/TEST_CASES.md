@@ -16,8 +16,8 @@ Version 0.3.0. This lists what to check, how, and what is already checked by the
 
 | | |
 |---|---|
-| Test files | 75 |
-| Tests | 1000 |
+| Test files | 77 |
+| Tests | 1030 |
 | Statements covered | 94.4% |
 | Lines covered | 95.9% |
 
@@ -496,3 +496,20 @@ Home answers four questions in order: where do I stand, am I doing okay, where d
 | HR-8 | One real insight | Look near the bottom | "Understand your spending" with a true statement from the month's transactions, such as the biggest category's share, and a button to Insights; nothing when nothing was spent | Auto: `InsightCard`, `app.flow` |
 | HR-9 | Goals with context | Have a goal | A Goals block with the nearest goal, what is saved of what it costs, a progress bar in amber, what is left or how long, and how many more goals; the header button keeps its ring but not a bare percentage; no block when there are no goals | Auto: `GoalsSummary`, `GoalsButton`, `Home` |
 | HR-10 | Soft dark theme | Use the app in dark mode at night | A charcoal page with lighter cards and off-white text, not black on bright white; every text, edge and colour still passes the contrast check | Auto: `contrast`. **Device** (how it feels) |
+
+## The back button
+
+On a phone, back moves back through the app instead of leaving it. It leaves the app only from Home with nothing open.
+
+| ID | Case | Do | Expect | Covered by |
+|---|---|---|---|---|
+| BAK-1 | From a tab | Open Activity, Insights or Settings, then press back | You are on Home, not out of the app | Auto: `backButton.flow`. **Device** |
+| BAK-2 | From Home | On Home with nothing open, press back | The phone leaves the app as it always did | Auto: `backButton.flow`. **Device** |
+| BAK-3 | Tab to tab | Home, then Activity, then Insights; press back | One press goes to Home | Auto: `backButton.flow` |
+| BAK-4 | A sheet | Open the goals, the add form, upcoming payments, a picker or the month list; press back | Only that closes; you stay where you were | Auto: `backButton.flow`, `backStack.flow` |
+| BAK-5 | Sheet in a sheet | Open Goals, then New goal on top; press back twice | The first press closes New goal, the second closes Goals | Auto: `backButton.flow` |
+| BAK-6 | A list in the form | Open the add form, then the Currency list; press back | The list closes and the form stays | Auto: `backButton.flow` |
+| BAK-7 | In Activity | Open the filters, or select mode; press back | That closes first; a second press goes to Home | Auto: `backButton.flow` |
+| BAK-8 | Closed another way | Close something with its Close button, Escape, or the tab bar | Nothing is left behind: the next back press is not wasted | Auto: `backStack.flow`, `backButton.flow` |
+| BAK-9 | Many times | Open and close a sheet again and again | Back does not pile up or need extra presses | Auto: `backStack.flow`, `backButton.flow` |
+| BAK-10 | After a reload | Reload the page while a sheet is open, then press back | The first press is not wasted | Auto: `backStack.flow`. **Device** |

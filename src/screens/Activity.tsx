@@ -26,6 +26,7 @@ import {
   type KindFilter,
 } from '../insights/filters'
 import { newestFirst } from '../insights/order'
+import { useBackClose } from '../ui/backStack'
 import { Icon } from '../ui/Icon'
 import { PickerField } from '../ui/PickerField'
 import { ScreenSkeleton } from '../ui/ScreenSkeleton'
@@ -109,6 +110,9 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
   const [minText, setMinText] = useState('')
   const [maxText, setMaxText] = useState('')
   const [selecting, setSelecting] = useState(false)
+  // Back closes the filters, and then leaves select mode, before it leaves the screen.
+  useBackClose(filtersOpen, () => setFiltersOpen(false))
+  useBackClose(selecting, endSelecting)
   const [picked, setPicked] = useState<Set<number>>(new Set())
   const chipRow = useRef<HTMLDivElement>(null)
 
