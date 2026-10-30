@@ -127,3 +127,23 @@ export function parseExpense(text: string, today = new Date()): ParsedExpense | 
 
   return { kind, amountMinor: toMinor(amount), merchant, categoryName, date, paymentMethod }
 }
+
+/**
+ * Entries are separated by semicolons, new lines, or commas that are not inside a number, so
+ * "1,200 rent" stays one amount while "coffee 120, lunch 340" becomes two entries.
+ */
+const SEPARATOR = /[;\n]+|,(?!\d)/
+
+/**
+ * Parses one or several entries typed together ("coffee 120, lunch 340, auto 80"). If any piece has
+ * no amount the text is treated as a single entry instead, so a stray comma can't lose anything.
+ */
+export function parseMany(text: string, today = new Date()): ParsedExpense[] {
+  const pieces = text.split(SEPARATOR).map((p) => p.trim()).filter(Boolean)
+  if (pieces.length > 1) {
+    const parsed = pieces.map((p) => parseExpense(p, today))
+    if (parsed.every((p): p is ParsedExpense => p !== null)) return parsed
+  }
+  const single = parseExpense(text, today)
+  return single ? [single] : []
+}

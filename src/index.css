@@ -191,6 +191,7 @@ dialog.sheet {
   color: var(--ink);
   box-shadow: 0 -1px 0 var(--ring);
   overflow-y: auto;
+  overflow-x: hidden; /* the sheet scrolls up and down only; rows inside it scroll sideways on their own */
 
   translate: 0 100%;
   opacity: 0;

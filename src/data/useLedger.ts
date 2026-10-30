@@ -1,45 +1,46 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo } from 'react'
-import { INCOME_CATEGORY } from '../db/defaultCategories'
-import { db, type Category, type Transaction } from '../db/schema'
-import { balanceFrom } from '../insights/aggregates'
+import { db, type Account, type Budget, type Category, type Goal, type Recurring, type Transaction } from '../db/schema'
+import { buildLedger, type Rates } from './buildLedger'
 
-const NO_TXS: Transaction[] = []
+export type { LedgerTx, Rates } from './buildLedger'
+
+const NO_ROWS: Transaction[] = []
 const NO_CATS: Category[] = []
+const NO_ACCOUNTS: Account[] = []
+const NO_BUDGETS: Budget[] = []
+const NO_RULES: Recurring[] = []
+const NO_GOALS: Goal[] = []
+const NO_RATES: Rates = {}
 
 /** Live view of everything the screens need. Personal-scale data, so one full read is fine. */
 export function useLedger() {
   const rows = useLiveQuery(() => db.transactions.toArray(), [])
   const categories = useLiveQuery(() => db.categories.toArray(), [])
   const currencyRow = useLiveQuery(() => db.settings.get('currency'), [])
-  const budgetRow = useLiveQuery(() => db.budgets.filter((b) => b.categoryId === null).first(), [])
-  const openingRow = useLiveQuery(() => db.settings.get('openingBalance'), [])
+  const budgets = useLiveQuery(() => db.budgets.toArray(), [])
+  const accounts = useLiveQuery(() => db.accounts.toArray(), [])
+  const recurring = useLiveQuery(() => db.recurring.toArray(), [])
+  const ratesRow = useLiveQuery(() => db.settings.get('rates'), [])
+  const goals = useLiveQuery(() => db.goals.toArray(), [])
 
   // One memoized object: it keeps the same identity until the data actually changes, so screens
   // wrapped in memo() skip re-rendering when something unrelated (a sheet, a tab) changes.
-  return useMemo(() => {
-    const txs = rows ?? NO_TXS
-    const cats = categories ?? NO_CATS
-    const balanceSet = typeof openingRow?.value === 'number'
-    const balance = balanceFrom(txs, balanceSet ? (openingRow.value as number) : 0)
-    return {
-      loading: rows === undefined || categories === undefined,
-      txs,
-      // Money sent drives every spending chart; money received only feeds the balance and lists.
-      expenses: txs.filter((t) => t.kind !== 'income'),
-      income: txs.filter((t) => t.kind === 'income'),
-      categories: cats,
-      /** Categories you can file an expense under (everything except "Income"). */
-      expenseCategories: cats.filter((c) => c.name !== INCOME_CATEGORY),
-      categoryById: new Map(cats.map((c) => [c.id, c])),
-      currency: typeof currencyRow?.value === 'string' ? currencyRow.value : 'INR',
-      budgetMinor: budgetRow?.monthlyLimitMinor ?? null,
-      /** True once the user has told the app their balance; otherwise the estimate starts from zero. */
-      balanceSet,
-      /** Opening balance + everything received - everything sent, over all time. */
-      estimatedBalanceMinor: balance.estimatedMinor,
-      /** Received minus sent over all time; used to calibrate the opening balance. */
-      netMinor: balance.netMinor,
-    }
-  }, [rows, categories, currencyRow, budgetRow, openingRow])
+  return useMemo(
+    () => ({
+      loading: rows === undefined || categories === undefined || accounts === undefined,
+      // Goals are saved by hand and don't come from transactions, so they bypass the ledger build.
+      goals: goals ?? NO_GOALS,
+      ...buildLedger({
+        transactions: rows ?? NO_ROWS,
+        categories: categories ?? NO_CATS,
+        accounts: accounts ?? NO_ACCOUNTS,
+        budgets: budgets ?? NO_BUDGETS,
+        recurring: recurring ?? NO_RULES,
+        currency: typeof currencyRow?.value === 'string' ? currencyRow.value : 'INR',
+        rates: ratesRow && typeof ratesRow.value === 'object' && ratesRow.value ? (ratesRow.value as Rates) : NO_RATES,
+      }),
+    }),
+    [rows, categories, currencyRow, budgets, accounts, recurring, ratesRow, goals],
+  )
 }

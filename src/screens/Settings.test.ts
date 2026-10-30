@@ -1,17 +1,13 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
+import { makeLedger } from '../test/ledger'
 import { Settings } from './Settings'
-
-const ledger = {
-  loading: false, txs: [], expenses: [], income: [], categories: [], expenseCategories: [],
-  categoryById: new Map(), currency: 'INR', budgetMinor: null, balanceSet: false, estimatedBalanceMinor: 0, netMinor: 0,
-}
 
 const render = (props: { updateReady?: boolean } = {}) =>
   renderToStaticMarkup(
     createElement(Settings, {
-      ledger, theme: 'system', onTheme: () => {}, updateReady: false, onApplyUpdate: () => {}, onCheckUpdate: async () => 'latest',
+      ledger: makeLedger(), theme: 'system', onTheme: () => {}, updateReady: false, onApplyUpdate: () => {}, onCheckUpdate: async () => 'latest', onShowWhatsNew: () => {},
       ...props,
     }),
   )

@@ -57,6 +57,23 @@ export default defineConfig({
         background_color: '#0d0d0d',
         theme_color: '#0d0d0d',
         categories: ['finance', 'productivity'],
+        // Long-press the icon to jump straight to the add form (handled by ?add= in App).
+        shortcuts: [
+          {
+            name: 'Add expense',
+            short_name: 'Expense',
+            description: 'Log money you sent',
+            url: `${base}?add=expense`,
+            icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+          },
+          {
+            name: 'Add received money',
+            short_name: 'Received',
+            description: 'Log money you received',
+            url: `${base}?add=income`,
+            icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+          },
+        ],
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },

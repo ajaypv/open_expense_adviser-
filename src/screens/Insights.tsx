@@ -1,9 +1,13 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { BarList } from '../charts/BarList'
 import { CategoryBars } from '../charts/CategoryBars'
+import { Meter } from '../charts/Meter'
+import { MonthColumns } from '../charts/MonthColumns'
 import { Movers } from '../charts/Movers'
 import { PaceChart } from '../charts/PaceChart'
+import { TrendBars } from '../charts/TrendBars'
 import { WeekdayBars } from '../charts/WeekdayBars'
+import { useDisplay } from '../data/display'
 import type { useLedger } from '../data/useLedger'
 import { formatMoney, formatMoneyCompact, localDateString } from '../db/money'
 import {
@@ -21,6 +25,8 @@ import {
   topMerchants,
   type MonthKey,
 } from '../insights/aggregates'
+import { categoryBudgetStatus, categoryTrends, monthlyTotals, savingsFor, unusualExpenses } from '../insights/trends'
+import { Icon } from '../ui/Icon'
 import { MonthSwitcher } from '../ui/MonthSwitcher'
 
 type Ledger = ReturnType<typeof useLedger>
@@ -53,11 +59,14 @@ function Section({ id, title, intro, children }: { id: string; title: string; in
 
 /** What the logged expenses say, computed on the device. Each block answers one question. */
 export const Insights = memo(function Insights({ ledger, month, onMonth, today, onOpenSettings }: Props) {
+  useDisplay() // amounts are masked or regrouped by display settings, so redraw when they change
   // Insights describe spending, so they use money sent only; received money feeds the balance.
-  const { expenses: txs, categoryById, currency, budgetMinor } = ledger
+  const { expenses: txs, income, categoryById, currency, budgetMinor, categoryBudgets } = ledger
   const currentMonth = localDateString(today).slice(0, 7)
   const isCurrent = month === currentMonth
   const money = (m: number) => formatMoney(m, currency)
+  // Months with expenses get a dot in the month picker (this screen only looks at money sent).
+  const activeMonths = useMemo(() => new Set(txs.map((t) => t.date.slice(0, 7))), [txs])
 
   const monthTxs = inMonth(txs, month)
   const total = sum(monthTxs)
@@ -76,6 +85,14 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
   const peakDay = weekdays.indexOf(Math.max(...weekdays))
   const changes = hasPrevious ? categoryChanges(txs, month, today).slice(0, 4) : []
   const biggest = total > 0 ? monthTxs.reduce((a, b) => (b.amountMinor > a.amountMinor ? b : a)) : null
+
+  // Money in against money out, what each category's limit has left, the odd big purchase, and the longer view.
+  const savings = savingsFor(txs, income, month)
+  const budgetRows = categoryBudgetStatus(monthTxs, categoryBudgets)
+  const unusual = unusualExpenses(txs, month)
+  const trends = categoryTrends(txs, month, 6, 4).filter((t) => t.months.some((m) => m > 0))
+  const yearTotals = monthlyTotals(txs, month, 12)
+  const monthsWithData = yearTotals.filter((m) => m.totalMinor > 0).length
 
   let pace: string | null = null
   if (projected !== null) {
@@ -101,7 +118,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
   return (
     <div className="pb-8">
       <h1 className="sr-only">Insights</h1>
-      <MonthSwitcher month={month} currentMonth={currentMonth} onChange={onMonth} />
+      <MonthSwitcher month={month} currentMonth={currentMonth} onChange={onMonth} activeMonths={activeMonths} />
 
       {total === 0 ? (
         <p className="mt-8 text-3xl font-semibold leading-tight tracking-tight">
@@ -148,6 +165,77 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
             ))}
           </dl>
 
+          {savings.receivedMinor > 0 && (
+            <Section id="savings-h" title="Money in and out">
+              <dl className="mt-3 grid grid-cols-2 gap-3 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]">
+                <div className="flex flex-col-reverse">
+                  <dt className="text-sm text-ink-2">Received</dt>
+                  <dd className="text-xl font-semibold tabular-nums">{money(savings.receivedMinor)}</dd>
+                </div>
+                <div className="flex flex-col-reverse">
+                  <dt className="text-sm text-ink-2">Sent</dt>
+                  <dd className="text-xl font-semibold tabular-nums">{money(savings.sentMinor)}</dd>
+                </div>
+              </dl>
+              <p className="mt-2 text-lg">
+                {savings.savedMinor >= 0 ? (
+                  <>
+                    You kept <b className="font-semibold">{money(savings.savedMinor)}</b>
+                    {savings.ratePct !== null && <>, {savings.ratePct}% of what came in</>}.
+                  </>
+                ) : (
+                  <>
+                    You spent <b className="font-semibold text-critical">{money(-savings.savedMinor)} more</b> than came in
+                    {isCurrent ? ' so far' : ''}.
+                  </>
+                )}
+              </p>
+            </Section>
+          )}
+
+          {budgetRows.length > 0 && (
+            <Section id="budgets-h" title="Budgets by category">
+              <ul className="mt-3 space-y-5 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]">
+                {budgetRows.map((b) => {
+                  const cat = categoryById.get(b.categoryId)
+                  return (
+                    <li key={b.categoryId}>
+                      <p className="mb-1.5 flex items-center gap-2 font-medium">
+                        <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: cat?.color ?? 'var(--other)' }} />
+                        {cat?.name ?? 'Other'}
+                      </p>
+                      <Meter spentMinor={b.spentMinor} limitMinor={b.limitMinor} currency={currency} />
+                    </li>
+                  )
+                })}
+              </ul>
+            </Section>
+          )}
+
+          {unusual.length > 0 && (
+            <Section id="unusual-h" title="Bigger than usual" intro="Purchases far above what that category normally costs.">
+              <ul className="mt-3 divide-y divide-line rounded-3xl bg-surface px-4 shadow-[0_0_0_1px_var(--ring)]">
+                {unusual.map((u) => (
+                  <li key={u.tx.id} className="flex items-start gap-3 py-3">
+                    <span aria-hidden="true" className="mt-0.5 shrink-0" style={{ color: 'var(--warn)' }}>
+                      <Icon name="warn" size={20} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">
+                        {u.tx.merchant || categoryById.get(u.tx.categoryId)?.name || 'Expense'}
+                      </p>
+                      <p className="text-sm text-ink-2">
+                        {Math.round(u.times * 10) / 10} times the usual {categoryById.get(u.tx.categoryId)?.name ?? 'category'}{' '}
+                        spend of {money(u.typicalMinor)}.
+                      </p>
+                    </div>
+                    <span className="shrink-0 font-semibold tabular-nums">{money(u.tx.amountMinor)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          )}
+
           {changes.length > 0 && (
             <Section
               id="moved-h"
@@ -184,6 +272,22 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
                   detail: `${m.count} ${m.count === 1 ? 'visit' : 'visits'}`,
                 }))}
               />
+            </Section>
+          )}
+
+          {trends.length > 0 && monthsWithData >= 2 && (
+            <Section id="trends-h" title="Trends by category" intro="The last six months for your biggest categories.">
+              <div className="mt-3 rounded-3xl bg-surface px-4 shadow-[0_0_0_1px_var(--ring)]">
+                <TrendBars trends={trends} categoryById={categoryById} currency={currency} />
+              </div>
+            </Section>
+          )}
+
+          {monthsWithData >= 2 && (
+            <Section id="year-h" title="The last 12 months">
+              <div className="mt-3 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]">
+                <MonthColumns totals={yearTotals} currency={currency} />
+              </div>
             </Section>
           )}
         </>

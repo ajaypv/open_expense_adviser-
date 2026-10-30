@@ -78,3 +78,44 @@ describe('database v1 -> v2 migration', () => {
     expect(await db.categories.count()).toBe(10)
   })
 })
+
+describe('database v3 -> v4 migration (accounts)', () => {
+  it('turns the old single opening balance into the first account, so no estimate changes', async () => {
+    const ids = await seedV1()
+    // A v1 database never had a balance, but a v3 one could: simulate it before upgrading.
+    const old = new Dexie('expense-tracker')
+    old.version(1).stores({
+      transactions: '++id, date, categoryId, merchant, createdAt',
+      categories: '++id, &name',
+      budgets: '++id, categoryId',
+      settings: 'key',
+      chat: '++id, createdAt',
+    })
+    await old.open()
+    await old.table('settings').put({ key: 'openingBalance', value: 123_400 })
+    old.close()
+    void ids
+
+    const { db } = await import('./schema')
+    await db.open()
+    const accounts = await db.accounts.toArray()
+    expect(accounts).toMatchObject([{ name: 'Main', openingMinor: 123_400 }])
+    expect(await db.settings.get('openingBalance')).toBeUndefined() // moved, not copied
+    expect(await db.recurring.count()).toBe(0)
+    // Existing transactions keep working: none names an account, so they belong to the first one.
+    expect((await db.transactions.toArray()).every((t) => t.accountId === undefined && t.deletedAt === undefined)).toBe(true)
+  })
+
+  it('starts a brand-new install with one account that has no balance yet', async () => {
+    const { db } = await import('./schema')
+    await db.open()
+    expect(await db.accounts.toArray()).toMatchObject([{ name: 'Main', openingMinor: null }])
+  })
+
+  it('leaves the account without a balance when the old database never had one', async () => {
+    await seedV1()
+    const { db } = await import('./schema')
+    await db.open()
+    expect(await db.accounts.toArray()).toMatchObject([{ name: 'Main', openingMinor: null }])
+  })
+})

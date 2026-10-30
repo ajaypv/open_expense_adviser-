@@ -56,14 +56,33 @@ const dayGap = (a: number, b: number) => {
   return Math.min(gap, 30 - gap)
 }
 
+export interface Here {
+  lat: number
+  lon: number
+}
+
+/** Within this many metres counts as "the same place". Position fixes are rounded to about 11 m. */
+export const NEARBY_METERS = 150
+
+/** Straight-line distance between two points on the earth, in metres (haversine). */
+export function distanceMeters(a: Here, b: Here): number {
+  const rad = Math.PI / 180
+  const dLat = (b.lat - a.lat) * rad
+  const dLon = (b.lon - a.lon) * rad
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2
+  return 2 * 6_371_000 * Math.asin(Math.min(1, Math.sqrt(h)))
+}
+
 /**
  * Regular transactions, ranked by how well they fit right now. A merchant needs at least two
  * entries to count as regular. Frequency sets the base score; matching today's weekday, the
  * current part of the day (from when entries were logged) or a monthly date adds to it.
  * Merchants logged only once come after the regulars, newest first, so the list is never empty
- * once there is any history. Anything already logged today goes last.
+ * once there is any history. Anything already logged today goes last. When `here` is given,
+ * merchants you have paid at this spot before rank higher. Transfers and amounts recorded in
+ * another currency are left out: neither makes a sensible one-tap fill.
  */
-export function suggest(txs: Transaction[], now: Date, limit = 4, kind?: Transaction['kind']): Suggestion[] {
+export function suggest(txs: Transaction[], now: Date, limit = 4, kind?: Transaction['kind'], here?: Here): Suggestion[] {
   const today = localDateString(now)
   const weekday = now.getDay()
   const dayOfMonth = now.getDate()
@@ -73,7 +92,8 @@ export function suggest(txs: Transaction[], now: Date, limit = 4, kind?: Transac
   const groups = new Map<string, Transaction[]>()
   for (const t of txs) {
     const name = t.merchant.trim().toLowerCase()
-    if (!name || (kind && t.kind !== kind)) continue
+    if (!name || t.kind === 'transfer' || (kind && t.kind !== kind)) continue
+    if ((t as { originalCurrency?: string }).originalCurrency) continue
     const key = `${t.kind}:${name}`
     const group = groups.get(key)
     if (group) group.push(t)
@@ -101,6 +121,7 @@ export function suggest(txs: Transaction[], now: Date, limit = 4, kind?: Transac
     let onWeekday = 0
     let inPart = 0
     let nearDay = 0
+    let nearHere = 0
     const days: number[] = []
     const monthSet = new Set<string>()
     for (const t of items) {
@@ -113,6 +134,7 @@ export function suggest(txs: Transaction[], now: Date, limit = 4, kind?: Transac
         if (partOfDay(new Date(t.createdAt).getHours()) === part) inPart++
       }
       if (dayGap(day, dayOfMonth) <= 2) nearDay++
+      if (here && t.location && distanceMeters(here, t.location) <= NEARBY_METERS) nearHere++
     }
     const weekdayShare = onWeekday / n
     const partShare = inPart / n
@@ -127,6 +149,8 @@ export function suggest(txs: Transaction[], now: Date, limit = 4, kind?: Transac
     }
     if (n >= 3 && weekdayShare >= 0.5) hints.push({ score: 2 * weekdayShare, reason: `Usually on ${WEEKDAYS[weekday]}` })
     if (n >= 3 && partShare >= 0.6) hints.push({ score: 1.5 * partShare, reason: `Usually in the ${part}` })
+    // Being where you have paid before is the strongest hint of all.
+    if (nearHere > 0 && nearHere / n >= 0.4) hints.push({ score: 4 * (nearHere / n) + 1, reason: 'You often pay here' })
     hints.sort((a, b) => b.score - a.score)
 
     const last = items[n - 1]

@@ -9,6 +9,8 @@ interface Props {
   balanceMinor: number
   /** Whether the user has told the app their balance (otherwise it starts from zero). */
   balanceSet: boolean
+  /** Each account's estimated balance, revealed with the total when there is more than one. */
+  accountLines?: { id: number; name: string; estimatedMinor: number }[]
   shown: boolean
   onToggle: () => void
   onSetBalance: () => void
@@ -27,6 +29,7 @@ export function WalletPanel({
   currency,
   balanceMinor,
   balanceSet,
+  accountLines,
   shown,
   onToggle,
   onSetBalance,
@@ -82,6 +85,17 @@ export function WalletPanel({
             {shown ? 'Hide balance' : 'Show balance'}
           </button>
         </div>
+
+        {shown && accountLines && accountLines.length > 1 && (
+          <ul aria-label="Balance by account" className="mt-3 space-y-1.5 border-t border-line pt-3">
+            {accountLines.map((a) => (
+              <li key={a.id} className="flex items-baseline justify-between gap-3">
+                <span className="truncate text-ink-2">{a.name}</span>
+                <span className="font-medium tabular-nums">{formatMoney(a.estimatedMinor, currency)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
 
         {shown && (
           <p className="mt-3 border-t border-line pt-3 text-sm text-ink-2">

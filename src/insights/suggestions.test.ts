@@ -129,3 +129,52 @@ describe('suggest', () => {
     expect(suggest([], wednesdayEvening)).toEqual([])
   })
 })
+
+describe('suggest near a place', () => {
+  const here = { lat: 12.9716, lon: 77.5946 }
+  const at = (merchant: string, lat: number, lon: number, date: string) =>
+    tx(date, merchant, 100, { location: { lat, lon, accuracyM: 10 } })
+
+  it('measures distance in metres', async () => {
+    const { distanceMeters } = await import('./suggestions')
+    expect(distanceMeters(here, here)).toBe(0)
+    // About 111 m per 0.001 degree of latitude.
+    expect(Math.round(distanceMeters(here, { lat: 12.9726, lon: 77.5946 }))).toBeGreaterThan(100)
+    expect(Math.round(distanceMeters(here, { lat: 12.9726, lon: 77.5946 }))).toBeLessThan(125)
+    expect(distanceMeters(here, { lat: 13.9716, lon: 77.5946 })).toBeGreaterThan(100_000) // a degree away
+  })
+
+  it('puts a merchant paid at this spot ahead of one with no connection to it, and says so', () => {
+    const txs = [
+      at('Corner Cafe', 12.9716, 77.5946, '2026-10-01'),
+      at('Corner Cafe', 12.9717, 77.5946, '2026-10-02'),
+      tx('2026-10-03', 'Gym'),
+      tx('2026-10-04', 'Gym'),
+      tx('2026-10-05', 'Gym'),
+    ]
+    const without = suggest(txs, wednesdayEvening)
+    expect(without[0].merchant).toBe('Gym') // three entries beat two when location is unknown
+    const near = suggest(txs, wednesdayEvening, 4, undefined, here)
+    expect(near[0]).toMatchObject({ merchant: 'Corner Cafe', reason: 'You often pay here' })
+  })
+
+  it('ignores merchants paid somewhere else, or with no saved location', () => {
+    const txs = [
+      at('Far Cafe', 19.07, 72.87, '2026-10-01'),
+      at('Far Cafe', 19.07, 72.87, '2026-10-02'),
+      tx('2026-10-03', 'Gym'),
+      tx('2026-10-04', 'Gym'),
+    ]
+    expect(suggest(txs, wednesdayEvening, 4, undefined, here).every((s) => s.reason !== 'You often pay here')).toBe(true)
+  })
+
+  it('leaves out transfers and amounts recorded in another currency', () => {
+    const rows = [
+      tx('2026-10-01', 'Cafe', 100, { kind: 'transfer' }),
+      tx('2026-10-02', 'Cafe', 100, { kind: 'transfer' }),
+      { ...tx('2026-10-03', 'Hotel'), originalCurrency: 'USD' },
+      { ...tx('2026-10-04', 'Hotel'), originalCurrency: 'USD' },
+    ]
+    expect(suggest(rows, wednesdayEvening)).toEqual([])
+  })
+})

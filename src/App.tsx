@@ -1,43 +1,77 @@
 import { flushSync } from 'react-dom'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { markVersionSeen, startupNotice, useOnboarded, useSeenVersion } from './data/appState'
+import type { LedgerTx } from './data/buildLedger'
+import { useDisplay } from './data/display'
 import { attachLocation } from './data/location'
 import { useSuggestionPlacement } from './data/preferences'
 import { useLedger } from './data/useLedger'
+import { useNearby } from './data/useNearby'
 import { useToday } from './data/useToday'
 import { formatMoney, localDateString } from './db/money'
-import { addTransaction, categoryIdByName, deleteTransaction, requestPersistentStorage } from './db/repo'
-import type { Transaction } from './db/schema'
+import {
+  addTransaction,
+  categoryIdByName,
+  deleteTransaction,
+  deleteTransactions,
+  purgeExpiredTrash,
+  requestPersistentStorage,
+} from './db/repo'
+import type { Goal, Transaction } from './db/schema'
 import { monthOf, type MonthKey } from './insights/aggregates'
+import { learnedCategoryId } from './ingest/learn'
+import { parseMany } from './ingest/localParser'
 import { suggest, type Suggestion } from './insights/suggestions'
-import { parseExpense } from './ingest/localParser'
 import { usePwa } from './pwa/usePwa'
+import { APP_VERSION } from './pwa/version'
+import { useReminders } from './reminders/useReminders'
 import { Activity } from './screens/Activity'
 import { Home } from './screens/Home'
 import { Insights } from './screens/Insights'
 import { Settings } from './screens/Settings'
+import { LockScreen } from './security/LockScreen'
+import { useLockState, watchVisibility } from './security/lock'
 import { useTheme } from './theme/useTheme'
 import { AddSheet } from './ui/AddSheet'
 import { BottomNav, TABS, type Tab } from './ui/BottomNav'
 import { ChatBar } from './ui/ChatBar'
+import { GoalMoneySheet, GoalSheet } from './ui/GoalSheets'
 import { PwaBanner } from './ui/PwaBanner'
 import { SuggestionList } from './ui/SuggestionList'
 import { ToastProvider, useToast } from './ui/toast'
+import { Welcome } from './ui/Welcome'
+import { WhatsNew } from './ui/WhatsNew'
 
 const NO_SUGGESTIONS: Suggestion[] = []
 
 export default function App() {
   return (
     <ToastProvider>
-      <Shell />
+      <Gate />
     </ToastProvider>
   )
 }
+
+/**
+ * With the app lock on, nothing but the PIN screen is rendered until it is unlocked, so there is
+ * nothing on screen (and nothing queried) for someone else to see.
+ */
+function Gate() {
+  const lock = useLockState()
+  useEffect(() => watchVisibility(), [])
+  return lock.locked ? <LockScreen /> : <Shell />
+}
+
+type Sheet = { open: boolean; editing: LedgerTx | null; prefill: Suggestion | null; startKind: Transaction['kind'] }
+/** `n` changes each time a goal sheet opens, so its form starts fresh from the goal it was opened for. */
+type GoalSheetState = { open: boolean; goal: Goal | null; n: number }
 
 function Shell() {
   const pwa = usePwa()
   const ledger = useLedger()
   const theme = useTheme()
   const toast = useToast()
+  useDisplay() // the suggestion row shows amounts, so redraw when display settings change
 
   const today = useToday()
   const currentMonth = localDateString(today).slice(0, 7)
@@ -48,26 +82,59 @@ function Shell() {
   // (an example chip); a new `n` remounts the bar with that text.
   const [draft, setDraft] = useState({ text: '', n: 0 })
   const [categoryFilter, setCategoryFilter] = useState<number | null>(null)
-  const [sheet, setSheet] = useState<{ open: boolean; editing: Transaction | null; prefill: Suggestion | null }>({
-    open: false,
-    editing: null,
-    prefill: null,
-  })
+  const [sheet, setSheet] = useState<Sheet>({ open: false, editing: null, prefill: null, startKind: 'expense' })
+  const [goalSheet, setGoalSheet] = useState<GoalSheetState>({ open: false, goal: null, n: 0 })
+  const [moneySheet, setMoneySheet] = useState<GoalSheetState>({ open: false, goal: null, n: 0 })
 
   // The user chooses where suggestions appear (or turns them off) in Settings.
   const placement = useSuggestionPlacement()
+  // Where they are right now, if they have turned location on: merchants paid near here rank higher.
+  const here = useNearby(sheet.open)
 
-  // Regulars that fit the current weekday, time of day and date. Recomputed when the data changes,
-  // when a new day starts, and each time the form opens (so the time of day is current). Not
-  // computed at all while suggestions are off.
+  // Regulars that fit the current weekday, time of day, date and place. Recomputed when the data
+  // changes, when a new day starts, and each time the form opens (so the time of day is current).
+  // Not computed at all while suggestions are off.
   const suggestions = useMemo(
-    () => (placement === 'off' ? NO_SUGGESTIONS : suggest(ledger.txs, new Date(), 8)),
+    () => (placement === 'off' ? NO_SUGGESTIONS : suggest(ledger.txs, new Date(), 8, undefined, here ?? undefined)),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sheet.open only forces a fresh clock reading
-    [ledger.txs, today, sheet.open, placement],
+    [ledger.txs, today, sheet.open, placement, here],
+  )
+
+  // The form has a tab for each kind, so each gets its own best picks. Taking them from the list above
+  // would leave "Received" empty whenever the top few are all expenses.
+  const sheetSuggestions = useMemo(
+    () =>
+      placement === 'off'
+        ? NO_SUGGESTIONS
+        : [...suggest(ledger.txs, new Date(), 4, 'expense', here ?? undefined), ...suggest(ledger.txs, new Date(), 4, 'income', here ?? undefined)],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sheet.open only forces a fresh clock reading
+    [ledger.txs, today, sheet.open, placement, here],
   )
 
   useEffect(() => {
     void requestPersistentStorage()
+    void purgeExpiredTrash() // anything deleted more than 30 days ago goes for good
+  }, [])
+
+  // Reminders to log, budget alerts, and the number on the app icon.
+  const showMessage = useCallback((message: string) => toast({ message }), [toast])
+  const { logNudge } = useReminders(ledger, showMessage)
+
+  // First launch asks three optional questions; after an update, what is new is shown once.
+  const onboarded = useOnboarded()
+  const seenVersion = useSeenVersion()
+  const notice = startupNotice({
+    loading: ledger.loading,
+    hasData: ledger.txs.length > 0 || ledger.trash.length > 0,
+    onboarded,
+    seenVersion,
+    version: APP_VERSION,
+  })
+  const [whatsNewByHand, setWhatsNewByHand] = useState(false)
+  const showWhatsNew = useCallback(() => setWhatsNewByHand(true), [])
+  const closeWhatsNew = useCallback(() => {
+    setWhatsNewByHand(false)
+    void markVersionSeen(APP_VERSION)
   }, [])
 
   // The estimated balance starts hidden. It stays revealed across tabs, but is hidden again
@@ -112,43 +179,89 @@ function Shell() {
     document.startViewTransition({ update, types: [direction] } as unknown as () => void)
   }, [])
 
+  // The input bar reads the latest data through refs, so its handler keeps the same identity and the
+  // bar doesn't re-render every time a transaction is added.
+  const dataRef = useRef({ txs: ledger.txs, categoryById: ledger.categoryById })
+  dataRef.current = { txs: ledger.txs, categoryById: ledger.categoryById }
   const currency = ledger.currency
-  const logFromChat = useCallback(async (text: string): Promise<boolean> => {
-    const parsed = parseExpense(text)
-    if (!parsed) {
-      toast({ message: 'No amount found. Try “450 lunch at Cafe”.' })
-      return false
-    }
-    const id = await addTransaction({
-      kind: parsed.kind,
-      amountMinor: parsed.amountMinor,
-      currency,
-      categoryId: await categoryIdByName(parsed.categoryName),
-      merchant: parsed.merchant,
-      note: '',
-      date: parsed.date,
-      paymentMethod: parsed.paymentMethod,
-      source: 'chat',
-    })
-    void attachLocation(id) // no-op unless the user turned location recording on
-    // Show the month the expense landed in so the user sees it appear.
-    setMonth(monthOf(parsed.date))
-    toast({
-      message:
-        parsed.kind === 'income'
-          ? `Received ${formatMoney(parsed.amountMinor, currency)}`
-          : `Added ${formatMoney(parsed.amountMinor, currency)} to ${parsed.categoryName}`,
-      actionLabel: 'Undo',
-      onAction: () => void deleteTransaction(id),
-    })
-    return true
-  }, [currency, toast])
+
+  const logFromChat = useCallback(
+    async (text: string): Promise<boolean> => {
+      const entries = parseMany(text)
+      if (entries.length === 0) {
+        toast({ message: 'No amount found. Try “450 lunch at Cafe”.' })
+        return false
+      }
+      const { txs, categoryById } = dataRef.current
+      const ids: number[] = []
+      let sent = 0
+      let lastName = ''
+      for (const parsed of entries) {
+        // Your own choice for a merchant beats the keyword guess.
+        const learned = parsed.kind === 'expense' ? learnedCategoryId(parsed.merchant, txs) : null
+        const categoryId = learned ?? (await categoryIdByName(parsed.categoryName))
+        lastName = categoryById.get(categoryId)?.name ?? parsed.categoryName
+        const id = await addTransaction({
+          kind: parsed.kind,
+          amountMinor: parsed.amountMinor,
+          currency,
+          categoryId,
+          merchant: parsed.merchant,
+          note: '',
+          date: parsed.date,
+          paymentMethod: parsed.paymentMethod,
+          source: 'chat',
+        })
+        void attachLocation(id) // no-op unless the user turned location recording on
+        ids.push(id)
+        if (parsed.kind === 'expense') sent += parsed.amountMinor
+      }
+      // Show the month the entry landed in so the user sees it appear.
+      setMonth(monthOf(entries[0].date))
+      const undo = () => void (ids.length === 1 ? deleteTransaction(ids[0]) : deleteTransactions(ids))
+      if (entries.length > 1) {
+        toast({ message: `Added ${entries.length} entries${sent ? `, ${formatMoney(sent, currency)} sent` : ''}`, actionLabel: 'Undo', onAction: undo })
+      } else {
+        const only = entries[0]
+        toast({
+          message:
+            only.kind === 'income'
+              ? `Received ${formatMoney(only.amountMinor, currency)}`
+              : `Added ${formatMoney(only.amountMinor, currency)} to ${lastName}`,
+          actionLabel: 'Undo',
+          onAction: undo,
+        })
+      }
+      return true
+    },
+    [currency, toast],
+  )
 
   // Stable handlers: the screens and the chat bar are memoized and skip renders they don't need.
-  const openAdd = useCallback(() => setSheet({ open: true, editing: null, prefill: null }), [])
-  const openEdit = useCallback((tx: Transaction) => setSheet({ open: true, editing: tx, prefill: null }), [])
-  const openSuggestion = useCallback((s: Suggestion) => setSheet({ open: true, editing: null, prefill: s }), [])
+  const openAdd = useCallback(
+    (kind: Transaction['kind'] = 'expense') => setSheet({ open: true, editing: null, prefill: null, startKind: kind }),
+    [],
+  )
+  const openAddDefault = useCallback(() => openAdd('expense'), [openAdd])
+  const openEdit = useCallback((tx: LedgerTx) => setSheet({ open: true, editing: tx, prefill: null, startKind: 'expense' }), [])
+  const openSuggestion = useCallback((s: Suggestion) => setSheet({ open: true, editing: null, prefill: s, startKind: s.kind }), [])
   const closeSheet = useCallback(() => setSheet((s) => ({ ...s, open: false })), [])
+
+  const newGoal = useCallback(() => setGoalSheet((s) => ({ open: true, goal: null, n: s.n + 1 })), [])
+  const editGoal = useCallback((goal: Goal) => setGoalSheet((s) => ({ open: true, goal, n: s.n + 1 })), [])
+  const closeGoalSheet = useCallback(() => setGoalSheet((s) => ({ ...s, open: false })), [])
+  const goalMoney = useCallback((goal: Goal) => setMoneySheet((s) => ({ open: true, goal, n: s.n + 1 })), [])
+  const closeMoneySheet = useCallback(() => setMoneySheet((s) => ({ ...s, open: false })), [])
+
+  // A home-screen shortcut ("Add expense", "Add received") opens the form straight away.
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get('add')
+    if (wanted === 'expense' || wanted === 'income') {
+      openAdd(wanted)
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }, [openAdd])
+
   const pickCategory = useCallback(
     (id: number) => {
       setCategoryFilter(id)
@@ -187,16 +300,15 @@ function Shell() {
             onToggleBalance={toggleBalance}
             suggestions={placement === 'home' ? suggestions : NO_SUGGESTIONS}
             onSuggestion={openSuggestion}
+            logNudge={logNudge}
+            onAdd={openAddDefault}
+            onNewGoal={newGoal}
+            onEditGoal={editGoal}
+            onGoalMoney={goalMoney}
           />
         )}
         {tab === 'activity' && (
-          <Activity
-            ledger={ledger}
-            today={today}
-            categoryFilter={categoryFilter}
-            onCategoryFilter={setCategoryFilter}
-            onEdit={openEdit}
-          />
+          <Activity ledger={ledger} today={today} categoryFilter={categoryFilter} onCategoryFilter={setCategoryFilter} onEdit={openEdit} />
         )}
         {tab === 'insights' && (
           <Insights ledger={ledger} month={month} onMonth={setMonth} today={today} onOpenSettings={openSettings} />
@@ -209,6 +321,7 @@ function Shell() {
             updateReady={pwa.updateReady}
             onApplyUpdate={pwa.applyUpdate}
             onCheckUpdate={pwa.checkNow}
+            onShowWhatsNew={showWhatsNew}
           />
         )}
       </main>
@@ -230,7 +343,7 @@ function Shell() {
               />
             </section>
           )}
-          <ChatBar key={draft.n} initialText={draft.text} onSubmit={logFromChat} onOpenForm={openAdd} />
+          <ChatBar key={draft.n} initialText={draft.text} onSubmit={logFromChat} onOpenForm={openAddDefault} />
         </div>
         <BottomNav current={tab} onSelect={go} />
       </div>
@@ -239,12 +352,20 @@ function Shell() {
         open={sheet.open}
         editing={sheet.editing}
         categories={ledger.categories}
+        accounts={ledger.accounts}
         currency={ledger.currency}
-        suggestions={suggestions}
+        suggestions={sheetSuggestions}
         showSuggestions={placement !== 'off'}
         prefill={sheet.prefill}
+        startKind={sheet.startKind}
         onClose={closeSheet}
       />
+
+      <GoalSheet key={`goal-${goalSheet.n}`} open={goalSheet.open} goal={goalSheet.goal} today={today} onClose={closeGoalSheet} />
+      <GoalMoneySheet key={`money-${moneySheet.n}`} open={moneySheet.open} goal={moneySheet.goal} currency={ledger.currency} onClose={closeMoneySheet} />
+
+      <Welcome open={notice === 'welcome'} currency={ledger.currency} accounts={ledger.accounts} />
+      <WhatsNew open={notice === 'whats-new' || whatsNewByHand} onClose={closeWhatsNew} />
     </div>
   )
 }

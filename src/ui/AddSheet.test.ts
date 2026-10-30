@@ -14,9 +14,13 @@ const swiggy: Suggestion = {
   paymentMethod: '', reason: 'Usually in the evening', count: 5,
 }
 
+const accounts = [{ id: 1, name: 'Main', openingMinor: null }]
+
 const render = (props: { suggestions: Suggestion[]; showSuggestions: boolean }) =>
   renderToStaticMarkup(
-    createElement(AddSheet, { open: false, editing: null, categories, currency: 'INR', prefill: null, onClose: () => {}, ...props }),
+    createElement(AddSheet, {
+      open: false, editing: null, categories, accounts, currency: 'INR', prefill: null, startKind: 'expense', onClose: () => {}, ...props,
+    }),
   )
 
 describe('AddSheet suggestions', () => {

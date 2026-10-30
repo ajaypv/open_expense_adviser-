@@ -105,7 +105,7 @@ export function balanceFrom(txs: Transaction[], openingMinor: number): BalanceSu
   let receivedMinor = 0
   for (const t of txs) {
     if (t.kind === 'income') receivedMinor += t.amountMinor
-    else sentMinor += t.amountMinor
+    else if (t.kind === 'expense') sentMinor += t.amountMinor // transfers are neither sent nor received
   }
   const netMinor = receivedMinor - sentMinor
   return { sentMinor, receivedMinor, netMinor, estimatedMinor: openingMinor + netMinor }

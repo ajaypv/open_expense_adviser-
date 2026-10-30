@@ -12,8 +12,11 @@ export interface Place {
 /** Amounts are stored as integer minor units (e.g. paise/cents) to avoid float drift. */
 export interface Transaction {
   id: number
-  /** 'expense' is money sent; 'income' is money received. The amount is always positive. */
-  kind: 'expense' | 'income'
+  /**
+   * 'expense' is money sent; 'income' is money received; 'transfer' moves money between two of the
+   * user's own accounts and counts as neither. The amount is always positive.
+   */
+  kind: 'expense' | 'income' | 'transfer'
   amountMinor: number
   currency: string
   categoryId: number
@@ -22,10 +25,58 @@ export interface Transaction {
   /** Local calendar date, YYYY-MM-DD. */
   date: string
   paymentMethod: string
-  source: 'manual' | 'chat' | 'import'
+  source: 'manual' | 'chat' | 'import' | 'recurring'
   createdAt: number
   /** Only set when the user turned location recording on; never sent anywhere. */
   location?: Place
+  /** Which account it belongs to (the source of a transfer). Missing means the first account. */
+  accountId?: number
+  /** The receiving account of a transfer. */
+  toAccountId?: number
+  /** Set when moved to the trash. Trashed rows stay for 30 days, then are purged. */
+  deletedAt?: number
+}
+
+/** A place money is kept: cash, a bank account, a card. */
+export interface Account {
+  id: number
+  name: string
+  /** What it held before any logged transaction. null until the user says. */
+  openingMinor: number | null
+  archived?: boolean
+}
+
+/** A transaction that repeats, such as rent or a subscription. */
+export interface Recurring {
+  id: number
+  kind: 'expense' | 'income'
+  amountMinor: number
+  currency: string
+  categoryId: number
+  merchant: string
+  note: string
+  paymentMethod: string
+  accountId?: number
+  frequency: 'weekly' | 'monthly'
+  /** Date (YYYY-MM-DD) the next occurrence is due. */
+  nextDue: string
+  active: boolean
+}
+
+/**
+ * Something the user is saving for: a purchase or an event. The saved amount is tracked here by hand
+ * and is separate from transactions, so setting money aside never changes a balance or a total.
+ */
+export interface Goal {
+  id: number
+  name: string
+  /** What it costs, in the main currency. */
+  targetMinor: number
+  /** Set aside so far. */
+  savedMinor: number
+  /** Optional date (YYYY-MM-DD) to have it by. */
+  dueDate?: string
+  createdAt: number
 }
 
 export interface Category {
@@ -60,6 +111,9 @@ export const db = new Dexie('expense-tracker') as Dexie & {
   budgets: EntityTable<Budget, 'id'>
   settings: EntityTable<Setting, 'key'>
   chat: EntityTable<ChatMessage, 'id'>
+  accounts: EntityTable<Account, 'id'>
+  recurring: EntityTable<Recurring, 'id'>
+  goals: EntityTable<Goal, 'id'>
 }
 
 db.version(1).stores({
@@ -106,6 +160,21 @@ db.version(3)
     }
   })
 
+// v4: accounts, recurring transactions, trash and transfers. The old single "opening balance"
+// becomes the opening balance of a first account, so no existing estimate changes.
+db.version(4)
+  .stores({ accounts: '++id', recurring: '++id, nextDue' })
+  .upgrade(async (tx) => {
+    const settings = tx.table('settings')
+    const opening = (await settings.get('openingBalance'))?.value
+    await tx.table('accounts').add({ name: 'Main', openingMinor: typeof opening === 'number' ? opening : null })
+    await settings.delete('openingBalance')
+  })
+
+// v5: goals. A new table only, so nothing existing needs migrating.
+db.version(5).stores({ goals: '++id' })
+
 db.on('populate', (tx) => {
   void tx.table('categories').bulkAdd(DEFAULT_CATEGORIES.map((c) => ({ ...c })))
+  void tx.table('accounts').add({ name: 'Main', openingMinor: null })
 })

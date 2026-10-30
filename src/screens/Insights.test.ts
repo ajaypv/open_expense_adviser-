@@ -2,6 +2,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import type { Category, Transaction } from '../db/schema'
+import { makeLedger } from '../test/ledger'
 import { Insights } from './Insights'
 
 const today = new Date(2026, 9, 28) // Wed 28 Oct 2026
@@ -29,20 +30,15 @@ const tx = (date: string, amount: number, categoryId: number, merchant = ''): Tr
 
 function render(txs: Transaction[], month: string, budgetMinor: number | null = 3_000_000, extra: Transaction[] = []) {
   const all = [...txs, ...extra]
-  const ledger = {
-    loading: false,
+  const ledger = makeLedger({
     txs: all,
     expenses: all.filter((t) => t.kind !== 'income'),
     income: all.filter((t) => t.kind === 'income'),
     categories,
     expenseCategories: categories,
     categoryById: new Map(categories.map((c) => [c.id, c])),
-    currency: 'INR',
     budgetMinor,
-    balanceSet: false,
-    estimatedBalanceMinor: 0,
-    netMinor: 0,
-  }
+  })
   return renderToStaticMarkup(
     createElement(Insights, { ledger, month, onMonth: () => {}, today, onOpenSettings: () => {} }),
   )
@@ -65,7 +61,8 @@ describe('Insights screen', () => {
     expect(html).toContain('Spending pace')
     expect(html).toContain('Food &amp; Dining')
     expect(html).not.toContain('What changed')
-    expect(html).not.toContain('September') // no previous-month line, legend row or column
+    // No previous-month line, legend row or column. The month picker's list of months is hidden until opened.
+    expect(html.replace(/<dialog[\s\S]*?<\/dialog>/g, '')).not.toContain('September')
     noBrokenNumbers(html)
   })
 
@@ -108,7 +105,10 @@ describe('Insights screen', () => {
     const spent = [tx('2026-10-05', 450, 1, 'Cafe'), tx('2026-10-20', 230, 2, 'Uber')]
     const salary: Transaction = { ...tx('2026-10-01', 80000, 1, 'Employer'), kind: 'income' }
     const withSalary = render(spent, '2026-10', null, [salary])
-    expect(withSalary).toBe(render(spent, '2026-10', null)) // identical page with or without the salary
+    // The only difference a salary makes is the "Money in and out" section; every spending block is identical.
+    expect(withSalary).toContain('Money in and out')
+    const withoutThatSection = withSalary.replace(/<section aria-labelledby="savings-h".*?<\/section>/, '')
+    expect(withoutThatSection).toBe(render(spent, '2026-10', null))
     expect(withSalary).not.toContain('Employer')
     // A month with only received money is an empty spending month.
     expect(render([], '2026-10', null, [salary])).toContain('Nothing to report for October yet.')

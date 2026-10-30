@@ -1,10 +1,11 @@
 import { memo, useMemo } from 'react'
+import type { LedgerTx } from '../data/buildLedger'
+import { setDisplay, useDisplay } from '../data/display'
 import { CategoryBars } from '../charts/CategoryBars'
 import { DayChart } from '../charts/DayChart'
 import { Meter } from '../charts/Meter'
 import type { useLedger } from '../data/useLedger'
 import { formatMoney, localDateString } from '../db/money'
-import type { Transaction } from '../db/schema'
 import {
   byCategory,
   byDay,
@@ -17,6 +18,9 @@ import {
 } from '../insights/aggregates'
 import { newestFirst } from '../insights/order'
 import type { Suggestion } from '../insights/suggestions'
+import type { Goal } from '../db/schema'
+import { GoalsSection } from '../ui/Goals'
+import { BackupNudge, DueCard, LogNudge } from '../ui/HomeCards'
 import { Icon } from '../ui/Icon'
 import { MonthSwitcher } from '../ui/MonthSwitcher'
 import { SuggestionList } from '../ui/SuggestionList'
@@ -31,7 +35,7 @@ interface Props {
   onMonth: (month: MonthKey) => void
   today: Date
   onPickCategory: (categoryId: number) => void
-  onEdit: (tx: Transaction) => void
+  onEdit: (tx: LedgerTx) => void
   onExample: (text: string) => void
   onOpenSettings: () => void
   onSeeAll: () => void
@@ -41,6 +45,14 @@ interface Props {
   /** Regulars for the "On the Home screen" choice; empty when suggestions live elsewhere or are off. */
   suggestions: Suggestion[]
   onSuggestion: (s: Suggestion) => void
+  /** Past the reminder time with nothing logged today. */
+  logNudge: boolean
+  /** Opens the add form. */
+  onAdd: () => void
+  /** Goals: make one, change one, or set money aside for one. */
+  onNewGoal: () => void
+  onEditGoal: (goal: Goal) => void
+  onGoalMoney: (goal: Goal) => void
 }
 
 const EXAMPLES = ['450 lunch at Cafe', 'Uber 230 yesterday', 'Salary 80,000']
@@ -61,10 +73,16 @@ export const Home = memo(function Home({
   onToggleBalance,
   suggestions,
   onSuggestion,
+  logNudge,
+  onAdd,
+  onNewGoal,
+  onEditGoal,
+  onGoalMoney,
 }: Props) {
   const { txs, expenses, income, categoryById, currency, budgetMinor, loading } = ledger
   const currentMonth = localDateString(today).slice(0, 7)
   const isCurrent = month === currentMonth
+  const display = useDisplay()
 
   // Everything below depends only on the data, the month and the day, so it is worked out once
   // per change rather than on every render.
@@ -81,6 +99,8 @@ export const Home = memo(function Home({
     }
   }, [txs, expenses, income, month, today])
   const { total, received, comparison, daily, categoryTotals, recent } = view
+  // Months with something in them get a dot in the month picker.
+  const activeMonths = useMemo(() => new Set(txs.map((t) => t.date.slice(0, 7))), [txs])
 
   if (loading) return <h1 className="sr-only">Home</h1>
 
@@ -116,9 +136,22 @@ export const Home = memo(function Home({
   return (
     <div className="pb-4">
       <h1 className="sr-only">Home</h1>
-      <MonthSwitcher month={month} currentMonth={currentMonth} onChange={onMonth} />
+      <MonthSwitcher month={month} currentMonth={currentMonth} onChange={onMonth} activeMonths={activeMonths} />
 
-      <section aria-label="Summary" className={`${card} mt-3 p-5`}>
+      <BackupNudge transactionCount={txs.length} />
+      {isCurrent && <DueCard ledger={ledger} today={today} />}
+      {isCurrent && logNudge && <LogNudge onAdd={onAdd} />}
+
+      <section aria-label="Summary" className={`${card} relative mt-3 p-5`}>
+        <button
+          type="button"
+          aria-pressed={display.privacy}
+          onClick={() => setDisplay({ privacy: !display.privacy })}
+          aria-label={display.privacy ? 'Show amounts' : 'Hide amounts'}
+          className="absolute right-2 top-2 flex size-11 items-center justify-center rounded-full text-ink-2 hover:bg-surface-2"
+        >
+          <Icon name={display.privacy ? 'eyeOff' : 'eye'} size={20} />
+        </button>
         {total === 0 ? (
           <p className="text-2xl font-semibold tracking-tight">No expenses in {name}.</p>
         ) : (
@@ -175,10 +208,13 @@ export const Home = memo(function Home({
         currency={currency}
         balanceMinor={ledger.estimatedBalanceMinor}
         balanceSet={ledger.balanceSet}
+        accountLines={ledger.accounts.map((a) => ({ id: a.id, name: a.name, estimatedMinor: ledger.balances.get(a.id)?.estimatedMinor ?? 0 }))}
         shown={balanceShown}
         onToggle={onToggleBalance}
         onSetBalance={onOpenSettings}
       />
+
+      <GoalsSection goals={ledger.goals} currency={currency} today={today} onNew={onNewGoal} onEdit={onEditGoal} onAddMoney={onGoalMoney} />
 
       {isCurrent && suggestions.length > 0 && (
         <section aria-labelledby="suggest-h" className="mt-8">
@@ -229,7 +265,7 @@ export const Home = memo(function Home({
                 See all
               </button>
             </div>
-            <TxList rows={recent} categoryById={categoryById} currency={currency} showDate onEdit={onEdit} />
+            <TxList rows={recent} categoryById={categoryById} accountById={ledger.accountById} currency={currency} showDate onEdit={onEdit} />
           </section>
         </>
       )}
