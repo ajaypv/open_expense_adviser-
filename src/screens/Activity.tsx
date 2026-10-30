@@ -12,10 +12,23 @@ import {
   restoreTransactions,
 } from '../db/repo'
 import { db, type Transaction } from '../db/schema'
-import { applyFilters, countActive, NO_FILTERS, type ActivityFilters, type KindFilter } from '../insights/filters'
+import {
+  applyFilters,
+  countActive,
+  dayTotals,
+  describeRange,
+  matchesSearch,
+  NO_FILTERS,
+  presetOf,
+  presetRange,
+  type ActivityFilters,
+  type DatePreset,
+  type KindFilter,
+} from '../insights/filters'
 import { newestFirst } from '../insights/order'
 import { Icon } from '../ui/Icon'
 import { PickerField } from '../ui/PickerField'
+import { ScreenSkeleton } from '../ui/ScreenSkeleton'
 import { TxList } from '../ui/TxList'
 import { useToast } from '../ui/toast'
 
@@ -26,6 +39,8 @@ interface Props {
   today: Date
   categoryFilter: number | null
   onCategoryFilter: (id: number | null) => void
+  /** The dates to start on, such as the month a category was opened from on Home. */
+  initialRange?: { from: string; to: string } | null
   onEdit: (tx: LedgerTx) => void
 }
 
@@ -37,12 +52,19 @@ const chip =
 
 const KINDS: { id: KindFilter; label: string }[] = [
   { id: 'all', label: 'All' },
-  { id: 'expense', label: 'Sent' },
+  { id: 'expense', label: 'Spent' },
   { id: 'income', label: 'Received' },
   { id: 'transfer', label: 'Transfers' },
 ]
 
-const field = 'mt-1 min-h-11 w-full rounded-xl bg-surface-2 px-3 focus-visible:outline-offset-0'
+const WHEN: { id: DatePreset; label: string }[] = [
+  { id: 'any', label: 'Any time' },
+  { id: 'this-month', label: 'This month' },
+  { id: 'last-month', label: 'Last month' },
+  { id: 'last-30', label: 'Last 30 days' },
+]
+
+const field = 'mt-1 min-h-11 w-full rounded-xl bg-surface-2 shadow-[inset_0_0_0_1px_var(--edge)] px-3 focus-visible:outline-offset-0'
 
 const sum = (rows: Transaction[]) => rows.reduce((acc, t) => acc + t.amountMinor, 0)
 // Transfers move money between your own accounts, so they are neither sent nor received.
@@ -76,13 +98,13 @@ const parseAmount = (text: string): number | null => {
   return text.trim() !== '' && Number.isFinite(n) && n >= 0 ? toMinor(n) : null
 }
 
-export const Activity = memo(function Activity({ ledger, today, categoryFilter, onCategoryFilter, onEdit }: Props) {
+export const Activity = memo(function Activity({ ledger, today, categoryFilter, onCategoryFilter, initialRange = null, onEdit }: Props) {
   const { txs, categories, categoryById, accountById, expenseCategories, currency } = ledger
   useDisplay() // amounts are masked or regrouped by display settings, so redraw when they change
   const toast = useToast()
   const [query, setQuery] = useState('')
   const [limit, setLimit] = useState(PAGE)
-  const [filters, setFilters] = useState<ActivityFilters>(NO_FILTERS)
+  const [filters, setFilters] = useState<ActivityFilters>(() => ({ ...NO_FILTERS, from: initialRange?.from ?? '', to: initialRange?.to ?? '' }))
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [minText, setMinText] = useState('')
   const [maxText, setMaxText] = useState('')
@@ -112,22 +134,46 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
   // Sorted once per data change, and the lowercase search text built once per data change, so a
   // keystroke only filters; it never re-sorts or re-lowercases thousands of rows.
   const sorted = useMemo(() => [...txs].sort(newestFirst), [txs])
-  const searchText = useMemo(
-    () =>
-      new Map(
-        txs.map((t) => [t.id, `${t.merchant} ${t.note} ${categoryById.get(t.categoryId)?.name ?? ''}`.toLowerCase()]),
-      ),
-    [txs, categoryById],
-  )
-
   // The box updates immediately; the list catches up when the device has a moment to spare.
   const deferredQuery = useDeferredValue(query)
-  const filtered = useMemo(() => {
-    const q = deferredQuery.trim().toLowerCase()
-    return applyFilters(sorted, filters).filter(
-      (t) => (categoryFilter === null || t.categoryId === categoryFilter) && (!q || searchText.get(t.id)!.includes(q)),
-    )
-  }, [sorted, searchText, deferredQuery, categoryFilter, filters])
+  const searching = deferredQuery.trim() !== ''
+  // What a search looks through: who, what, where, how, and the amount as typed (450, 1250.5).
+  const searchText = useMemo(
+    () =>
+      searching
+        ? new Map(
+            txs.map((t) => [
+              t.id,
+              [
+                t.merchant,
+                t.note,
+                categoryById.get(t.categoryId)?.name ?? '',
+                accountById.get(t.accountId ?? -1)?.name ?? '',
+                t.paymentMethod,
+                String(t.amountMinor / 100),
+                t.originalMinor !== undefined ? String(t.originalMinor / 100) : '',
+              ]
+                .join(' ')
+                .toLowerCase(),
+            ]),
+          )
+        : null,
+    [searching, txs, categoryById, accountById],
+  )
+  const filtered = useMemo(
+    () =>
+      applyFilters(sorted, filters).filter(
+        (t) => (categoryFilter === null || t.categoryId === categoryFilter) && (!searchText || matchesSearch(searchText.get(t.id) ?? '', deferredQuery)),
+      ),
+    [sorted, searchText, deferredQuery, categoryFilter, filters],
+  )
+
+  // A day's total counts the whole day, not just the rows on screen so far.
+  const totals = useMemo(() => dayTotals(filtered), [filtered])
+
+  // A selection only means what can be seen: rows a filter or a search has hidden drop out of it.
+  const visibleIds = useMemo(() => new Set(filtered.map((t) => t.id)), [filtered])
+  const chosen = useMemo(() => new Set([...picked].filter((id) => visibleIds.has(id))), [picked, visibleIds])
 
   const groups = useMemo(() => {
     const map = new Map<string, LedgerTx[]>()
@@ -141,6 +187,25 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
 
   const activeFilters = countActive(filters)
   const filtering = query.trim() !== '' || categoryFilter !== null || activeFilters > 0
+  const amountConflict = filters.minMinor !== null && filters.maxMinor !== null && filters.minMinor > filters.maxMinor
+  const whenNow = presetOf(filters, today)
+
+  // What is narrowing the list, each with its own way to take it off.
+  const inUse: { key: string; label: string; clear: () => void }[] = []
+  if (filters.kind !== 'all') inUse.push({ key: 'kind', label: KINDS.find((k) => k.id === filters.kind)!.label, clear: () => patch({ kind: 'all' }) })
+  if (filters.from || filters.to) inUse.push({ key: 'date', label: describeRange(filters.from, filters.to, today), clear: () => patch({ from: '', to: '' }) })
+  if (filters.minMinor !== null || filters.maxMinor !== null) {
+    const { minMinor: lo, maxMinor: hi } = filters
+    inUse.push({
+      key: 'amount',
+      label: lo !== null && hi !== null ? `${formatMoney(lo, currency)} to ${formatMoney(hi, currency)}` : lo !== null ? `At least ${formatMoney(lo, currency)}` : `Up to ${formatMoney(hi!, currency)}`,
+      clear: () => {
+        patch({ minMinor: null, maxMinor: null })
+        setMinText('')
+        setMaxText('')
+      },
+    })
+  }
 
   function patch(next: Partial<ActivityFilters>) {
     setFilters((f) => ({ ...f, ...next }))
@@ -183,7 +248,11 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
       return next
     })
   }, [])
-  const selection = useMemo(() => (selecting ? { ids: picked, onToggle: toggle } : null), [selecting, picked, toggle])
+  const selection = useMemo(() => (selecting ? { ids: chosen, onToggle: toggle } : null), [selecting, chosen, toggle])
+
+  function selectAll() {
+    setPicked(new Set(filtered.map((t) => t.id)))
+  }
 
   function endSelecting() {
     setSelecting(false)
@@ -191,7 +260,7 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
   }
 
   async function deleteSelected() {
-    const ids = [...picked]
+    const ids = [...chosen]
     if (ids.length === 0) return
     const rows = await deleteTransactions(ids)
     endSelecting()
@@ -203,16 +272,25 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
   }
 
   async function moveSelected(categoryId: number) {
-    // Only money sent has a category you can change; received money and transfers stay as they are.
-    const ids = txs.filter((t) => picked.has(t.id) && t.kind === 'expense').map((t) => t.id)
-    if (ids.length === 0) {
-      toast({ message: 'Only money sent can be moved to a category.' })
+    // Only spending has a category you can change; received money and transfers stay as they are.
+    const rows = txs.filter((t) => chosen.has(t.id) && t.kind === 'expense')
+    if (rows.length === 0) {
+      toast({ message: 'Only spending can be moved to a category.' })
       return
     }
-    await recategorizeTransactions(ids, categoryId)
+    const left = chosen.size - rows.length
+    const before = new Map<number, number[]>()
+    for (const t of rows) before.set(t.categoryId, [...(before.get(t.categoryId) ?? []), t.id])
+    await recategorizeTransactions(rows.map((t) => t.id), categoryId)
     endSelecting()
-    toast({ message: `Moved ${ids.length} to ${categoryById.get(categoryId)?.name ?? 'the category'}` })
+    toast({
+      message: `Moved ${rows.length} to ${categoryById.get(categoryId)?.name ?? 'the category'}${left > 0 ? `. Left ${left} received or transfer as it was.` : ''}`,
+      actionLabel: 'Undo',
+      onAction: () => void Promise.all([...before].map(([was, ids]) => recategorizeTransactions(ids, was))),
+    })
   }
+
+  if (ledger.loading) return <ScreenSkeleton label="Activity" />
 
   return (
     <div className="pb-6">
@@ -224,7 +302,7 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
           <Icon name="search" size={20} />
         </span>
         <label htmlFor="search" className="sr-only">
-          Search expenses
+          Search transactions
         </label>
         <input
           id="search"
@@ -236,7 +314,7 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
             setQuery(e.target.value)
             setLimit(PAGE)
           }}
-          placeholder="Search merchant, note or category"
+          placeholder="Search merchant, note, category or amount"
           className="min-h-12 w-full rounded-2xl bg-surface pl-11 pr-11 shadow-[0_0_0_1px_var(--ring)] [&::-webkit-search-cancel-button]:appearance-none"
         />
         {query && (
@@ -342,6 +420,13 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
             </div>
           </div>
 
+          {amountConflict && (
+            <p role="alert" className="flex items-center gap-2 text-critical">
+              <Icon name="warn" size={18} />
+              The smallest amount is above the largest, so nothing can match.
+            </p>
+          )}
+
           {activeFilters > 0 && (
             <button
               type="button"
@@ -357,6 +442,18 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
           )}
         </section>
       )}
+
+      <div
+        role="group"
+        aria-label="Filter by date"
+        className="relative -mx-5 mt-3 flex snap-x snap-proximity scroll-px-5 gap-2 overflow-x-auto px-5 py-0.5 [mask-image:linear-gradient(to_right,black_calc(100%-1.25rem),transparent)]"
+      >
+        {WHEN.map((w) => (
+          <button key={w.id} type="button" aria-pressed={whenNow === w.id} onClick={() => patch(presetRange(w.id, today))} className={chip}>
+            {w.label}
+          </button>
+        ))}
+      </div>
 
       {/* py-0.5 stops the scroller clipping each chip's 1px border; the right edge fades to hint
           that the row scrolls, and the fade ends where the side padding does. */}
@@ -383,33 +480,58 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
         ))}
       </div>
 
+      {inUse.length > 0 && (
+        <ul aria-label="Filters in use" className="mt-3 flex flex-wrap gap-2">
+          {inUse.map((f) => (
+            <li key={f.key}>
+              <button
+                type="button"
+                onClick={f.clear}
+                aria-label={`Remove ${f.label} filter`}
+                className="flex min-h-11 items-center gap-2 rounded-full bg-surface-2 pl-4 pr-3 font-medium"
+              >
+                {f.label}
+                <Icon name="close" size={16} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {filtering && (
         <p className="mt-4 text-ink-2" aria-live="polite">
-          {filtered.length} {filtered.length === 1 ? 'transaction' : 'transactions'}:{' '}
-          <span className="font-semibold text-ink">{formatMoney(sentOf(filtered), currency)}</span> sent
-          {receivedOf(filtered) > 0 && (
+          {filtered.length > 0 && filtered.every((t) => t.kind === 'transfer') ? (
             <>
-              , <span className="font-semibold text-ink">{formatMoney(receivedOf(filtered), currency)}</span> received
+              {`${filtered.length} ${filtered.length === 1 ? 'transfer' : 'transfers'}:`} <span className="font-semibold text-ink">{formatMoney(sum(filtered), currency)}</span> moved
+            </>
+          ) : (
+            <>
+              {filtered.length} {filtered.length === 1 ? 'transaction' : 'transactions'}:{' '}
+              <span className="font-semibold text-ink">{formatMoney(sentOf(filtered), currency)}</span> spent
+              {receivedOf(filtered) > 0 && (
+                <>
+                  , <span className="font-semibold text-ink">{formatMoney(receivedOf(filtered), currency)}</span> received
+                </>
+              )}
             </>
           )}
         </p>
       )}
 
       {txs.length === 0 ? (
-        <p className="mt-8 text-lg text-ink-2">Your transactions will show up here once you log them.</p>
+        <p className="mt-8 text-lg text-ink-2">Nothing here yet. Type something like “450 lunch at Cafe” in the bar below.</p>
       ) : filtered.length === 0 ? (
         <p className="mt-8 text-lg text-ink-2">
-          Nothing matches.{' '}
+          {query.trim() ? `No transactions match “${query.trim()}”.` : 'No transactions match.'}{' '}
           <button type="button" className="font-medium text-ink underline underline-offset-2" onClick={clearAll}>
-            Clear filters
+            Clear search and filters
           </button>
         </p>
       ) : (
         <div>
           {groups.map(([date, rows]) => {
             const heading = dayHeading(date, today)
-            const sent = sentOf(rows)
-            const received = receivedOf(rows)
+            const { spentMinor: sent, receivedMinor: received } = totals.get(date) ?? { spentMinor: 0, receivedMinor: 0 }
             return (
               <section
                 key={date}
@@ -422,9 +544,16 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
                     {heading.detail && <span className="ml-2 text-sm font-normal text-ink-2">{heading.detail}</span>}
                   </h2>
                   <p className="shrink-0 text-[0.9375rem] text-ink-2 tabular-nums">
-                    {sent > 0 && formatMoney(sent, currency)}
+                    {sent > 0 && (
+                      <>
+                        <span className="sr-only">Spent </span>
+                        {formatMoney(sent, currency)}
+                      </>
+                    )}
                     {received > 0 && (
-                      <span className={`text-good ${sent > 0 ? 'ml-2' : ''}`}>+{formatMoney(received, currency)}</span>
+                      <span className={`text-good ${sent > 0 ? 'ml-2' : ''}`}>
+                        <span className="sr-only">Received </span>+{formatMoney(received, currency)}
+                      </span>
                     )}
                   </p>
                 </div>
@@ -442,13 +571,16 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
             )
           })}
           {filtered.length > limit && (
-            <button
-              type="button"
-              onClick={() => setLimit((l) => l + PAGE)}
-              className="mt-6 min-h-12 w-full rounded-full bg-surface font-medium shadow-[0_0_0_1px_var(--ring)]"
-            >
-              Show more
-            </button>
+            <>
+              <p className="mt-6 text-center text-ink-2">{`Showing ${limit} of ${filtered.length}`}</p>
+              <button
+                type="button"
+                onClick={() => setLimit((l) => l + PAGE)}
+                className="mt-2 min-h-12 w-full rounded-full bg-surface font-medium shadow-[0_0_0_1px_var(--ring)]"
+              >
+                Show more
+              </button>
+            </>
           )}
         </div>
       )}
@@ -456,7 +588,7 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
       {selecting && (
         <div className="sticky bottom-3 z-10 mt-6 flex flex-wrap items-center gap-2 rounded-3xl bg-btn p-2 pl-4 text-btn-ink shadow-lg">
           <span aria-live="polite" className="mr-auto text-sm font-medium">
-            {picked.size === 0 ? 'Tap rows to select' : `${picked.size} selected`}
+            {chosen.size === 0 ? 'Tap rows to select' : `${chosen.size} selected`}
           </span>
           <label htmlFor="bulk-category" className="sr-only">
             Move selected to a category
@@ -466,14 +598,19 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
             title="Move selected to"
             value={null}
             placeholder="Move to…"
-            disabled={picked.size === 0}
+            disabled={chosen.size === 0}
             options={expenseCategories.map((c) => ({ value: c.id, label: c.name }))}
             onChange={(id) => void moveSelected(id)}
             className="min-h-11 rounded-full bg-btn-ink/15 px-4 text-sm font-medium text-btn-ink"
           />
+          {filtered.length > 0 && chosen.size < filtered.length && (
+            <button type="button" onClick={selectAll} className="min-h-11 rounded-full bg-btn-ink/15 px-4 text-sm font-semibold">
+              {`Select all ${filtered.length}`}
+            </button>
+          )}
           <button
             type="button"
-            disabled={picked.size === 0}
+            disabled={chosen.size === 0}
             onClick={() => void deleteSelected()}
             className="min-h-11 rounded-full bg-btn-ink/15 px-4 text-sm font-semibold disabled:opacity-40"
           >

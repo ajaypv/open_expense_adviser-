@@ -10,7 +10,7 @@ import { CURRENCIES } from '../screens/settings/parts'
 import { Dialog } from './Dialog'
 import { PickerField } from './PickerField'
 
-const input = 'mt-1 min-h-12 w-full rounded-xl bg-surface-2 px-3.5'
+const input = 'mt-1 min-h-12 w-full rounded-xl bg-surface-2 shadow-[inset_0_0_0_1px_var(--edge)] px-3.5'
 
 const toNumber = (text: string) => Number(text.replace(/,/g, ''))
 
@@ -49,6 +49,7 @@ export function Welcome({ open, currency, accounts }: { open: boolean; currency:
         Welcome
       </h2>
       <p className="mt-1 text-ink-2">Everything stays on this device. Three quick things, all optional.</p>
+      <p className="mt-2 text-ink-2">After that, just type what you spend in the bar at the bottom, like “Uber 230 yesterday”. Back up from Settings now and then, since your data lives only here.</p>
 
       <form onSubmit={(e) => void start(e)} className="mt-4 space-y-4">
         <div>
@@ -67,7 +68,7 @@ export function Welcome({ open, currency, accounts }: { open: boolean; currency:
         </div>
         <div>
           <label htmlFor="w-balance" className="text-sm text-ink-2">
-            What do you have today? ({chosen})
+            Money you have today ({chosen})
           </label>
           <input id="w-balance" inputMode="decimal" autoComplete="off" placeholder="Skip for now" value={balance} onChange={(e) => setBalance(e.target.value)} className={input} />
           <p className="mt-1 text-sm text-ink-2">Used for an estimated balance that stays hidden until you show it.</p>

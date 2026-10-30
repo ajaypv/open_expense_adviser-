@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useRef, useState } from 'react'
 import { describeAge, getLastBackup } from '../../data/backupState'
 import { backUpNow } from '../../data/backupNow'
-import { shareOrDownload, transactionsToCsv } from '../../data/exporters'
+import { forSpreadsheet, shareOrDownload, transactionsToCsv } from '../../data/exporters'
 import type { Backup, ImportSummary } from '../../data/importBackup'
 import { formatMoney, localDateString } from '../../db/money'
 import { emptyTrash, purgeTransaction, restoreTransaction, TRASH_DAYS } from '../../db/repo'
@@ -101,7 +101,7 @@ export function DataSection({ ledger }: { ledger: Ledger }) {
 
   async function exportCsv() {
     const csv = transactionsToCsv(await db.transactions.toArray(), ledger.categoryById, ledger.accountById)
-    const result = await shareOrDownload(`expenses-${localDateString()}.csv`, 'text/csv', csv)
+    const result = await shareOrDownload(`expenses-${localDateString()}.csv`, 'text/csv;charset=utf-8', forSpreadsheet(csv))
     if (result !== 'cancelled') toast({ message: result === 'shared' ? 'Export shared' : 'Export saved to your downloads' })
   }
 

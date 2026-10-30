@@ -219,6 +219,37 @@ describe('Currency and exchange rates', () => {
     await waitFor(async () => expect((await db.settings.get('currency'))?.value).toBe('USD'))
   })
 
+  describe('changing it once there are transactions', () => {
+    const pickUsd = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.click(await screen.findByRole('button', { name: 'Main currency' }))
+      await user.click(await screen.findByRole('radio', { name: /USD/ }))
+    }
+
+    it('asks first, saying what will happen, and keeps the currency if the answer is no', async () => {
+      await tx()
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+      const user = userEvent.setup()
+      mount((l) => <CurrencySection ledger={l} />)
+      await pickUsd(user)
+      expect(confirm).toHaveBeenCalledOnce()
+      expect(confirm.mock.calls[0][0]).toMatch(/USD/)
+      expect(confirm.mock.calls[0][0]).toMatch(/stay as they are/)
+      await new Promise((r) => setTimeout(r, 40))
+      expect((await db.settings.get('currency'))?.value).not.toBe('USD')
+      confirm.mockRestore()
+    })
+
+    it('changes it when the answer is yes', async () => {
+      await tx()
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+      const user = userEvent.setup()
+      mount((l) => <CurrencySection ledger={l} />)
+      await pickUsd(user)
+      await waitFor(async () => expect((await db.settings.get('currency'))?.value).toBe('USD'))
+      confirm.mockRestore()
+    })
+  })
+
   it('adds a currency, saves its rate when the field is left, and removes it when emptied', async () => {
     const user = userEvent.setup()
     mount((l) => <CurrencySection ledger={l} />)
@@ -251,10 +282,10 @@ describe('Currency and exchange rates', () => {
     const user = userEvent.setup()
     mount((l) => <CurrencySection ledger={l} />)
     expect(await screen.findByRole('alert')).toHaveTextContent('Set a rate for USD')
-    expect(screen.getByText('Rate needed')).toBeInTheDocument()
+    expect(screen.getByText('Set a rate')).toBeInTheDocument()
     await user.type(screen.getByLabelText('Value of 1 USD in INR'), '83')
     await user.tab()
-    await waitFor(() => expect(screen.queryByText('Rate needed')).toBeNull())
+    await waitFor(() => expect(screen.queryByText('Set a rate')).toBeNull())
     expect(screen.queryByRole('alert')).toBeNull()
   })
 })

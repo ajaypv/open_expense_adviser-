@@ -30,7 +30,7 @@ async function dailyReminder() {
   const state = readState((await db.settings.get(REMINDER_STATE_KEY))?.value)
   const logged =
     (await db.transactions
-      .filter((t) => t.deletedAt === undefined && (t.date === today || localDateString(new Date(t.createdAt)) === today))
+      .filter((t) => t.deletedAt === undefined && t.source !== 'recurring' && (t.date === today || localDateString(new Date(t.createdAt)) === today))
       .count()) > 0
   if (!shouldNotifyLog(now, today, prefs, logged, state)) return
   await self.registration.showNotification('Log today’s spending', {

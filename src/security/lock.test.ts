@@ -61,6 +61,13 @@ describe('app lock', () => {
     expect(localStorage.getItem('lock-enabled')).toBe('1')
   })
 
+  it('waits a minute before locking when no time was ever saved, instead of locking at once', async () => {
+    localStorage.setItem('lock-enabled', '1')
+    localStorage.removeItem('lock-after')
+    const { getLockState } = await load()
+    expect(getLockState().autoLockSeconds).toBe(60)
+  })
+
   it('refuses a bad PIN when turning on', async () => {
     const { enableLock } = await load()
     await expect(enableLock('12', 60)).rejects.toThrow(/4 to 8/)

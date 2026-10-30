@@ -150,3 +150,33 @@ describe('category budgets and rates', () => {
     await expect(setRate('USD', Number.NaN)).rejects.toThrow()
   })
 })
+
+describe('deleting several at once', () => {
+  it('leaves what is already in the trash alone, and does not hand it back for Undo to restore', async () => {
+    const { db, add, deleteTransaction, deleteTransactions } = await load()
+    const old = await add('Old')
+    const fresh = await add('Fresh')
+    await deleteTransaction(old)
+    const stamped = (await db.transactions.get(old))!.deletedAt
+    const removed = await deleteTransactions([old, fresh])
+    expect(removed.map((t) => t.merchant)).toEqual(['Fresh'])
+    expect((await db.transactions.get(old))!.deletedAt).toBe(stamped)
+  })
+
+  it('ignores an id that is not there', async () => {
+    const { add, deleteTransactions } = await load()
+    const id = await add('Here')
+    expect((await deleteTransactions([id, 9999])).map((t) => t.merchant)).toEqual(['Here'])
+  })
+})
+
+describe('purgeTransactions', () => {
+  it('removes the transactions outright, as when undoing something that was only just added', async () => {
+    const { db, add, purgeTransactions } = await load()
+    const a = await add('A')
+    const b = await add('B')
+    await add('C')
+    await purgeTransactions([a, b])
+    expect((await db.transactions.toArray()).map((t) => t.merchant)).toEqual(['C'])
+  })
+})

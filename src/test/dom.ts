@@ -11,6 +11,7 @@ import { cleanup } from '@testing-library/react'
 import { afterEach, beforeEach } from 'vitest'
 import { db } from '../db/schema'
 import { resetGoalGlow } from '../ui/GoalsButton'
+import { resetMotion } from '../ui/motion'
 
 // <dialog>: opening sets the attribute, closing removes it and fires "close", as a browser does.
 const dialog = HTMLDialogElement.prototype
@@ -53,6 +54,7 @@ export async function resetDb() {
 
 beforeEach(async () => {
   resetGoalGlow()
+  resetMotion()
   localStorage.clear()
   await resetDb()
 })

@@ -1,9 +1,9 @@
 import { formatMoney } from '../db/money'
+import { AnimatedMoney } from './AnimatedMoney'
 import { Icon } from './Icon'
 
 interface Props {
   monthName: string
-  sentMinor: number
   receivedMinor: number
   currency: string
   balanceMinor: number
@@ -19,12 +19,11 @@ interface Props {
 const card = 'rounded-3xl bg-surface shadow-[0_0_0_1px_var(--ring)]'
 
 /**
- * Money sent and received this month, and an estimated balance that stays hidden until the
+ * Money received this month, and an estimated balance that stays hidden until the
  * user asks to see it. The mask has a fixed length so it doesn't hint at the amount.
  */
 export function WalletPanel({
   monthName,
-  sentMinor,
   receivedMinor,
   currency,
   balanceMinor,
@@ -35,26 +34,17 @@ export function WalletPanel({
   onSetBalance,
 }: Props) {
   return (
-    <section aria-label="Money sent and received" className="mt-3 space-y-3">
-      <dl className="grid grid-cols-2 gap-3">
-        <div className={`${card} flex flex-col-reverse gap-1 p-4`}>
-          <dt className="flex items-center gap-1.5 text-sm text-ink-2">
-            <Icon name="arrowUp" size={16} />
-            Sent in {monthName}
-          </dt>
-          <dd className="text-[clamp(1.25rem,6vw,1.625rem)] font-semibold leading-tight tracking-tight tabular-nums">
-            {formatMoney(sentMinor, currency)}
-          </dd>
-        </div>
-        <div className={`${card} flex flex-col-reverse gap-1 p-4`}>
-          <dt className="flex items-center gap-1.5 text-sm text-ink-2">
-            <Icon name="arrowDown" size={16} />
-            Received in {monthName}
-          </dt>
-          <dd className="text-[clamp(1.25rem,6vw,1.625rem)] font-semibold leading-tight tracking-tight tabular-nums">
-            {formatMoney(receivedMinor, currency)}
-          </dd>
-        </div>
+    <section aria-label="Money received and your balance" className="mt-3 space-y-3">
+      <dl className={`${card} flex items-center justify-between gap-3 p-4`}>
+        <dt className="flex items-center gap-2 text-sm font-medium text-ink-2">
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink">
+            <Icon name="arrowDown" size={14} />
+          </span>
+          Received in {monthName}
+        </dt>
+        <dd className="text-[clamp(1.25rem,6vw,1.625rem)] font-bold leading-tight tracking-tight tabular-nums">
+          <AnimatedMoney minor={receivedMinor} currency={currency} id="received" />
+        </dd>
       </dl>
 
       <div className={`${card} p-4`}>
@@ -63,7 +53,7 @@ export function WalletPanel({
             <p className="text-sm text-ink-2">Estimated balance</p>
             <p
               id="balance-value"
-              className="text-[clamp(1.375rem,6.4vw,1.75rem)] font-semibold leading-tight tracking-tight tabular-nums"
+              className="text-[clamp(1.375rem,6.4vw,1.75rem)] font-bold leading-tight tracking-tight tabular-nums"
             >
               {shown ? (
                 formatMoney(balanceMinor, currency)
@@ -100,7 +90,7 @@ export function WalletPanel({
         {shown && (
           <p className="mt-3 border-t border-line pt-3 text-sm text-ink-2">
             {balanceSet ? (
-              'Your balance when you set it, plus money received, minus money sent since.'
+              'Starts from the balance you set, then adds what you receive and subtracts what you spend.'
             ) : (
               <>
                 Based only on what you&rsquo;ve logged.{' '}

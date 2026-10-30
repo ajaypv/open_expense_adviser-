@@ -29,7 +29,7 @@ export function Movers({ changes, categoryById, currency, previousLabel }: Props
             <div className="flex items-baseline justify-between gap-3">
               <span className="flex min-w-0 items-center gap-2">
                 <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: cat?.color ?? 'var(--other)' }} />
-                <span className="truncate">{cat?.name ?? 'Uncategorised'}</span>
+                <span className="truncate">{cat?.name ?? 'No category'}</span>
               </span>
               <span className="flex shrink-0 items-center gap-1 font-semibold tabular-nums">
                 <Icon name={up ? 'arrowUp' : 'arrowDown'} size={16} />

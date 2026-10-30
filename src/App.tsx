@@ -1,5 +1,5 @@
 import { flushSync } from 'react-dom'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { markVersionSeen, startupNotice, useOnboarded, useSeenVersion } from './data/appState'
 import type { LedgerTx } from './data/buildLedger'
 import { useDisplay } from './data/display'
@@ -12,23 +12,22 @@ import { formatMoney, localDateString } from './db/money'
 import {
   addTransaction,
   categoryIdByName,
-  deleteTransaction,
-  deleteTransactions,
+  purgeTransaction,
+  purgeTransactions,
   purgeExpiredTrash,
   requestPersistentStorage,
 } from './db/repo'
 import type { Goal, Transaction } from './db/schema'
 import { monthOf, type MonthKey } from './insights/aggregates'
+import { monthRange } from './insights/filters'
 import { learnedCategoryId } from './ingest/learn'
-import { parseMany } from './ingest/localParser'
+import { describeDay, parseMany } from './ingest/localParser'
 import { suggest, type Suggestion } from './insights/suggestions'
 import { usePwa } from './pwa/usePwa'
 import { APP_VERSION } from './pwa/version'
 import { useReminders } from './reminders/useReminders'
 import { Activity } from './screens/Activity'
 import { Home } from './screens/Home'
-import { Insights } from './screens/Insights'
-import { Settings } from './screens/Settings'
 import { LockScreen } from './security/LockScreen'
 import { useLockState, watchVisibility } from './security/lock'
 import { useTheme } from './theme/useTheme'
@@ -38,12 +37,20 @@ import { ChatBar } from './ui/ChatBar'
 import { GoalMoneySheet, GoalSheet } from './ui/GoalSheets'
 import { GoalsOverview } from './ui/GoalsOverview'
 import { PwaBanner } from './ui/PwaBanner'
+import { ScreenSkeleton } from './ui/ScreenSkeleton'
 import { SuggestionList } from './ui/SuggestionList'
 import { ToastProvider, useToast } from './ui/toast'
 import { Welcome } from './ui/Welcome'
 import { WhatsNew } from './ui/WhatsNew'
 
 const NO_SUGGESTIONS: Suggestion[] = []
+
+// Insights (with its charts) and Settings (with its ten sections) are a large share of the code and are not
+// needed to draw Home, so they are fetched when first wanted, and in the idle moment after the first screen.
+const loadInsights = () => import('./screens/Insights').then((m) => ({ default: m.Insights }))
+const loadSettings = () => import('./screens/Settings').then((m) => ({ default: m.Settings }))
+const Insights = lazy(loadInsights)
+const Settings = lazy(loadSettings)
 
 export default function App() {
   return (
@@ -83,6 +90,10 @@ function Shell() {
   // (an example chip); a new `n` remounts the bar with that text.
   const [draft, setDraft] = useState({ text: '', n: 0 })
   const [categoryFilter, setCategoryFilter] = useState<number | null>(null)
+  // The dates Activity opens on when a category is picked from Home: the month Home was showing.
+  const [activityRange, setActivityRange] = useState<{ from: string; to: string } | null>(null)
+  const monthRef = useRef(month)
+  monthRef.current = month
   const [sheet, setSheet] = useState<Sheet>({ open: false, editing: null, prefill: null, startKind: 'expense' })
   const [goalsOpen, setGoalsOpen] = useState(false)
   const [goalSheet, setGoalSheet] = useState<GoalSheetState>({ open: false, goal: null, n: 0 })
@@ -116,6 +127,26 @@ function Shell() {
   useEffect(() => {
     void requestPersistentStorage()
     void purgeExpiredTrash() // anything deleted more than 30 days ago goes for good
+  }, [])
+
+  // The browser tab, history and screen readers all announce the title, so it names the screen that is open.
+  useEffect(() => {
+    const label = TABS.find((t) => t.id === tab)?.label
+    document.title = tab === 'home' || !label ? 'Expense Tracker' : `${label} - Expense Tracker`
+  }, [tab])
+
+  // Fetch the other screens in the idle moment after the first one is up, so opening a tab is instant.
+  useEffect(() => {
+    const fetchScreens = () => {
+      void loadInsights()
+      void loadSettings()
+    }
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(fetchScreens, { timeout: 4000 })
+      return () => window.cancelIdleCallback(id)
+    }
+    const id = window.setTimeout(fetchScreens, 1500)
+    return () => window.clearTimeout(id)
   }, [])
 
   // Reminders to log, budget alerts, and the number on the app icon.
@@ -172,6 +203,11 @@ function Shell() {
   const go = useCallback((next: Tab) => {
     const current = tabRef.current
     if (next === current) return
+    // Whatever was picked on the way into Activity stays behind when it is left, so coming back starts fresh.
+    if (current === 'activity') {
+      setCategoryFilter(null)
+      setActivityRange(null)
+    }
     const direction = TABS.findIndex((t) => t.id === next) > TABS.findIndex((t) => t.id === current) ? 'forward' : 'backward'
     const update = () => {
       tabRef.current = next
@@ -191,7 +227,7 @@ function Shell() {
     async (text: string): Promise<boolean> => {
       const entries = parseMany(text)
       if (entries.length === 0) {
-        toast({ message: 'No amount found. Try “450 lunch at Cafe”.' })
+        toast({ message: 'I couldn’t find an amount. Try “450 lunch at Cafe”.' })
         return false
       }
       const { txs, categoryById } = dataRef.current
@@ -206,7 +242,7 @@ function Shell() {
         const id = await addTransaction({
           kind: parsed.kind,
           amountMinor: parsed.amountMinor,
-          currency,
+          currency: parsed.currency ?? currency,
           categoryId,
           merchant: parsed.merchant,
           note: '',
@@ -220,16 +256,16 @@ function Shell() {
       }
       // Show the month the entry landed in so the user sees it appear.
       setMonth(monthOf(entries[0].date))
-      const undo = () => void (ids.length === 1 ? deleteTransaction(ids[0]) : deleteTransactions(ids))
+      // Undoing something just added removes it, rather than leaving a copy in the trash.
+      const undo = () => void (ids.length === 1 ? purgeTransaction(ids[0]) : purgeTransactions(ids))
       if (entries.length > 1) {
-        toast({ message: `Added ${entries.length} entries${sent ? `, ${formatMoney(sent, currency)} sent` : ''}`, actionLabel: 'Undo', onAction: undo })
+        toast({ message: `Added ${entries.length} transactions${sent ? `, ${formatMoney(sent, currency)} spent` : ''}`, actionLabel: 'Undo', onAction: undo })
       } else {
         const only = entries[0]
+        const money = formatMoney(only.amountMinor, only.currency ?? currency)
+        const when = describeDay(only.date)
         toast({
-          message:
-            only.kind === 'income'
-              ? `Received ${formatMoney(only.amountMinor, currency)}`
-              : `Added ${formatMoney(only.amountMinor, currency)} to ${lastName}`,
+          message: (only.kind === 'income' ? `Received ${money}` : `Added ${money} to ${lastName}`) + (when ? `, ${when}` : ''),
           actionLabel: 'Undo',
           onAction: undo,
         })
@@ -269,12 +305,14 @@ function Shell() {
   const pickCategory = useCallback(
     (id: number) => {
       setCategoryFilter(id)
+      setActivityRange(monthRange(monthRef.current))
       go('activity')
     },
     [go],
   )
   const seeAll = useCallback(() => {
     setCategoryFilter(null)
+    setActivityRange(null)
     go('activity')
   }, [go])
   const openSettings = useCallback(() => go('settings'), [go])
@@ -310,21 +348,25 @@ function Shell() {
           />
         )}
         {tab === 'activity' && (
-          <Activity ledger={ledger} today={today} categoryFilter={categoryFilter} onCategoryFilter={setCategoryFilter} onEdit={openEdit} />
+          <Activity ledger={ledger} today={today} categoryFilter={categoryFilter} onCategoryFilter={setCategoryFilter} initialRange={activityRange} onEdit={openEdit} />
         )}
         {tab === 'insights' && (
-          <Insights ledger={ledger} month={month} onMonth={setMonth} today={today} onOpenSettings={openSettings} />
+          <Suspense fallback={<ScreenSkeleton label="Insights" />}>
+            <Insights ledger={ledger} month={month} onMonth={setMonth} today={today} onOpenSettings={openSettings} onPickCategory={pickCategory} />
+          </Suspense>
         )}
         {tab === 'settings' && (
-          <Settings
-            ledger={ledger}
-            theme={theme.pref}
-            onTheme={theme.setPref}
-            updateReady={pwa.updateReady}
-            onApplyUpdate={pwa.applyUpdate}
-            onCheckUpdate={pwa.checkNow}
-            onShowWhatsNew={showWhatsNew}
-          />
+          <Suspense fallback={<ScreenSkeleton label="Settings" />}>
+            <Settings
+              ledger={ledger}
+              theme={theme.pref}
+              onTheme={theme.setPref}
+              updateReady={pwa.updateReady}
+              onApplyUpdate={pwa.applyUpdate}
+              onCheckUpdate={pwa.checkNow}
+              onShowWhatsNew={showWhatsNew}
+            />
+          </Suspense>
         )}
       </main>
 

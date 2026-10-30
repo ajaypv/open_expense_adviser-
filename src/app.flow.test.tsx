@@ -46,7 +46,7 @@ describe('First launch', () => {
     expect(await screen.findByRole('dialog', { name: 'Welcome' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Skip for now' }))
     await waitFor(async () => expect((await db.settings.get('onboarded'))?.value).toBe(true))
-    expect(await screen.findByText('Nothing logged yet.')).toBeInTheDocument()
+    expect(await screen.findByText('Let’s add your first one.')).toBeInTheDocument()
   })
 
   it('saves the currency, balance and budget typed in the welcome', async () => {
@@ -55,7 +55,7 @@ describe('First launch', () => {
     await screen.findByRole('dialog', { name: 'Welcome' })
     await user.click(screen.getByRole('button', { name: 'Currency' }))
     await user.click(await screen.findByRole('radio', { name: /USD/ }))
-    await user.type(screen.getByLabelText(/What do you have today/), '5,000')
+    await user.type(screen.getByLabelText(/Money you have today/), '5,000')
     await user.type(screen.getByLabelText(/Monthly budget/), '30000')
     await user.click(screen.getByRole('button', { name: 'Get started' }))
     // The last thing the welcome records is the version seen, so wait for that before checking the rest.
@@ -69,7 +69,7 @@ describe('First launch', () => {
     const user = userEvent.setup()
     render(<App />)
     await screen.findByRole('dialog', { name: 'Welcome' })
-    await user.type(screen.getByLabelText(/What do you have today/), 'lots')
+    await user.type(screen.getByLabelText(/Money you have today/), 'lots')
     await user.click(screen.getByRole('button', { name: 'Get started' }))
     expect(await screen.findByText('Use numbers only. Leave a box empty to skip it.')).toBeInTheDocument()
     expect(await db.settings.get('onboarded')).toBeUndefined()
@@ -93,7 +93,7 @@ describe('First launch', () => {
 
 describe('Logging from the input bar', () => {
   const type = async (user: ReturnType<typeof userEvent.setup>, text: string) => {
-    await user.type(await screen.findByLabelText('Log an expense'), `${text}{Enter}`)
+    await user.type(await screen.findByLabelText('Add a transaction'), `${text}{Enter}`)
   }
 
   it('turns a sentence into an expense and says what was added', async () => {
@@ -102,7 +102,21 @@ describe('Logging from the input bar', () => {
     await waitFor(async () => expect(await db.transactions.count()).toBe(1))
     expect((await db.transactions.toArray())[0]).toMatchObject({ kind: 'expense', amountMinor: 45_000, source: 'chat', date: localDateString() })
     expect(await screen.findByText(/Added ₹450 to/)).toBeInTheDocument()
-    expect(screen.getByLabelText('Log an expense')).toHaveValue('') // the bar clears
+    expect(screen.getByLabelText('Add a transaction')).toHaveValue('') // the bar clears
+  })
+
+  it('keeps the currency that was typed, so a dollar is not saved as a rupee', async () => {
+    const user = await open()
+    await type(user, '$5 coffee')
+    await waitFor(async () => expect(await db.transactions.count()).toBe(1))
+    expect((await db.transactions.toArray())[0]).toMatchObject({ amountMinor: 500, currency: 'USD' })
+    expect(await screen.findByText(/Added \$5(\.00)? to/)).toBeInTheDocument()
+  })
+
+  it('says which day it filed the entry under when that is not today', async () => {
+    const user = await open()
+    await type(user, 'Uber 230 yesterday')
+    expect(await screen.findByText(/Added ₹230 to .*, yesterday/)).toBeInTheDocument()
   })
 
   it("shows what was spent today on Home as soon as it is logged, and not yesterday's", async () => {
@@ -117,7 +131,7 @@ describe('Logging from the input bar', () => {
     const user = await open()
     await type(user, 'coffee 120, lunch 340')
     await waitFor(async () => expect(await db.transactions.count()).toBe(2))
-    expect(await screen.findByText('Added 2 entries, ₹460 sent')).toBeInTheDocument()
+    expect(await screen.findByText('Added 2 transactions, ₹460 spent')).toBeInTheDocument()
   })
 
   it('understands received money', async () => {
@@ -132,15 +146,15 @@ describe('Logging from the input bar', () => {
     const user = await open()
     await type(user, '450 lunch')
     await user.click(await screen.findByRole('button', { name: 'Undo' }))
-    await waitFor(async () => expect((await db.transactions.toArray())[0].deletedAt).toBeTypeOf('number'))
+    await waitFor(async () => expect(await db.transactions.count()).toBe(0)) // gone, not parked in the trash
   })
 
   it('asks for an amount when there is none, and keeps what was typed', async () => {
     const user = await open()
     await type(user, 'lunch at the cafe')
-    expect(await screen.findByText('No amount found. Try “450 lunch at Cafe”.')).toBeInTheDocument()
+    expect(await screen.findByText('I couldn’t find an amount. Try “450 lunch at Cafe”.')).toBeInTheDocument()
     expect(await db.transactions.count()).toBe(0)
-    expect(screen.getByLabelText('Log an expense')).toHaveValue('lunch at the cafe')
+    expect(screen.getByLabelText('Add a transaction')).toHaveValue('lunch at the cafe')
   })
 
   it('learns the category chosen for a merchant', async () => {
@@ -155,15 +169,15 @@ describe('Logging from the input bar', () => {
 
   it('does not send an empty message', async () => {
     const user = await open()
-    expect(await screen.findByRole('button', { name: 'Add expense' })).toBeDisabled()
-    await user.type(screen.getByLabelText('Log an expense'), '   ')
-    expect(screen.getByRole('button', { name: 'Add expense' })).toBeDisabled()
+    expect(await screen.findByRole('button', { name: 'Send' })).toBeDisabled()
+    await user.type(screen.getByLabelText('Add a transaction'), '   ')
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
   })
 
   it('opens the full form from the plus button', async () => {
     const user = await open()
     await user.click(await screen.findByRole('button', { name: 'Add with the full form' }))
-    expect(await screen.findByRole('dialog', { name: 'Add transaction' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'New transaction' })).toBeInTheDocument()
   })
 })
 
@@ -175,7 +189,7 @@ describe('Moving around', () => {
     for (const [name, heading] of [['Activity', /Filters/], ['Insights', /./], ['Settings', 'Appearance']] as const) {
       await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name }))
       expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name })).toHaveAttribute('aria-current', 'page')
-      if (typeof heading === 'string') expect(await screen.findByText(heading)).toBeInTheDocument()
+      if (typeof heading === 'string') expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument()
     }
     await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Home' }))
     expect(await screen.findByText('Latest')).toBeInTheDocument()
@@ -183,7 +197,7 @@ describe('Moving around', () => {
 
   it('does not let any screen slide sideways, however wide something inside it is', async () => {
     await open()
-    await screen.findByText('Nothing logged yet.')
+    await screen.findByText('Let’s add your first one.')
     // jsdom has no layout, so this checks the rule that stops it: the scrolling area only moves up and down.
     expect(document.querySelector('main')).toHaveClass('overflow-y-auto', 'overflow-x-hidden')
   })
@@ -191,9 +205,9 @@ describe('Moving around', () => {
   it('opens a transaction to edit from the list', async () => {
     await tx({ merchant: 'Cafe' })
     const user = await open()
-    await user.click(await screen.findByRole('button', { name: /Edit sent Cafe/ }))
+    await user.click(await screen.findByRole('button', { name: /Edit spent Cafe/ }))
     const sheet = await screen.findByRole('dialog', { name: 'Edit transaction' })
-    expect(within(sheet).getByLabelText('Where')).toHaveValue('Cafe')
+    expect(within(sheet).getByLabelText('Merchant')).toHaveValue('Cafe')
   })
 
   it('shows another month from the month picker', async () => {
@@ -215,7 +229,7 @@ describe('Hide amounts', () => {
     const user = await open()
     await screen.findByText('Latest')
     await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Settings' }))
-    await screen.findByText('Appearance')
+    await screen.findByRole('heading', { name: 'Appearance' })
 
     // Something half-way down the page that a rebuild would lose: an opened section and the scroll position.
     await user.click(screen.getByText('Limits by category'))
@@ -293,7 +307,7 @@ describe('Goals from Home', () => {
     const user = await open()
     expect(await goalsButton()).toHaveClass('goal-glow')
     await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Settings' }))
-    await screen.findByText('Appearance')
+    await screen.findByRole('heading', { name: 'Appearance' })
     await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Home' }))
     expect(await goalsButton()).not.toHaveClass('goal-glow')
   })
@@ -346,5 +360,67 @@ describe('Goals from Home', () => {
     await user.click(within(overview).getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('dialog', { name: 'Goals' })).toBeNull()
     expect(screen.getByText('Latest')).toBeInTheDocument()
+  })
+})
+
+describe('The backup reminder', () => {
+  it('shows on the month in progress, and stays out of the way when looking back at an old one', async () => {
+    await db.transactions.bulkAdd(
+      Array.from({ length: 12 }, (_, i) => ({
+        kind: 'expense', amountMinor: 1000, currency: 'INR', categoryId: 1, merchant: `Shop ${i}`, note: '', date: localDateString(),
+        paymentMethod: '', source: 'manual', createdAt: 1000 + i,
+      })) as never,
+    )
+    const user = await open()
+    expect(await screen.findByRole('region', { name: 'Backup reminder' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Previous month' }))
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Backup reminder' })).toBeNull())
+  })
+})
+
+describe('The page title', () => {
+  const mainNav = () => within(screen.getByRole('navigation', { name: 'Main' }))
+
+  it('says which screen is open, so the browser tab, history and a screen reader all know', async () => {
+    await tx()
+    const user = await open()
+    await screen.findByText('Latest')
+    expect(document.title).toBe('Expense Tracker')
+    await user.click(mainNav().getByRole('button', { name: 'Activity' }))
+    await waitFor(() => expect(document.title).toBe('Activity - Expense Tracker'))
+    await user.click(mainNav().getByRole('button', { name: 'Settings' }))
+    await waitFor(() => expect(document.title).toBe('Settings - Expense Tracker'))
+    await user.click(mainNav().getByRole('button', { name: 'Home' }))
+    await waitFor(() => expect(document.title).toBe('Expense Tracker'))
+  })
+})
+
+describe('Opening a category from Home', () => {
+  const lastMonthDay = () => {
+    const d = new Date()
+    return localDateString(new Date(d.getFullYear(), d.getMonth() - 1, 15))
+  }
+  const mainNav = () => within(screen.getByRole('navigation', { name: 'Main' }))
+
+  it('lands on the month Home was showing, so the totals match', async () => {
+    await tx({ merchant: 'Swiggy' })
+    await tx({ merchant: 'Oldcafe', date: lastMonthDay() })
+    const user = await open()
+    await user.click(await screen.findByRole('button', { name: /Food & Dining, .*Show these expenses/ }))
+    expect(await screen.findByRole('button', { name: /Edit spent Swiggy/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Edit spent Oldcafe/ })).toBeNull()
+    expect(screen.getByRole('button', { name: 'This month' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('forgets the category and the month when you leave Activity and come back', async () => {
+    await tx({ merchant: 'Swiggy' })
+    await tx({ merchant: 'Oldcafe', date: lastMonthDay() })
+    const user = await open()
+    await user.click(await screen.findByRole('button', { name: /Food & Dining, .*Show these expenses/ }))
+    await screen.findByRole('button', { name: /Edit spent Swiggy/ })
+    await user.click(mainNav().getByRole('button', { name: 'Home' }))
+    await user.click(mainNav().getByRole('button', { name: 'Activity' }))
+    expect(await screen.findByRole('button', { name: /Edit spent Oldcafe/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Any time' })).toHaveAttribute('aria-pressed', 'true')
   })
 })

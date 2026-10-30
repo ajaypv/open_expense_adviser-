@@ -84,7 +84,7 @@ export function PickerField<T extends string | number>({
             autoComplete="off"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="mb-2 min-h-12 w-full rounded-xl bg-surface-2 px-3.5"
+            className="mb-2 min-h-12 w-full rounded-xl bg-surface-2 shadow-[inset_0_0_0_1px_var(--edge)] px-3.5"
           />
         )}
 

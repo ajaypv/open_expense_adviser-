@@ -25,7 +25,7 @@ const cell =
  * A time chosen with taps on hours and minutes, in a sheet that matches the app, instead of the
  * browser's own clock popup. Nothing changes until "Set time" is pressed.
  */
-export function TimeField({ id, title, value, onChange, hour12 = prefers12Hour(), className = 'min-h-12 w-40 rounded-xl bg-surface-2 px-3.5' }: Props) {
+export function TimeField({ id, title, value, onChange, hour12 = prefers12Hour(), className = 'min-h-12 w-40 rounded-xl bg-surface-2 shadow-[inset_0_0_0_1px_var(--edge)] px-3.5' }: Props) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState(() => splitTime(value))
   const t = to12(draft.hour)

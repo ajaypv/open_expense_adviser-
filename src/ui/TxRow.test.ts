@@ -48,7 +48,7 @@ describe('TxRow', () => {
 
   it('keeps a spoken label and flags saved locations', () => {
     const html = row(tx({ location: { lat: 1, lon: 2, accuracyM: 3 } }))
-    expect(html).toContain('aria-label="Edit sent Swiggy, ₹450, added with location"')
+    expect(html).toContain('aria-label="Edit spent Swiggy, ₹450, Food &amp; Dining, added with location"')
     expect(html).toContain('Added with location')
   })
 
@@ -66,5 +66,16 @@ describe('TxList', () => {
     expect((html.match(/<li /g) ?? []).length).toBe(3)
     expect((html.match(/<ul /g) ?? []).length).toBe(1)
     for (const name of ['Swiggy', 'Uber', 'Cafe']) expect(html).toContain(name)
+  })
+})
+
+describe('TxRow spoken label', () => {
+  it('carries what the eye sees: category, date and note, not only the title and amount', () => {
+    const html = row(tx({ note: 'with the team', date: '2026-10-20' }), food, { showDate: true })
+    expect(html).toMatch(/aria-label="Edit spent Swiggy, ₹450, Food &amp; Dining, (20 Oct|Oct 20)[^"]*, note: with the team"/)
+  })
+
+  it('leaves the date out when the list does not show it', () => {
+    expect(row(tx({ date: '2026-10-20' }), food)).not.toMatch(/aria-label="[^"]*(20 Oct|Oct 20)/)
   })
 })

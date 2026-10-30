@@ -8,7 +8,7 @@ import { useToast } from './toast'
 
 const IDEAS = ['New phone', 'Trip', 'Emergency fund', 'Gift']
 
-const field = 'mt-1 min-h-12 w-full rounded-xl bg-surface-2 px-3.5'
+const field = 'mt-1 min-h-12 w-full rounded-xl bg-surface-2 shadow-[inset_0_0_0_1px_var(--edge)] px-3.5'
 const chip =
   'flex min-h-11 cursor-pointer items-center rounded-full bg-surface px-3.5 text-[0.9375rem] shadow-[inset_0_0_0_1px_var(--ring)] ' +
   'has-[:checked]:bg-btn has-[:checked]:text-btn-ink has-[:checked]:shadow-none has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2'

@@ -56,7 +56,7 @@ export const ChatBar = memo(function ChatBar({ initialText = '', onSubmit, onOpe
         <Icon name="plus" />
       </button>
       <label htmlFor="chat-input" className="sr-only">
-        Log an expense
+        Add a transaction
       </label>
       <textarea
         id="chat-input"
@@ -67,13 +67,13 @@ export const ChatBar = memo(function ChatBar({ initialText = '', onSubmit, onOpe
         enterKeyHint="send"
         autoComplete="off"
         autoCapitalize="sentences"
-        placeholder="Spent 450 on lunch…"
+        placeholder="Try “450 lunch at Cafe”"
         className="max-h-32 min-h-11 flex-1 resize-none bg-transparent px-1 py-[0.6875rem] leading-snug outline-none focus-visible:outline-none [field-sizing:content]"
       />
       <button
         type="submit"
         disabled={!canSend}
-        aria-label="Add expense"
+        aria-label="Send"
         className="flex size-11 shrink-0 items-center justify-center rounded-full bg-btn text-btn-ink transition-opacity disabled:opacity-30"
       >
         <Icon name="send" />

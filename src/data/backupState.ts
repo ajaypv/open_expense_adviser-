@@ -2,6 +2,7 @@ import { db } from '../db/schema'
 
 const LAST = 'lastBackupAt'
 const SNOOZE = 'backupSnoozedUntil'
+const SNOOZE_COUNT = 'backupSnoozeCount'
 
 const DAY = 86_400_000
 
@@ -9,7 +10,8 @@ const DAY = 86_400_000
 export const BACKUP_EVERY_DAYS = 30
 /** Don't nag people who have only logged a handful of entries. */
 export const BACKUP_MIN_TRANSACTIONS = 10
-const SNOOZE_DAYS = 7
+/** Each "Later" waits longer than the one before, so a reminder that was declined stops coming back every week. */
+const SNOOZE_STEPS_DAYS = [7, 30, 90]
 
 export async function getLastBackup(): Promise<number | null> {
   const v = (await db.settings.get(LAST))?.value
@@ -19,10 +21,17 @@ export async function getLastBackup(): Promise<number | null> {
 export async function markBackedUp(now = Date.now()): Promise<void> {
   await db.settings.put({ key: LAST, value: now })
   await db.settings.delete(SNOOZE)
+  await db.settings.delete(SNOOZE_COUNT)
 }
 
 export async function snoozeBackupNudge(now = Date.now()): Promise<void> {
-  await db.settings.put({ key: SNOOZE, value: now + SNOOZE_DAYS * DAY })
+  const said = (await db.settings.get(SNOOZE_COUNT))?.value
+  const times = typeof said === 'number' ? said : 0
+  const days = SNOOZE_STEPS_DAYS[Math.min(times, SNOOZE_STEPS_DAYS.length - 1)]
+  await db.settings.bulkPut([
+    { key: SNOOZE, value: now + days * DAY },
+    { key: SNOOZE_COUNT, value: times + 1 },
+  ])
 }
 
 export async function getSnoozedUntil(): Promise<number> {

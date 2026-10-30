@@ -45,7 +45,7 @@ describe('TxRow: other currencies', () => {
     const html = row(dollars)
     expect(html).toContain('$10')
     expect(html).toContain('≈ ₹835')
-    expect(html).toContain('aria-label="Edit sent Swiggy, $10"')
+    expect(html).toContain('aria-label="Edit spent Swiggy, $10, Food &amp; Dining"')
   })
 
   it('says a rate is missing instead of showing a made-up conversion', () => {
@@ -64,10 +64,10 @@ describe('TxRow: select mode', () => {
     const off = row(tx(), { selecting: true, selected: false })
     expect(off).toContain('role="checkbox"')
     expect(off).toContain('aria-checked="false"')
-    expect(off).toContain('aria-label="Select sent Swiggy')
+    expect(off).toContain('aria-label="Select spent Swiggy')
     const on = row(tx(), { selecting: true, selected: true })
     expect(on).toContain('aria-checked="true"')
-    expect(on).toContain('aria-label="Selected sent Swiggy')
+    expect(on).toContain('aria-label="Selected spent Swiggy')
   })
 
   it('is a plain button otherwise', () => {
@@ -124,7 +124,7 @@ describe('Home cards', () => {
   })
 
   it('nudges to log when nothing was added today', () => {
-    expect(renderToStaticMarkup(createElement(LogNudge, { onAdd: () => {} }))).toContain('Nothing logged today yet')
+    expect(renderToStaticMarkup(createElement(LogNudge, { onAdd: () => {} }))).toContain('Nothing added today yet')
   })
 })
 

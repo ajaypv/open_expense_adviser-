@@ -23,7 +23,7 @@ export function dueRules(rules: Recurring[], today: string): Recurring[] {
  */
 export function occurrencesDue(rule: Recurring, today: string, cap = 12): string[] {
   const dates: string[] = []
-  const anchor = parseLocalDate(rule.nextDue).getDate()
+  const anchor = rule.anchorDay ?? parseLocalDate(rule.nextDue).getDate()
   let due = rule.nextDue
   while (due <= today && dates.length < cap) {
     dates.push(due)

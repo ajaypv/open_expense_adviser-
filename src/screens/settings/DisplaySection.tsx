@@ -61,7 +61,7 @@ function Segmented<T extends string>({
 export function DisplaySection({ theme, onTheme }: { theme: ThemePref; onTheme: (t: ThemePref) => void }) {
   const display = useDisplay()
   return (
-    <Group id="look-h" title="Appearance">
+    <Group id="look-h" title="Theme, text and numbers">
       <div className={`${card} space-y-5 p-4`}>
         <Segmented label="Theme" name="theme" value={theme} options={THEMES} onChange={onTheme} />
 
@@ -81,7 +81,7 @@ export function DisplaySection({ theme, onTheme }: { theme: ThemePref; onTheme: 
 
         <Switch
           label="Hide amounts"
-          detail="Replaces every amount with ₹•••• so the screen is safe to show. Turn it off to see them again."
+          detail="Replaces every amount with dots, so you can show your screen. Turn it off to see them again."
           checked={display.privacy}
           onChange={(privacy) => setDisplay({ privacy })}
         />

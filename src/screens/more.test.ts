@@ -51,7 +51,7 @@ describe('Activity', () => {
 
   it('keeps Select off with nothing to select, and explains the empty list', () => {
     const out = render([])
-    expect(out).toContain('Your transactions will show up here')
+    expect(out).toContain('Nothing here yet')
     expect(out).toMatch(/<button[^>]*disabled[^>]*>Select</)
   })
 
@@ -84,7 +84,7 @@ describe('Insights additions', () => {
     expect(out).toContain('Money in and out')
     expect(out).toContain('₹2,000') // received
     expect(out).toContain('₹1,600') // sent this month: 100 + 900 + 600
-    expect(out).toContain('You kept <b class="font-semibold">₹400</b>, 20% of what came in')
+    expect(out).toContain('So far this month you kept <b class="font-semibold">₹400</b>.') // the month is not over, so no rate yet
   })
 
   it('says so plainly when more went out than came in', () => {
@@ -129,7 +129,7 @@ describe('Insights additions', () => {
 describe('Welcome, What’s new and the lock screen', () => {
   it('welcomes with three optional questions and a way to skip', () => {
     const out = html(createElement(Welcome, { open: true, currency: 'INR', accounts: [{ id: 1, name: 'Main', openingMinor: null }] }))
-    for (const text of ['Welcome', 'Currency', 'What do you have today?', 'Monthly budget', 'Get started', 'Skip for now']) expect(out).toContain(text)
+    for (const text of ['Welcome', 'Currency', 'Money you have today', 'Monthly budget', 'Get started', 'Skip for now']) expect(out).toContain(text)
   })
 
   it('lists what changed in the newest version', () => {
@@ -173,7 +173,7 @@ describe('Settings sections', () => {
 
   it('Currency: warns when a currency used has no rate', () => {
     const out = html(createElement(CurrencySection, { ledger: makeLedger({ missingRates: ['USD'], rates: {} }) }))
-    expect(out).toContain('Rate needed')
+    expect(out).toContain('Set a rate')
     expect(out).toContain('Set a rate for USD')
     expect(out).toContain('Value of 1 USD in INR')
   })
@@ -207,7 +207,7 @@ describe('Settings sections', () => {
     const security = html(createElement(SecuritySection))
     expect(security).toContain('App lock')
     expect(security).toContain('Set a PIN')
-    expect(security).toContain('doesn’t scramble the data')
+    expect(security).toContain('does not encrypt the data')
   })
 
   it('Appearance: text size, hide amounts and number format', () => {

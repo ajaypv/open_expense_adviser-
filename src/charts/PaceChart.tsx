@@ -30,10 +30,13 @@ function niceCeil(value: number): number {
  * view; the gray line is the previous month for reference. Touch, hover or arrow keys move a
  * crosshair, and the legend rows double as the readout for the chosen day.
  */
-export function PaceChart({ current, previous, monthKey, currentLabel, previousLabel, budgetMinor, lastDay, currency }: Props) {
+export function PaceChart({ current, previous: previousMonth, monthKey, currentLabel, previousLabel, budgetMinor, lastDay, currency }: Props) {
   const plot = useRef<HTMLDivElement>(null)
   const [selected, setSelected] = useState<number | null>(null)
   const n = current.length
+  // Both lines share one x scale, so a longer previous month (31 days against 30) stops where this month does
+  // instead of running off the end of the chart.
+  const previous = previousMonth.slice(0, n)
   const day = selected ?? lastDay - 1
   // With no previous month (first month of use) the chart shows only the month in view.
   const hasPrevious = previous.length > 0
