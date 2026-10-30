@@ -11,6 +11,7 @@ import { cleanup } from '@testing-library/react'
 import { afterEach, beforeEach } from 'vitest'
 import { db } from '../db/schema'
 import { resetGoalGlow } from '../ui/GoalsButton'
+import { resetBackStack } from '../ui/backStack'
 import { resetMotion } from '../ui/motion'
 
 // <dialog>: opening sets the attribute, closing removes it and fires "close", as a browser does.
@@ -53,6 +54,7 @@ export async function resetDb() {
 }
 
 beforeEach(async () => {
+  resetBackStack()
   resetGoalGlow()
   resetMotion()
   localStorage.clear()
