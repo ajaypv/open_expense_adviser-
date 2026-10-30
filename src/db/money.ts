@@ -1,3 +1,20 @@
+/**
+ * The largest amount one transaction can hold, in minor units (₹10,000,000,000). Above this, sums stop being
+ * exact and a backup can no longer be read back, so nothing bigger is accepted.
+ */
+export const MAX_AMOUNT_MINOR = 1_000_000_000_000
+
+/** A three-letter currency code the browser can format. Anything else would throw on every amount shown. */
+export function isValidCurrency(code: unknown): code is string {
+  if (typeof code !== 'string' || !/^[A-Z]{3}$/.test(code)) return false
+  try {
+    new Intl.NumberFormat('en', { style: 'currency', currency: code })
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** Convert a user-entered decimal amount (e.g. 450.5) to integer minor units. */
 export function toMinor(amount: number): number {
   // toPrecision(15) strips float noise (1.005 * 100 = 100.49999999999999) before rounding.
@@ -72,4 +89,9 @@ export function localDateString(date = new Date()): string {
 export function parseLocalDate(date: string): Date {
   const [y, m, d] = date.split('-').map(Number)
   return new Date(y, m - 1, d)
+}
+
+/** A YYYY-MM-DD that is a real day: 2026-02-30 and 2026-13-45 are not. */
+export function isRealDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && localDateString(parseLocalDate(value)) === value
 }

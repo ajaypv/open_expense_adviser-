@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { useLedger } from '../data/useLedger'
 import { localDateString } from '../db/money'
 import { inMonth, sum } from '../insights/aggregates'
@@ -42,7 +42,8 @@ export function useReminders(ledger: Ledger, onMessage: (text: string) => void):
     }
   }, [])
 
-  const logged = loggedOn(ledger.txs, today)
+  // Scanned once per change to the data or the day, not on every redraw of the screen.
+  const logged = useMemo(() => loggedOn(ledger.txs, today), [ledger.txs, today])
   const logNudge = prefs.loaded && logReminderDue(now, prefs, logged)
   const dueCount = dueRules(ledger.recurring, today).length
 

@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo } from 'react'
+import { isValidCurrency } from '../db/money'
 import { db, type Account, type Budget, type Category, type Goal, type Recurring, type Transaction } from '../db/schema'
 import { buildLedger, type Rates } from './buildLedger'
 
@@ -17,18 +18,27 @@ const NO_RATES: Rates = {}
 export function useLedger() {
   const rows = useLiveQuery(() => db.transactions.toArray(), [])
   const categories = useLiveQuery(() => db.categories.toArray(), [])
-  const currencyRow = useLiveQuery(() => db.settings.get('currency'), [])
   const budgets = useLiveQuery(() => db.budgets.toArray(), [])
   const accounts = useLiveQuery(() => db.accounts.toArray(), [])
   const recurring = useLiveQuery(() => db.recurring.toArray(), [])
-  const ratesRow = useLiveQuery(() => db.settings.get('rates'), [])
+  // Both settings in one read: it resolves with a row or undefined, so "not here" can't be mistaken for "not loaded yet".
+  const settings = useLiveQuery(() => db.settings.bulkGet(['currency', 'rates']), [])
   const goals = useLiveQuery(() => db.goals.toArray(), [])
 
   // One memoized object: it keeps the same identity until the data actually changes, so screens
   // wrapped in memo() skip re-rendering when something unrelated (a sheet, a tab) changes.
   return useMemo(
     () => ({
-      loading: rows === undefined || categories === undefined || accounts === undefined,
+      // Everything the first screen draws has to be here, or amounts would show in the wrong currency and
+      // budgets and due cards would pop in after the page had settled.
+      loading:
+        rows === undefined ||
+        categories === undefined ||
+        accounts === undefined ||
+        budgets === undefined ||
+        recurring === undefined ||
+        goals === undefined ||
+        settings === undefined,
       // Goals are saved by hand and don't come from transactions, so they bypass the ledger build.
       goals: goals ?? NO_GOALS,
       ...buildLedger({
@@ -37,10 +47,10 @@ export function useLedger() {
         accounts: accounts ?? NO_ACCOUNTS,
         budgets: budgets ?? NO_BUDGETS,
         recurring: recurring ?? NO_RULES,
-        currency: typeof currencyRow?.value === 'string' ? currencyRow.value : 'INR',
-        rates: ratesRow && typeof ratesRow.value === 'object' && ratesRow.value ? (ratesRow.value as Rates) : NO_RATES,
+        currency: isValidCurrency(settings?.[0]?.value) ? settings[0].value : 'INR',
+        rates: settings?.[1] && typeof settings[1].value === 'object' && settings[1].value ? (settings[1].value as Rates) : NO_RATES,
       }),
     }),
-    [rows, categories, currencyRow, budgets, accounts, recurring, ratesRow, goals],
+    [rows, categories, settings, budgets, accounts, recurring, goals],
   )
 }

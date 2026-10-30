@@ -10,17 +10,29 @@ const ToastContext = createContext<(options: ToastOptions) => void>(() => {})
 
 export const useToast = () => useContext(ToastContext)
 
+/** A message that only tells you something. */
 const VISIBLE_MS = 6000
+/** A message with an Undo stays longer: it may be the only way back from a mistake. */
+const VISIBLE_WITH_ACTION_MS = 9000
+/** How long it lingers after a finger, pointer or keyboard focus leaves it. */
+const LINGER_MS = 3000
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<(ToastOptions & { id: number }) | null>(null)
   const timer = useRef<number | undefined>(undefined)
 
-  const show = useCallback((options: ToastOptions) => {
+  const hideIn = useCallback((ms: number) => {
     window.clearTimeout(timer.current)
-    setToast({ ...options, id: Date.now() })
-    timer.current = window.setTimeout(() => setToast(null), VISIBLE_MS)
+    timer.current = window.setTimeout(() => setToast(null), ms)
   }, [])
+
+  const show = useCallback(
+    (options: ToastOptions) => {
+      setToast({ ...options, id: Date.now() })
+      hideIn(options.actionLabel ? VISIBLE_WITH_ACTION_MS : VISIBLE_MS)
+    },
+    [hideIn],
+  )
 
   useEffect(() => () => window.clearTimeout(timer.current), [])
 
@@ -35,9 +47,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toast && (
           <div
             key={toast.id}
+            // It waits while it is being read or used, and goes a moment after the person lets go.
+            onPointerEnter={() => window.clearTimeout(timer.current)}
+            onPointerLeave={() => hideIn(LINGER_MS)}
+            onFocus={() => window.clearTimeout(timer.current)}
+            onBlur={() => hideIn(LINGER_MS)}
             className="toast pointer-events-auto flex max-w-md items-center gap-4 rounded-2xl bg-btn py-2.5 pl-4 pr-2 text-btn-ink shadow-lg"
           >
-            <span className="text-[0.9375rem]">{toast.message}</span>
+            <span>{toast.message}</span>
             {toast.actionLabel && (
               <button
                 type="button"

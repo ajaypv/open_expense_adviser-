@@ -7,7 +7,7 @@ export type Ledger = ReturnType<typeof useLedger>
 export { CURRENCIES } from '../../db/currencies'
 
 export const card = 'rounded-3xl bg-surface shadow-[0_0_0_1px_var(--ring)]'
-export const field = 'min-h-12 w-full rounded-xl bg-surface-2 px-3.5 focus-visible:outline-offset-0'
+export const field = 'min-h-12 w-full rounded-xl bg-surface-2 shadow-[inset_0_0_0_1px_var(--edge)] px-3.5 focus-visible:outline-offset-0'
 export const saveButton = 'min-h-12 shrink-0 rounded-full bg-btn px-5 font-semibold text-btn-ink'
 export const secondaryButton = 'min-h-12 rounded-full bg-surface-2 px-5 font-medium disabled:opacity-50'
 export const dangerLink = 'mt-1 min-h-11 rounded-full font-medium text-critical'
@@ -27,11 +27,11 @@ export function Group({
   children: ReactNode
 }) {
   return (
-    <section aria-labelledby={id} className="mt-8">
+    <section aria-labelledby={id} className="mt-6">
       <div className="mb-3 flex items-center justify-between gap-3 px-1">
-        <h2 id={id} className="text-lg font-semibold">
+        <h3 id={id} className="text-lg font-bold tracking-tight">
           {title}
-        </h2>
+        </h3>
         {status}
       </div>
       {hint && <p className="-mt-1 mb-3 px-1 text-ink-2">{hint}</p>}
@@ -86,7 +86,7 @@ export function Switch({
       />
       <span
         aria-hidden="true"
-        className="relative h-7 w-12 shrink-0 rounded-full bg-surface-2 shadow-[inset_0_0_0_1px_var(--axis)] transition-colors after:absolute after:left-1 after:top-1 after:size-5 after:rounded-full after:bg-ink-2 after:transition-transform peer-checked:bg-btn peer-checked:after:translate-x-5 peer-checked:after:bg-btn-ink peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink peer-disabled:opacity-50 motion-reduce:transition-none motion-reduce:after:transition-none"
+        className="relative h-7 w-12 shrink-0 rounded-full bg-surface-2 shadow-[inset_0_0_0_1px_var(--edge)] transition-colors after:absolute after:left-1 after:top-1 after:size-5 after:rounded-full after:bg-ink-2 after:transition-transform peer-checked:bg-btn peer-checked:after:translate-x-5 peer-checked:after:bg-btn-ink peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink peer-disabled:opacity-50 motion-reduce:transition-none motion-reduce:after:transition-none"
       />
     </label>
   )
@@ -126,7 +126,7 @@ export function RadioList<T extends string>({
           </span>
           <span
             aria-hidden="true"
-            className="flex size-6 shrink-0 items-center justify-center rounded-full text-transparent shadow-[inset_0_0_0_1.5px_var(--axis)] peer-checked:bg-btn peer-checked:text-btn-ink peer-checked:shadow-none"
+            className="flex size-6 shrink-0 items-center justify-center rounded-full text-transparent shadow-[inset_0_0_0_1.5px_var(--edge)] peer-checked:bg-btn peer-checked:text-btn-ink peer-checked:shadow-none"
           >
             <Icon name="check" size={16} />
           </span>

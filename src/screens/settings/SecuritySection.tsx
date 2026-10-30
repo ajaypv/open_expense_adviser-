@@ -90,7 +90,7 @@ export function SecuritySection() {
       id="security-h"
       title="App lock"
       status={<Status on={lock.enabled}>{lock.enabled ? 'On' : 'Off'}</Status>}
-      hint="Ask for a PIN when the app opens or returns from the background. It keeps others out of the app, but it doesn’t scramble the data stored on the device."
+      hint="Asks for a PIN when the app opens or comes back from the background. It keeps other people out of the app, but it does not encrypt the data stored on this device."
     >
       <div className={`${card} p-4`}>
         {mode === 'idle' && !lock.enabled && (
@@ -103,12 +103,12 @@ export function SecuritySection() {
           <div className="space-y-3">
             <div>
               <label htmlFor="auto-lock" className="text-sm text-ink-2">
-                Lock the app
+                Lock when I’m away
               </label>
               <div className="mt-1.5">
                 <PickerField
                   id="auto-lock"
-                  title="Lock the app"
+                  title="Lock when I’m away"
                   value={lock.autoLockSeconds}
                   options={AUTO_LOCK_OPTIONS}
                   onChange={setAutoLockSeconds}
@@ -159,10 +159,10 @@ export function SecuritySection() {
             {mode === 'setup' && (
               <div>
                 <label htmlFor="pin-after" className="text-sm text-ink-2">
-                  Lock the app
+                  Lock when I’m away
                 </label>
                 <div className="mt-1.5">
-                  <PickerField id="pin-after" title="Lock the app" value={after} options={AUTO_LOCK_OPTIONS} onChange={setAfter} className={field} />
+                  <PickerField id="pin-after" title="Lock when I’m away" value={after} options={AUTO_LOCK_OPTIONS} onChange={setAfter} className={field} />
                 </div>
               </div>
             )}

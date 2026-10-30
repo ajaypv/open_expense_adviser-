@@ -60,6 +60,12 @@ export interface Recurring {
   frequency: 'weekly' | 'monthly'
   /** Date (YYYY-MM-DD) the next occurrence is due. */
   nextDue: string
+  /**
+   * The day of the month a monthly rule keeps to. A rule for the 31st moves to the 28th in February but
+   * comes back to the 31st in March; without this it would stay on the 28th for good. Rules made before
+   * this existed take the day from their due date.
+   */
+  anchorDay?: number
   active: boolean
 }
 

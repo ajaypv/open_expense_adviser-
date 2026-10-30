@@ -1,11 +1,11 @@
-import { localDateString, parseLocalDate } from './money'
+import { isValidCurrency, localDateString, MAX_AMOUNT_MINOR, parseLocalDate } from './money'
 import { db, type Goal, type Recurring, type Transaction } from './schema'
 
 const DEFAULT_CURRENCY = 'INR'
 
 export async function getCurrency(): Promise<string> {
   const row = await db.settings.get('currency')
-  return typeof row?.value === 'string' ? row.value : DEFAULT_CURRENCY
+  return isValidCurrency(row?.value) ? row.value : DEFAULT_CURRENCY
 }
 
 export async function setCurrency(currency: string): Promise<void> {
@@ -15,9 +15,10 @@ export async function setCurrency(currency: string): Promise<void> {
 export type NewTransaction = Omit<Transaction, 'id' | 'createdAt'>
 
 function assertValidAmount(amountMinor: number) {
-  if (!Number.isInteger(amountMinor) || amountMinor <= 0) {
+  if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) {
     throw new Error('Amount must be a positive number')
   }
+  if (amountMinor > MAX_AMOUNT_MINOR) throw new Error('That amount is too large. Enter a smaller one.')
 }
 
 export async function addTransaction(input: NewTransaction): Promise<number> {
@@ -40,12 +41,17 @@ export async function deleteTransaction(id: number): Promise<Transaction | undef
   return existing
 }
 
-/** Move several transactions to the trash at once. Returns them as they were. */
+/**
+ * Move several transactions to the trash at once, in one step. Returns the ones that were moved, as they were.
+ * Anything already in the trash is left alone (its date is not reset) and is not returned, so Undo can't
+ * bring back something that was deleted earlier.
+ */
 export async function deleteTransactions(ids: number[]): Promise<Transaction[]> {
-  const rows = (await db.transactions.bulkGet(ids)).filter((t): t is Transaction => t !== undefined)
-  const now = Date.now()
-  await db.transactions.bulkPut(rows.map((t) => ({ ...t, deletedAt: now })))
-  return rows
+  return db.transaction('rw', db.transactions, async () => {
+    const rows = (await db.transactions.bulkGet(ids)).filter((t): t is Transaction => t !== undefined && t.deletedAt === undefined)
+    await db.transactions.where('id').anyOf(rows.map((t) => t.id)).modify({ deletedAt: Date.now() })
+    return rows
+  })
 }
 
 /** Take a transaction out of the trash (or put back one that was just deleted): used by Undo and Restore. */
@@ -61,6 +67,11 @@ export async function restoreTransactions(rows: Transaction[]): Promise<void> {
 /** Remove one trashed transaction for good. */
 export async function purgeTransaction(id: number): Promise<void> {
   await db.transactions.delete(id)
+}
+
+/** Remove several transactions outright: for Undo of something that was only just added, so it doesn't fill the trash. */
+export async function purgeTransactions(ids: number[]): Promise<void> {
+  await db.transactions.bulkDelete(ids)
 }
 
 export async function emptyTrash(): Promise<number> {
@@ -126,7 +137,8 @@ export async function deleteAccount(id: number): Promise<boolean> {
 
 export async function addRecurring(rule: Omit<Recurring, 'id'>): Promise<number> {
   assertValidAmount(rule.amountMinor)
-  return db.recurring.add(rule as never) as Promise<number>
+  const anchorDay = rule.anchorDay ?? parseLocalDate(rule.nextDue).getDate()
+  return db.recurring.add({ ...rule, anchorDay } as never) as Promise<number>
 }
 
 export async function updateRecurring(id: number, patch: Partial<Omit<Recurring, 'id'>>): Promise<void> {

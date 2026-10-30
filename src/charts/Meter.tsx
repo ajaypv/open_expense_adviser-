@@ -1,5 +1,6 @@
 import { formatMoney } from '../db/money'
 import { Icon } from '../ui/Icon'
+import { useIntro } from '../ui/motion'
 
 interface Props {
   spentMinor: number
@@ -9,10 +10,11 @@ interface Props {
 
 /** Budget progress. The state is always stated in words and an icon, never by color alone. */
 export function Meter({ spentMinor, limitMinor, currency }: Props) {
+  const intro = useIntro()
   const ratio = spentMinor / limitMinor
   const over = ratio >= 1
   const close = ratio >= 0.8 && !over
-  const fill = over ? 'var(--critical)' : close ? 'var(--warn)' : 'var(--s1)'
+  const fill = over ? 'var(--critical)' : close ? 'var(--warn-ui)' : 'var(--s1)'
 
   const status = over
     ? `Over budget by ${formatMoney(spentMinor - limitMinor, currency)}`
@@ -40,13 +42,13 @@ export function Meter({ spentMinor, limitMinor, currency }: Props) {
         style={{ background: 'color-mix(in oklab, var(--s1) 16%, var(--surface))' }}
       >
         <div
-          className="h-full rounded-full transition-[width] duration-300"
+          className={`${intro ? 'bar-reveal ' : ''}h-full rounded-full transition-[width] duration-300`}
           style={{ width: `${Math.min(ratio, 1) * 100}%`, background: fill }}
         />
       </div>
-      <p className="mt-2 flex items-center gap-1.5 text-[0.9375rem] text-ink-2">
+      <p className={`mt-2 flex items-center gap-1.5 ${over ? 'font-semibold text-critical' : close ? 'font-medium text-ink' : 'text-ink-2'}`}>
         {(over || close) && (
-          <span style={{ color: over ? 'var(--critical)' : 'var(--warn)' }}>
+          <span style={{ color: over ? 'var(--critical)' : 'var(--warn-ui)' }}>
             <Icon name="warn" size={18} />
           </span>
         )}

@@ -47,7 +47,7 @@ function RateRow({ code, base, rate }: { code: string; base: string; rate: numbe
         onChange={(e) => setValue(e.target.value)}
         onBlur={() => void save()}
         onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-        className="min-h-11 w-28 rounded-xl bg-surface-2 px-3 text-right focus-visible:outline-offset-0"
+        className="min-h-11 w-28 rounded-xl bg-surface-2 shadow-[inset_0_0_0_1px_var(--edge)] px-3 text-right focus-visible:outline-offset-0"
       />
       <span className="w-10 shrink-0 text-ink-2">{base}</span>
     </li>
@@ -70,7 +70,7 @@ export function CurrencySection({ ledger }: { ledger: Ledger }) {
     <Group
       id="currency-h"
       title="Currency"
-      status={missingRates.length > 0 ? <Status on={false}>Rate needed</Status> : undefined}
+      status={missingRates.length > 0 ? <Status on={false}>Set a rate</Status> : undefined}
     >
       <div className={`${card} p-4`}>
         <label htmlFor="currency" className="text-sm text-ink-2">
@@ -82,7 +82,11 @@ export function CurrencySection({ ledger }: { ledger: Ledger }) {
             title="Main currency"
             value={currency}
             options={currencyOptions([...new Set([currency, ...CURRENCIES])])}
-            onChange={(c) => void setCurrency(c)}
+            onChange={(c) => {
+              // Totals are shown in the main currency, so once there is something to re-base it is worth a question.
+              if (c !== currency && ledger.txs.length > 0 && !window.confirm(`Change your main currency to ${c}? Amounts you have already entered stay as they are, and every total is shown in ${c} from now on. Set a rate for ${currency} afterwards so older amounts convert.`)) return
+              void setCurrency(c)
+            }}
             className={field}
             showDetail
           />
@@ -123,7 +127,7 @@ export function CurrencySection({ ledger }: { ledger: Ledger }) {
                 placeholder="Choose…"
                 options={currencyOptions(addable)}
                 onChange={(c) => setExtra((x) => [...x, c])}
-                className="min-h-11 flex-1 rounded-xl bg-surface-2 px-3"
+                className="min-h-11 flex-1 rounded-xl bg-surface-2 shadow-[inset_0_0_0_1px_var(--edge)] px-3"
               />
             </div>
           )}

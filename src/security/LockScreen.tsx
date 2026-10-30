@@ -119,7 +119,7 @@ export function LockScreen() {
             onChange={(e) => setConfirmErase(e.target.value)}
             autoComplete="off"
             autoCapitalize="characters"
-            className="min-h-12 w-full rounded-xl bg-surface-2 px-3.5"
+            className="min-h-12 w-full rounded-xl bg-surface-2 shadow-[inset_0_0_0_1px_var(--edge)] px-3.5"
           />
           <button
             type="button"

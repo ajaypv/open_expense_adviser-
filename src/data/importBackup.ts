@@ -1,16 +1,23 @@
 import { z } from 'zod'
+import { isRealDate, isValidCurrency, MAX_AMOUNT_MINOR } from '../db/money'
 import { db, type Recurring, type Transaction } from '../db/schema'
 
 const place = z.object({ lat: z.number(), lon: z.number(), accuracyM: z.number() })
 
+// Damaged or hand-edited files are checked here, so nothing in them can break the app once restored.
+const currencyCode = z.string().refine(isValidCurrency, 'not a currency code')
+const day = z.string().refine(isRealDate, 'not a real date')
+const amount = z.number().int().positive().max(MAX_AMOUNT_MINOR)
+const SAFE_COLOR = /^(#[0-9a-fA-F]{3,8}|var\(--[\w-]+\))$/
+
 const txSchema = z.object({
   kind: z.enum(['expense', 'income', 'transfer']).default('expense'),
-  amountMinor: z.number().int().positive(),
-  currency: z.string().min(1).default('INR'),
+  amountMinor: amount,
+  currency: currencyCode.default('INR'),
   categoryId: z.number().int().optional(),
   merchant: z.string().default(''),
   note: z.string().default(''),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  date: day,
   paymentMethod: z.string().default(''),
   createdAt: z.number().optional(),
   location: place.optional(),
@@ -20,33 +27,45 @@ const txSchema = z.object({
 
 const recurringSchema = z.object({
   kind: z.enum(['expense', 'income']),
-  amountMinor: z.number().int().positive(),
-  currency: z.string().default('INR'),
+  amountMinor: amount,
+  currency: currencyCode.default('INR'),
   categoryId: z.number().int().optional(),
   merchant: z.string().default(''),
   note: z.string().default(''),
   paymentMethod: z.string().default(''),
   accountId: z.number().int().optional(),
   frequency: z.enum(['weekly', 'monthly']),
-  nextDue: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  nextDue: day,
+  anchorDay: z.number().int().min(1).max(31).optional(),
   active: z.boolean().default(true),
 })
 
 const goalSchema = z.object({
   name: z.string().min(1),
-  targetMinor: z.number().int().positive(),
-  savedMinor: z.number().int().min(0).default(0),
-  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  targetMinor: amount,
+  savedMinor: z.number().int().min(0).max(MAX_AMOUNT_MINOR).default(0),
+  dueDate: day.optional(),
   createdAt: z.number().optional(),
 })
 
 const backupSchema = z.object({
   version: z.number().int().min(1),
-  currency: z.string().optional(),
-  categories: z.array(z.object({ id: z.number().int(), name: z.string().min(1), color: z.string().default('var(--other)') })).default([]),
+  currency: currencyCode.optional(),
+  categories: z
+    .array(
+      z.object({
+        id: z.number().int(),
+        name: z.string().min(1),
+        color: z
+          .string()
+          .default('var(--other)')
+          .transform((c) => (SAFE_COLOR.test(c) ? c : 'var(--other)')),
+      }),
+    )
+    .default([]),
   transactions: z.array(txSchema),
   budgets: z
-    .array(z.object({ categoryId: z.number().int().nullable(), monthlyLimitMinor: z.number().int().positive(), currency: z.string().default('INR') }))
+    .array(z.object({ categoryId: z.number().int().nullable(), monthlyLimitMinor: amount, currency: currencyCode.default('INR') }))
     .default([]),
   accounts: z
     .array(z.object({ id: z.number().int(), name: z.string().min(1), openingMinor: z.number().int().nullable().default(null), archived: z.boolean().optional() }))
@@ -54,7 +73,7 @@ const backupSchema = z.object({
   recurring: z.array(recurringSchema).default([]),
   /** Added after version 2 shipped; older files simply have none. */
   goals: z.array(goalSchema).default([]),
-  rates: z.record(z.string(), z.number().positive()).default({}),
+  rates: z.record(currencyCode, z.number().positive().max(1_000_000)).default({}),
   /** Version 1 files kept one balance for everything. */
   openingBalanceMinor: z.number().int().nullable().optional(),
 })
@@ -86,6 +105,48 @@ export function parseBackup(text: string): ParseResult {
 const fingerprint = (t: { createdAt?: number; date: string; kind: string; amountMinor: number; merchant: string }) =>
   `${t.createdAt ?? ''}|${t.date}|${t.kind}|${t.amountMinor}|${t.merchant.trim().toLowerCase()}`
 
+/** Without an entry time two identical lines are two real purchases (two ₹50 teas), so they are counted. */
+const looseKey = (t: { date: string; kind: string; amountMinor: number; merchant: string }) =>
+  `${t.date}|${t.kind}|${t.amountMinor}|${t.merchant.trim().toLowerCase()}`
+
+interface Plan {
+  /** Lines in the file that are not here yet. */
+  toAdd: number[]
+  /** Trashed rows the file brings back. */
+  toRevive: number[]
+}
+
+/** Which lines of the file would be added, and which trashed rows they would bring back. */
+function plan(rows: Transaction[], lines: Backup['transactions']): Plan {
+  const live = rows.filter((r) => r.deletedAt === undefined)
+  const liveFingerprints = new Set(live.map(fingerprint))
+  const liveCounts = new Map<string, number>()
+  for (const r of live) liveCounts.set(looseKey(r), (liveCounts.get(looseKey(r)) ?? 0) + 1)
+  const trashed = new Map<string, number[]>()
+  for (const r of rows) if (r.deletedAt !== undefined) trashed.set(fingerprint(r), [...(trashed.get(fingerprint(r)) ?? []), r.id])
+
+  const seen = new Set<string>()
+  const used = new Map<string, number>()
+  const toAdd: number[] = []
+  const toRevive: number[] = []
+  lines.forEach((t, i) => {
+    if (t.createdAt === undefined) {
+      const key = looseKey(t)
+      const n = (used.get(key) ?? 0) + 1
+      used.set(key, n)
+      if (n > (liveCounts.get(key) ?? 0)) toAdd.push(i)
+      return
+    }
+    const fp = fingerprint(t)
+    if (liveFingerprints.has(fp) || seen.has(fp)) return
+    seen.add(fp)
+    const dead = trashed.get(fp)
+    if (dead?.length) toRevive.push(dead.shift()!)
+    else toAdd.push(i)
+  })
+  return { toAdd, toRevive }
+}
+
 export interface ImportSummary {
   total: number
   /** Transactions in the file that are not already here. */
@@ -94,8 +155,8 @@ export interface ImportSummary {
 
 /** What a restore would change, shown to the user before they choose. */
 export async function summarizeImport(backup: Backup): Promise<ImportSummary> {
-  const have = new Set((await db.transactions.toArray()).map(fingerprint))
-  return { total: backup.transactions.length, newCount: backup.transactions.filter((t) => !have.has(fingerprint(t))).length }
+  const { toAdd, toRevive } = plan(await db.transactions.toArray(), backup.transactions)
+  return { total: backup.transactions.length, newCount: toAdd.length + toRevive.length }
 }
 
 export interface ImportResult {
@@ -158,16 +219,13 @@ export async function importBackup(backup: Backup, mode: 'merge' | 'replace'): P
     const mapAcc = (id: number | undefined) => (id === undefined ? undefined : accId.get(id))
 
     // Transactions, skipping any that are already here.
-    const have = new Set((await db.transactions.toArray()).map(fingerprint))
+    const { toAdd, toRevive } = plan(await db.transactions.toArray(), backup.transactions)
     const now = Date.now()
     const fresh: Omit<Transaction, 'id'>[] = []
-    let skipped = 0
-    backup.transactions.forEach((t, i) => {
-      if (have.has(fingerprint(t))) {
-        skipped++
-        return
-      }
-      have.add(fingerprint(t)) // also drops duplicates inside the file itself
+    for (const id of toRevive) await db.transactions.update(id, { deletedAt: undefined })
+    const skipped = backup.transactions.length - toAdd.length - toRevive.length
+    toAdd.forEach((i) => {
+      const t = backup.transactions[i]
       fresh.push({
         kind: t.kind,
         amountMinor: t.amountMinor,
@@ -218,8 +276,8 @@ export async function importBackup(backup: Backup, mode: 'merge' | 'replace'): P
     if (mode === 'replace' && backup.currency) await db.settings.put({ key: 'currency', value: backup.currency })
     const currentRates = ((await db.settings.get('rates'))?.value ?? {}) as Record<string, number>
     const rates = mode === 'replace' ? { ...backup.rates } : { ...backup.rates, ...currentRates }
-    if (Object.keys(rates).length > 0) await db.settings.put({ key: 'rates', value: rates })
+    if (Object.keys(rates).length > 0 || mode === 'replace') await db.settings.put({ key: 'rates', value: rates })
 
-    return { added: fresh.length, skipped }
+    return { added: fresh.length + toRevive.length, skipped }
   })
 }

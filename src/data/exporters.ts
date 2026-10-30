@@ -95,6 +95,9 @@ export function downloadFile(filename: string, mime: string, content: string): v
  * browser supports sharing files, otherwise download it. Returns how it was handled; "cancelled"
  * means the user closed the sheet, so nothing was saved.
  */
+/** Excel only reads UTF-8 as UTF-8 when the file starts with a byte-order mark; without it ₹ and accented names turn to garbage. */
+export const forSpreadsheet = (csv: string) => (csv.startsWith('\uFEFF') ? csv : `\uFEFF${csv}`)
+
 export async function shareOrDownload(
   filename: string,
   mime: string,

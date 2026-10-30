@@ -258,3 +258,84 @@ describe('goals in a backup', () => {
     if (!r.ok) expect(r.error).toMatch(/goals/)
   })
 })
+
+describe('a backup that has been edited or damaged', () => {
+  it('refuses a currency that is not a currency, which would break every screen', async () => {
+    const { parseBackup } = await load()
+    for (const bad of ['rupees!', 'rs', 'inr', '', 'XXXX']) {
+      expect(parseBackup(backupText({ currency: bad })).ok, `currency ${bad}`).toBe(false)
+      expect(parseBackup(backupText({ transactions: [tx({ currency: bad })] })).ok, `tx currency ${bad}`).toBe(false)
+    }
+    expect(parseBackup(backupText({ currency: 'USD' })).ok).toBe(true)
+  })
+
+  it('refuses a rate for a made-up currency, or one that would give infinite amounts', async () => {
+    const { parseBackup } = await load()
+    expect(parseBackup(backupText({ rates: { 'abc!': 80 } })).ok).toBe(false)
+    expect(parseBackup(backupText({ rates: { USD: 1e308 } })).ok).toBe(false)
+    expect(parseBackup(backupText({ rates: { USD: 83.2 } })).ok).toBe(true)
+  })
+
+  it('refuses a day that does not exist, which would show up as a phantom month', async () => {
+    const { parseBackup } = await load()
+    expect(parseBackup(backupText({ transactions: [tx({ date: '2026-13-45' })] })).ok).toBe(false)
+    expect(parseBackup(backupText({ transactions: [tx({ date: '2026-02-30' })] })).ok).toBe(false)
+    expect(parseBackup(backupText({ transactions: [tx({ date: '2028-02-29' })] })).ok).toBe(true)
+  })
+
+  it('refuses an amount too large to be stored, so a backup can always be read back', async () => {
+    const { parseBackup } = await load()
+    expect(parseBackup(backupText({ transactions: [tx({ amountMinor: 1e22 })] })).ok).toBe(false)
+    expect(parseBackup(backupText({ transactions: [tx({ amountMinor: 1_000_000_000_001 })] })).ok).toBe(false)
+  })
+
+  it('replaces a category colour that is not a colour with the neutral one', async () => {
+    const { parseBackup } = await load()
+    const r = parseBackup(backupText({ categories: [{ id: 1, name: 'Food', color: 'url(https://example.com/x.png)' }, { id: 2, name: 'Pets', color: '#a1b2c3' }] }))
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.backup.categories.map((c) => c.color)).toEqual(['var(--other)', '#a1b2c3'])
+  })
+})
+
+describe('restoring over what is already here', () => {
+  it('brings back a transaction that is in the trash, instead of skipping it', async () => {
+    const { db, parseBackup, importBackup, deleteTransaction } = await load()
+    const parsed = parseBackup(backupText())
+    if (!parsed.ok) throw new Error('bad fixture')
+    await importBackup(parsed.backup, 'merge')
+    const [first] = await db.transactions.toArray()
+    await deleteTransaction(first.id)
+    const result = await importBackup(parsed.backup, 'merge')
+    expect(result.added).toBe(1)
+    expect((await db.transactions.toArray()).filter((t) => t.deletedAt === undefined)).toHaveLength(2)
+  })
+
+  it('keeps two identical purchases from a file with no entry times, and adds none the second time', async () => {
+    const { db, parseBackup, importBackup } = await load()
+    const lines = [tx({ createdAt: undefined, merchant: 'Chai', amountMinor: 5000 }), tx({ createdAt: undefined, merchant: 'Chai', amountMinor: 5000 })]
+    const parsed = parseBackup(backupText({ transactions: lines }))
+    if (!parsed.ok) throw new Error('bad fixture')
+    expect((await importBackup(parsed.backup, 'merge')).added).toBe(2)
+    expect(await db.transactions.count()).toBe(2)
+    expect((await importBackup(parsed.backup, 'merge')).added).toBe(0)
+    expect(await db.transactions.count()).toBe(2)
+  })
+
+  it('counts a trashed transaction as new in the preview, since restoring will bring it back', async () => {
+    const { db, parseBackup, importBackup, summarizeImport, deleteTransaction } = await load()
+    const parsed = parseBackup(backupText())
+    if (!parsed.ok) throw new Error('bad fixture')
+    await importBackup(parsed.backup, 'merge')
+    await deleteTransaction((await db.transactions.toArray())[0].id)
+    expect((await summarizeImport(parsed.backup)).newCount).toBe(1)
+  })
+
+  it('drops old exchange rates when a replace restore comes with none', async () => {
+    const { db, parseBackup, importBackup } = await load()
+    await db.settings.put({ key: 'rates', value: { USD: 83 } })
+    const parsed = parseBackup(backupText({ rates: {} }))
+    if (!parsed.ok) throw new Error('bad fixture')
+    await importBackup(parsed.backup, 'replace')
+    expect((await db.settings.get('rates'))?.value).toEqual({})
+  })
+})

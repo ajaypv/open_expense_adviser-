@@ -56,7 +56,7 @@ describe('Home', () => {
   it('counts only money sent as spending, and shows money received separately', () => {
     const html = render(false)
     expect(html).toContain('₹680') // 450 + 230 sent; the salary is not spending
-    expect(html).toContain('Sent in October')
+    expect(html).not.toContain('Sent in')
     expect(html).toContain('Received in October')
     expect(html).toContain('₹80,000')
   })
@@ -123,7 +123,7 @@ describe('Home goals button', () => {
 
   it('is there on a first launch too, so a goal can be set before anything is logged', () => {
     const html = renderWith([], [])
-    expect(html).toContain('Nothing logged yet.')
+    expect(html).toContain('Let’s add your first one.')
     expect(html).toContain('aria-label="Goals. None yet"')
   })
 })

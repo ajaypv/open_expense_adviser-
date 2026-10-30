@@ -4,7 +4,7 @@ import { useDisplay } from '../data/display'
 import { attachLocation, clearLocation } from '../data/location'
 import { CURRENCIES, currencyOptions } from '../db/currencies'
 import { INCOME_CATEGORY } from '../db/defaultCategories'
-import { localDateString, parseLocalDate, toMinor } from '../db/money'
+import { localDateString, parseLocalDate, toMinor, formatMoney } from '../db/money'
 import {
   addRecurring,
   addTransaction,
@@ -59,7 +59,7 @@ const chip =
   'flex min-h-11 cursor-pointer items-center gap-2 rounded-full bg-surface px-3.5 text-[0.9375rem] shadow-[inset_0_0_0_1px_var(--ring)] ' +
   'has-[:checked]:bg-btn has-[:checked]:text-btn-ink has-[:checked]:shadow-none has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2'
 
-const input = 'mt-1 min-h-12 w-full rounded-xl bg-surface-2 px-3.5'
+const input = 'mt-1 min-h-12 w-full rounded-xl bg-surface-2 shadow-[inset_0_0_0_1px_var(--edge)] px-3.5'
 
 /** The short sign for a currency (₹, $, €), or its code when it has none. */
 function symbolFor(code: string): string {
@@ -138,6 +138,10 @@ export const AddSheet = memo(function AddSheet({
   const [place, setPlace] = useState<Place | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [more, setMore] = useState(false)
+  // Set the moment Add is tapped, so a second tap can't save the same thing again while the first is under way.
+  // The ref answers at once (two taps can land before React redraws); the state dims the button.
+  const [saving, setSaving] = useState(false)
+  const savingNow = useRef(false)
 
   // Open/close the native dialog and (re)load the form each time it opens.
   useEffect(() => {
@@ -222,7 +226,7 @@ export const AddSheet = memo(function AddSheet({
   const pickable = (selected: number | null) => accounts.filter((a) => !a.archived || a.id === selected)
 
   const kinds: { id: Kind; label: string }[] = [
-    { id: 'expense', label: 'Sent' },
+    { id: 'expense', label: 'Spent' },
     { id: 'income', label: 'Received' },
     ...(canTransfer ? [{ id: 'transfer' as const, label: 'Transfer' }] : []),
   ]
@@ -230,15 +234,16 @@ export const AddSheet = memo(function AddSheet({
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
+    if (savingNow.current) return
     const value = Number(amount.replace(/,/g, ''))
     if (!Number.isFinite(value) || value <= 0) {
-      setError('Enter an amount above 0.')
+      setError('Enter an amount, like 250 or 250.50.')
       playOnce(amountCard.current, SHAKE, 320)
       amountInput.current?.focus()
       return
     }
     if (selectedCategory === null) {
-      setError('Pick a category.')
+      setError('Choose a category.')
       return
     }
     if (transfer && (fromId === null || toId === null || fromId === toId)) {
@@ -257,6 +262,8 @@ export const AddSheet = memo(function AddSheet({
       ...(fromId !== null ? { accountId: fromId } : {}),
       ...(transfer && toId !== null ? { toAccountId: toId } : {}),
     }
+    savingNow.current = true
+    setSaving(true)
     try {
       if (editing) {
         // A transaction that stopped being a transfer must forget its second account.
@@ -264,7 +271,8 @@ export const AddSheet = memo(function AddSheet({
         toast({ message: 'Changes saved' })
       } else {
         void attachLocation(await addTransaction({ ...fields, source: 'manual' }))
-        let message = transfer ? 'Transfer added' : received ? 'Received money added' : 'Expense added'
+        const money = formatMoney(fields.amountMinor, fields.currency)
+        let message = transfer ? `Moved ${money}` : received ? `Added ${money} received` : `Added ${money} spent`
         if (repeat !== 'never' && !transfer) {
           await addRecurring({
             kind: kind as 'expense' | 'income',
@@ -277,6 +285,7 @@ export const AddSheet = memo(function AddSheet({
             accountId: fromId ?? undefined,
             frequency: repeat,
             nextDue: nextDueAfter(date, repeat, parseLocalDate(date).getDate()),
+            anchorDay: parseLocalDate(date).getDate(),
             active: true,
           })
           message += repeat === 'weekly' ? '. Repeats every week.' : '. Repeats every month.'
@@ -285,7 +294,10 @@ export const AddSheet = memo(function AddSheet({
       }
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save. Try again.')
+      setError(err instanceof Error ? err.message : 'Couldn’t save. Try again.')
+    } finally {
+      savingNow.current = false
+      setSaving(false)
     }
   }
 
@@ -310,7 +322,7 @@ export const AddSheet = memo(function AddSheet({
     toast({ message: 'Copied to today', actionLabel: 'Undo', onAction: () => void deleteTransaction(id) })
   }
 
-  const title = editing ? 'Edit transaction' : 'Add transaction'
+  const title = editing ? 'Edit transaction' : 'New transaction'
 
   return (
     <dialog
@@ -343,7 +355,7 @@ export const AddSheet = memo(function AddSheet({
 
         <div
           role="radiogroup"
-          aria-label="Money sent, received or moved between accounts"
+          aria-label="Money spent, received or moved between accounts"
           className="grid gap-1 rounded-full bg-surface-2 p-1"
           style={{ gridTemplateColumns: `repeat(${kinds.length}, minmax(0, 1fr))` }}
         >
@@ -393,7 +405,7 @@ export const AddSheet = memo(function AddSheet({
               id="amount"
               inputMode="decimal"
               autoComplete="off"
-              enterKeyHint="next"
+              enterKeyHint="done"
               placeholder="0"
               value={amount}
               onChange={(e) => {
@@ -405,7 +417,7 @@ export const AddSheet = memo(function AddSheet({
               aria-describedby={error ? 'sheet-error' : undefined}
               // Long numbers step down in size so they always fit on the line. The sizes are important
               // because the global "inputs are at least 1rem" rule would otherwise win over them.
-              className={`min-w-0 flex-1 origin-left bg-transparent font-semibold tabular-nums tracking-tight caret-ink outline-none transition-[font-size] duration-150 placeholder:text-ink-2/60 ${
+              className={`min-w-0 flex-1 origin-left bg-transparent font-semibold tabular-nums tracking-tight caret-ink outline-none transition-[font-size] duration-150 placeholder:text-muted ${
                 amount.length > 10 ? 'text-4xl!' : amount.length > 7 ? 'text-5xl!' : 'text-6xl!'
               }`}
             />
@@ -470,7 +482,7 @@ export const AddSheet = memo(function AddSheet({
             <>
               <div className="min-[26rem]:col-span-2">
                 <label htmlFor="merchant" className="text-sm text-ink-2">
-                  {received ? 'From' : 'Where'}
+                  {received ? 'From' : 'Merchant'}
                 </label>
                 <input
                   id="merchant"
@@ -615,8 +627,8 @@ export const AddSheet = memo(function AddSheet({
               </button>
             </>
           )}
-          <button type="submit" className="min-h-12 flex-1 rounded-full bg-btn font-semibold text-btn-ink">
-            {editing ? 'Save changes' : transfer ? 'Add transfer' : received ? 'Add received money' : 'Add expense'}
+          <button type="submit" disabled={saving} className="min-h-12 flex-1 rounded-full bg-btn font-semibold text-btn-ink disabled:opacity-60">
+            {editing ? 'Save changes' : 'Add'}
           </button>
         </div>
       </form>

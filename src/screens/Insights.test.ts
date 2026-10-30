@@ -81,7 +81,7 @@ describe('Insights screen', () => {
     for (const text of ['Spending pace', 'What changed', 'Busiest days', 'Where it went', 'Places you spend most', 'Budget']) {
       expect(html).toContain(text)
     }
-    expect(html).toContain('On pace for')
+    expect(html).toContain('At this rate')
     expect(html).toContain('under budget')
     noBrokenNumbers(html)
   })
@@ -97,7 +97,7 @@ describe('Insights screen', () => {
     ]
     const html = render(txs, '2026-09')
     expect(html).toContain('You spent')
-    expect(html).not.toContain('On pace for')
+    expect(html).not.toContain('At this rate')
     noBrokenNumbers(html)
   })
 

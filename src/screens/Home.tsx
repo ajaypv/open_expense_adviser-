@@ -5,7 +5,7 @@ import { CategoryBars } from '../charts/CategoryBars'
 import { DayChart } from '../charts/DayChart'
 import { Meter } from '../charts/Meter'
 import type { useLedger } from '../data/useLedger'
-import { formatMoney, formatMoneyCompact, localDateString } from '../db/money'
+import { formatMoney, localDateString } from '../db/money'
 import {
   byCategory,
   byDay,
@@ -18,7 +18,9 @@ import {
   type MonthKey,
 } from '../insights/aggregates'
 import { newestFirst } from '../insights/order'
+import { ScreenSkeleton } from '../ui/ScreenSkeleton'
 import type { Suggestion } from '../insights/suggestions'
+import { AnimatedMoney } from '../ui/AnimatedMoney'
 import { BackupNudge, DueCard, LogNudge } from '../ui/HomeCards'
 import { HomeHeader } from '../ui/HomeHeader'
 import { Icon } from '../ui/Icon'
@@ -99,16 +101,16 @@ export const Home = memo(function Home({
   // Months with something in them get a dot in the month picker.
   const activeMonths = useMemo(() => new Set(txs.map((t) => t.date.slice(0, 7))), [txs])
 
-  if (loading) return <h1 className="sr-only">Home</h1>
+  if (loading) return <ScreenSkeleton label="Home" />
 
   if (txs.length === 0) {
     return (
       <div>
         <HomeHeader today={today} goals={ledger.goals} onOpenGoals={onOpenGoals} />
         <div className="pt-10">
-        <h1 className="text-3xl font-semibold tracking-tight">Nothing logged yet.</h1>
+        <h2 className="text-3xl font-bold tracking-tight">Let’s add your first one.</h2>
         <p className="mt-3 max-w-sm text-lg text-ink-2">
-          Type what you spent or received in the bar below, as you would say it. Tap an example to try it.
+          Type what you spent or received in the bar below, as you would say it. Tap an example, then press send. Or use + for the full form.
         </p>
         <ul className="mt-6 flex flex-wrap gap-2">
           {EXAMPLES.map((e) => (
@@ -138,7 +140,7 @@ export const Home = memo(function Home({
       <HomeHeader today={today} goals={ledger.goals} onOpenGoals={onOpenGoals} />
       <MonthSwitcher month={month} currentMonth={currentMonth} onChange={onMonth} activeMonths={activeMonths} />
 
-      <BackupNudge transactionCount={txs.length} />
+      {isCurrent && <BackupNudge transactionCount={txs.length} />}
       {isCurrent && <DueCard ledger={ledger} today={today} />}
       {isCurrent && logNudge && <LogNudge onAdd={onAdd} />}
 
@@ -153,15 +155,15 @@ export const Home = memo(function Home({
           <Icon name={display.privacy ? 'eyeOff' : 'eye'} size={20} />
         </button>
         {total === 0 ? (
-          <p className="text-2xl font-semibold tracking-tight">No expenses in {name}.</p>
+          <p className="text-2xl font-semibold tracking-tight">Nothing spent in {name} yet.</p>
         ) : (
           <>
             <p className="text-ink-2">
               {isCurrent ? "You've spent so far in " : 'You spent in '}
               {name}
             </p>
-            <p className="mt-1 whitespace-nowrap text-[clamp(2.75rem,15vw,3.75rem)] font-semibold leading-none tracking-tighter tabular-nums">
-              {formatMoney(total, currency)}
+            <p className="mt-1 whitespace-nowrap text-[clamp(2.75rem,15vw,3.75rem)] font-extrabold leading-none tracking-[-0.04em] tabular-nums">
+              <AnimatedMoney minor={total} currency={currency} id="hero" />
             </p>
             {delta !== null && (
               <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.9375rem] text-ink-2">
@@ -205,14 +207,16 @@ export const Home = memo(function Home({
         <section aria-label="Recent spending" className={`${card} mt-3 grid grid-cols-3 divide-x divide-line py-4`}>
           {(
             [
-              ['Today', recentlySpent.todayMinor],
-              ['Yesterday', recentlySpent.yesterdayMinor],
-              ['Last 7 days', recentlySpent.last7Minor],
+              ['Today', 'today', recentlySpent.todayMinor],
+              ['Yesterday', 'yesterday', recentlySpent.yesterdayMinor],
+              ['Last 7 days', 'last7', recentlySpent.last7Minor],
             ] as const
-          ).map(([label, amount]) => (
+          ).map(([label, id, amount]) => (
             <div key={label} role="group" aria-label={`${label}: ${formatMoney(amount, currency)}`} className="min-w-0 px-4 first:pl-5 last:pr-5">
-              <p className="text-sm text-ink-2">{label}</p>
-              <p className="mt-0.5 truncate text-lg font-semibold tabular-nums">{formatMoneyCompact(amount, currency)}</p>
+              <p className="text-sm font-medium text-ink-2">{label}</p>
+              <p className={`mt-0.5 truncate text-xl font-bold tracking-tight tabular-nums ${amount === 0 ? 'text-ink-2' : ''}`}>
+                <AnimatedMoney minor={amount} currency={currency} id={id} compact />
+              </p>
             </div>
           ))}
         </section>
@@ -220,7 +224,6 @@ export const Home = memo(function Home({
 
       <WalletPanel
         monthName={name}
-        sentMinor={total}
         receivedMinor={received}
         currency={currency}
         balanceMinor={ledger.estimatedBalanceMinor}
@@ -234,7 +237,7 @@ export const Home = memo(function Home({
 
       {isCurrent && suggestions.length > 0 && (
         <section aria-labelledby="suggest-h" className="mt-8">
-          <h2 id="suggest-h" className="mb-3 px-1 text-lg font-semibold">
+          <h2 id="suggest-h" className="mb-3 px-1 text-xl font-bold tracking-tight">
             Suggested for now
           </h2>
           <SuggestionList items={suggestions} categoryById={categoryById} currency={currency} onPick={onSuggestion} tone="page" />
@@ -244,7 +247,7 @@ export const Home = memo(function Home({
       {total > 0 && (
         <>
           <section aria-labelledby="daily-h" className="mt-8">
-            <h2 id="daily-h" className="mb-3 px-1 text-lg font-semibold">
+            <h2 id="daily-h" className="mb-3 px-1 text-xl font-bold tracking-tight">
               Day by day
             </h2>
             <div className={`${card} p-4`}>
@@ -258,7 +261,7 @@ export const Home = memo(function Home({
           </section>
 
           <section aria-labelledby="cats-h" className="mt-8">
-            <h2 id="cats-h" className="mb-3 px-1 text-lg font-semibold">
+            <h2 id="cats-h" className="mb-3 px-1 text-xl font-bold tracking-tight">
               Where it went
             </h2>
             <div className={`${card} px-4 py-2`}>
@@ -274,7 +277,7 @@ export const Home = memo(function Home({
 
           <section aria-labelledby="recent-h" className="mt-8">
             <div className="mb-1 flex items-center justify-between px-1">
-              <h2 id="recent-h" className="text-lg font-semibold">
+              <h2 id="recent-h" className="text-xl font-bold tracking-tight">
                 Latest
               </h2>
               <button type="button" onClick={onSeeAll} className="min-h-11 px-2 font-medium underline underline-offset-2">

@@ -42,7 +42,7 @@ export const TxRow = memo(function TxRow({ tx, category, currency, accountById, 
   useDisplay() // amounts are masked or regrouped by display settings, so redraw when they change
   const received = tx.kind === 'income'
   const transfer = tx.kind === 'transfer'
-  const categoryName = category?.name ?? 'Uncategorised'
+  const categoryName = category?.name ?? 'No category'
   const route = transfer
     ? `${accountById?.get(tx.accountId ?? -1)?.name ?? 'Account'} to ${accountById?.get(tx.toAccountId ?? -1)?.name ?? 'account'}`
     : null
@@ -57,7 +57,7 @@ export const TxRow = memo(function TxRow({ tx, category, currency, accountById, 
   const foreign = tx.originalCurrency !== undefined && tx.originalCurrency !== currency
   const converted = foreign && !tx.unconverted ? `≈ ${formatMoney(tx.amountMinor, currency)}` : null
 
-  const spoken = `${selecting ? (selected ? 'Selected' : 'Select') : 'Edit'} ${transfer ? 'transfer' : received ? 'received' : 'sent'} ${title}, ${paid}${tx.location ? ', added with location' : ''}`
+  const spoken = `${selecting ? (selected ? 'Selected' : 'Select') : 'Edit'} ${transfer ? 'transfer' : received ? 'received' : 'spent'} ${title}, ${paid}${showCategory ? `, ${categoryName}` : ''}${showDate ? `, ${shortDate(tx.date)}` : ''}${tx.note ? `, note: ${tx.note}` : ''}${tx.location ? ', added with location' : ''}`
 
   return (
     <button
@@ -75,7 +75,7 @@ export const TxRow = memo(function TxRow({ tx, category, currency, accountById, 
         style={{ background: selecting ? undefined : `color-mix(in oklab, ${transfer ? 'var(--other)' : color} 22%, var(--surface))` }}
       >
         {selecting ? (
-          <span className={`flex size-6 items-center justify-center rounded-full ${selected ? 'bg-btn text-btn-ink' : 'shadow-[inset_0_0_0_1.5px_var(--axis)] text-transparent'}`}>
+          <span className={`flex size-6 items-center justify-center rounded-full ${selected ? 'bg-btn text-btn-ink' : 'shadow-[inset_0_0_0_1.5px_var(--edge)] text-transparent'}`}>
             <Icon name="check" size={16} />
           </span>
         ) : transfer ? (
@@ -97,7 +97,7 @@ export const TxRow = memo(function TxRow({ tx, category, currency, accountById, 
               <span className="truncate">{categoryName}</span>
             </span>
           )}
-          {tx.paymentMethod && <span className="shrink-0 rounded-full bg-surface-2 px-2 py-px text-xs">{tx.paymentMethod}</span>}
+          {tx.paymentMethod && <span className="shrink-0 rounded-full bg-surface-2 px-2 py-px text-sm">{tx.paymentMethod}</span>}
           {tx.location && (
             <>
               <span aria-hidden="true" className="shrink-0">
@@ -112,7 +112,7 @@ export const TxRow = memo(function TxRow({ tx, category, currency, accountById, 
       </span>
       <span className="shrink-0 self-start text-right">
         {/* Received money gets a leading + (and the green text token), so it isn't marked by color alone. */}
-        <span className={`block text-[1.0625rem] font-semibold tabular-nums ${received ? 'text-good' : ''}`}>
+        <span className={`block text-lg font-semibold tabular-nums ${received ? 'text-good' : ''}`}>
           {received ? '+' : ''}
           {paid}
         </span>

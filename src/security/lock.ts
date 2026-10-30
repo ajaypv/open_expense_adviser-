@@ -82,7 +82,9 @@ const write = (key: string, value: string | null) => {
 
 function initial(): LockState {
   const enabled = read(ENABLED_FLAG) === '1'
-  const after = Number(read(AFTER_FLAG))
+  const saved = read(AFTER_FLAG)
+  // Number(null) is 0, which would mean "lock the moment the app is left" for anyone with no saved choice.
+  const after = saved === null ? NaN : Number(saved)
   return { enabled, locked: enabled, autoLockSeconds: Number.isFinite(after) && after >= 0 ? after : 60 }
 }
 

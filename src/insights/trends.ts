@@ -45,60 +45,94 @@ export interface Unusual {
   times: number
 }
 
-const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)]
-
 /** Needs this many other transactions in the category before "unusual" means anything. */
 const MIN_HISTORY = 5
 /** How much bigger than the typical amount counts as unusual. */
 const UNUSUAL_TIMES = 2.5
 
+/** The first position in an ascending list that holds `value` or something larger. */
+function lowerBound(sorted: number[], value: number): number {
+  let lo = 0
+  let hi = sorted.length
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1
+    if (sorted[mid] < value) lo = mid + 1
+    else hi = mid
+  }
+  return lo
+}
+
 /**
  * Expenses this month far larger than that category's usual: at least 2.5 times its median, judged
  * against everything else in the category. The biggest jump first.
+ *
+ * Each category's amounts are sorted once. The median of "everything else" is then read straight off that
+ * list, skipping the transaction's own place in it, rather than sorting the rest again for every transaction.
  */
 export function unusualExpenses(expenses: Transaction[], month: MonthKey, limit = 3): Unusual[] {
-  const byCategory = new Map<number, Transaction[]>()
+  const amounts = new Map<number, number[]>()
   for (const t of expenses) {
-    const g = byCategory.get(t.categoryId)
-    if (g) g.push(t)
-    else byCategory.set(t.categoryId, [t])
+    const list = amounts.get(t.categoryId)
+    if (list) list.push(t.amountMinor)
+    else amounts.set(t.categoryId, [t.amountMinor])
   }
+  for (const list of amounts.values()) list.sort((a, b) => a - b)
+
   const out: Unusual[] = []
   for (const t of inMonth(expenses, month)) {
-    const others = (byCategory.get(t.categoryId) ?? []).filter((o) => o.id !== t.id)
-    if (others.length < MIN_HISTORY) continue
-    const typicalMinor = median(others.map((o) => o.amountMinor))
+    const sorted = amounts.get(t.categoryId) ?? []
+    const others = sorted.length - 1
+    if (others < MIN_HISTORY) continue
+    // Take this transaction's own amount out of the list (one copy of it), then read the middle.
+    const own = lowerBound(sorted, t.amountMinor)
+    const middle = Math.floor(others / 2)
+    const typicalMinor = sorted[middle < own ? middle : middle + 1]
     if (typicalMinor <= 0) continue
     const times = t.amountMinor / typicalMinor
     if (times >= UNUSUAL_TIMES) out.push({ tx: t, typicalMinor, times })
   }
-  return out.sort((a, b) => b.times - a.times).slice(0, limit)
+  return out.sort((x, y) => y.times - x.times).slice(0, limit)
 }
 
 export interface CategoryTrend {
   categoryId: number
   /** Spending in each of the last `n` months, oldest first. */
   months: number[]
-  /** The latest month against the average of the ones before it, as a whole percent. null if there is no earlier spending. */
+  /**
+   * The latest month against the usual of the months before it, as a whole percent. null when there isn't
+   * enough to compare with: fewer than two earlier months of use, or a latest month that is still in progress.
+   */
   changePct: number | null
+  /** The usual month: the average of the earlier months since logging began. 0 when there is none. */
+  averageMinor: number
 }
 
+/** Earlier months needed before "more than usual" means anything. */
+const MIN_EARLIER_MONTHS = 2
+
 /** How the biggest categories have moved over the last `n` months. */
-export function categoryTrends(expenses: Transaction[], endMonth: MonthKey, n = 6, limit = 4): CategoryTrend[] {
+export function categoryTrends(expenses: Transaction[], endMonth: MonthKey, n = 6, limit = 4, endInProgress = false): CategoryTrend[] {
   const keys = Array.from({ length: n }, (_, i) => shiftMonth(endMonth, i - (n - 1)))
   const grid = new Map<number, number[]>()
+  const overall = new Array<number>(n).fill(0)
   for (const t of expenses) {
     const i = keys.indexOf(monthOf(t.date))
     if (i === -1) continue
     const row = grid.get(t.categoryId) ?? new Array<number>(n).fill(0)
     row[i] += t.amountMinor
     grid.set(t.categoryId, row)
+    overall[i] += t.amountMinor
   }
+  // The months before the first one with anything logged say nothing about what is usual, so they are left out
+  // of the average. Without this a person with two months of use sees "+400%" against four empty months.
+  const first = overall.findIndex((m) => m > 0)
   return [...grid]
     .map(([categoryId, months]) => {
-      const before = months.slice(0, -1)
-      const average = before.reduce((a, b) => a + b, 0) / before.length
-      return { categoryId, months, changePct: average > 0 ? Math.round(((months[n - 1] - average) / average) * 100) : null }
+      const earlier = first === -1 ? [] : months.slice(first, -1)
+      const enough = earlier.length >= MIN_EARLIER_MONTHS
+      const average = enough ? earlier.reduce((a, b) => a + b, 0) / earlier.length : 0
+      const changePct = enough && average > 0 && !endInProgress ? Math.round(((months[n - 1] - average) / average) * 100) : null
+      return { categoryId, months, changePct, averageMinor: Math.round(average) }
     })
     .sort((a, b) => b.months.reduce((x, y) => x + y, 0) - a.months.reduce((x, y) => x + y, 0))
     .slice(0, limit)

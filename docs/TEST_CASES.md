@@ -16,10 +16,10 @@ Version 0.3.0. This lists what to check, how, and what is already checked by the
 
 | | |
 |---|---|
-| Test files | 53 |
-| Tests | 633 |
-| Statements covered | 93.5% |
-| Lines covered | 95.2% |
+| Test files | 67 |
+| Tests | 865 |
+| Statements covered | 94.4% |
+| Lines covered | 95.9% |
 
 Two kinds of test:
 
@@ -383,6 +383,11 @@ See INS-4 to INS-8.
 | VIS-3 | Sheets | Open and close the Add form and pickers | They rise from the bottom and the page behind doesn't scroll | Device |
 | VIS-4 | No sideways scroll | Use every screen at 360 px, especially Settings | No screen scrolls, drifts or slides sideways, however you swipe | Auto (the rule that stops it): `app.flow`. **Device** (the feel) |
 | VIS-8 | Four tabs | Look at the bottom bar at 360 px | Home, Activity, Insights and Settings fit with readable labels and 44 px tap targets | Auto: `BottomNav.test`. **Device** |
+| VIS-9 | Numbers count up | Open the app; then log an expense; then switch month | The big number, Today / Yesterday / Last 7 days, Sent and Received count up to their value in under a second and land exactly on it. They count again only when the figure changes, not each time you return to Home. No decimals flicker while counting | Auto: `motion.flow`. **Device** (how it feels) |
+| VIS-10 | Reduce motion | Turn on "reduce motion", open the app | Every figure shows its final value at once; the budget bar is simply there | Auto: `motion.flow`. Also on device |
+| VIS-11 | Budget bar wipes in | Set a budget, open the app, go to Settings and back | The bar wipes in from the left once when the app opens, not when you come back to Home | Auto: `Meter.flow`. **Device** |
+| VIS-12 | Typeface | Look at every screen, including the ₹ and other currency signs | Manrope everywhere, digits line up in columns, no missing-glyph boxes; the same with no network | Auto: `fonts.test`. **Device** |
+| VIS-13 | Hidden amounts while counting | Turn on Hide amounts | Amounts stay hidden (₹••••); nothing counts up in view | Auto: `Home.test`, `app.flow` |
 | VIS-5 | Dark and light | View every screen in both | No white flashes, no unreadable text | Device |
 | VIS-6 | Rotate | Rotate the phone | Layout stays usable | Device |
 | VIS-7 | Speed | Scroll Activity with 1,000+ entries | Smooth; typing in search stays responsive | Device |
@@ -402,3 +407,48 @@ npm test                       run everything (about 40 seconds)
 npx vitest run --coverage      run with a coverage report
 npx vitest run src/ui          run one folder
 ```
+
+## Audit fixes
+
+Cases added after the full review in [AUDIT.md](AUDIT.md). "Auto" names the test file that proves it.
+
+| ID | Case | Do | Expect | Covered by |
+|---|---|---|---|---|
+| AUD-1 | Indian amounts | Type "2 lakh rent", "1.5 lakh", "10 lac", "1 crore", "2L", "1cr", "12,34,567 rent" | The full amount is saved, and the word is not left in the merchant | Auto: `localParser.more` |
+| AUD-2 | Currency marks | Type "Rs.99 chai", "450/- lunch", "450rs lunch", "₹450lunch", "coffee .5" | Read correctly | Auto: `localParser.more` |
+| AUD-3 | Dates in the sentence | Type "on 5th dinner 400", "coffee 120 on 28 oct", "12/03 dinner 800", "uber 230 mon", "18k rent last month" | Filed on that day; the date words are not in the merchant | Auto: `localParser.more` |
+| AUD-4 | Several numbers | Type "2 coffees 100", "iphone 12 pro 79900", "dinner for 4 1200" | The price is the amount, not the quantity or model | Auto: `localParser.more` |
+| AUD-5 | Two entries with "and" | Type "coffee 120 and lunch 340"; "coffee 120, lunch 340 yesterday" | Two entries; the trailing day covers both | Auto: `localParser.more` |
+| AUD-6 | Money in or out | "got 500 from Ravi" is received; "maid salary 8000", "income tax 5000 paid" are spent | As described | Auto: `localParser.more` |
+| AUD-7 | Currency typed | Type "$5 coffee" | Saved as 5 USD, and the message shows $5 | Auto: `localParser.more`, `app.flow` |
+| AUD-8 | The message names the day | Type "Uber 230 yesterday" | "Added ₹230 to Transport, yesterday" | Auto: `app.flow`, `localParser.more` |
+| AUD-9 | Too-large amounts | Type 99999999999999999999 | Refused; a backup can always be read back | Auto: `localParser.more`, `currencySetting` |
+| AUD-10 | Damaged backup | Restore a file with a made-up currency, a day like 2026-13-45, a huge amount or a strange colour | Refused with a plain message, or the colour replaced; the app is never left unusable | Auto: `importBackup` |
+| AUD-11 | Bad saved currency | A saved currency that is not a currency | The app falls back to rupees; if anything else breaks it shows "Something went wrong" with Reload, never a blank page | Auto: `currencySetting`, `useLedger.flow`, `ErrorBoundary.flow` |
+| AUD-12 | Restore and the trash | Delete a transaction, restore the same backup (merge) | It comes back, not skipped; two identical lines in a file without times both count | Auto: `importBackup` |
+| AUD-13 | Recurring added twice | Tap Add twice, or Add then Add all | One occurrence is added | Auto: `recurringOps` |
+| AUD-14 | Rent on the 31st | A monthly rule made for the 31st, applied month after month | 31 Jan, 28 Feb, 31 Mar, 30 Apr, 31 May | Auto: `recurringOps` |
+| AUD-15 | Double tap on Add | Tap Add twice in the same instant | Saved once | Auto: `AddSheet.flow` (fails without the guard) |
+| AUD-16 | Undo of a chat entry | Add by typing, then Undo | Gone; not left in Recently deleted | Auto: `app.flow`, `trash` |
+| AUD-17 | Bulk delete | Delete a selection that includes something already in the trash | Only the live rows are deleted, and Undo does not bring back the old one | Auto: `trash` |
+| AUD-18 | Quick dates in Activity | Tap This month, Last month, Last 30 days, Any time | The list narrows to that range, and the chip shows pressed | Auto: `activity.flow`, `filters` |
+| AUD-19 | Month carried from Home | Tap a category bar on Home while viewing a month | Activity opens on that category and that month; leaving and coming back starts fresh | Auto: `app.flow` |
+| AUD-20 | Filters in use | Turn on any filter | A chip names it and removes it; "Clear search and filters" clears everything | Auto: `activity.flow` |
+| AUD-21 | Day totals | More than 80 rows in one day | The day's total counts all of them; "Showing 80 of 85" says how many are out of view | Auto: `activity.flow` |
+| AUD-22 | Search | Type words in any order, an amount, or an account name | Matches; "No transactions match “…”" names the search | Auto: `activity.flow`, `filters` |
+| AUD-23 | Selection and filters | Select rows, then narrow the list | Only what is still showing counts and is deleted; Select all picks what is showing | Auto: `activity.flow` |
+| AUD-24 | Move can be undone | Move a mix of spent and received to a category | Only spending moves, the message says what was left, and Undo puts the categories back | Auto: `activity.flow` |
+| AUD-25 | Insights headline | Open Insights | "You spent ₹X in October", then what the biggest part was | Auto: `Insights.more` |
+| AUD-26 | Empty month | Open a month with no expenses when others have some | "No expenses logged in October" and a button to the latest month with data | Auto: `Insights.more` |
+| AUD-27 | Trends are fair | A person with two months of use | No "+400%"; the change appears only with two earlier months, and not at all while the month is in progress | Auto: `trends.more` |
+| AUD-28 | Where it went, first | Open Insights | It sits right after the first numbers, and tapping a row opens those expenses for that month | Auto: `Insights.more`, `app.flow` |
+| AUD-29 | Chart edges | View a 30-day month against a 31-day one | The grey line stays inside the chart | Auto: `PaceChart` |
+| AUD-30 | Settings layout | Open Settings | Five headings (Your data and privacy, Money, Automatic, Appearance, More), a jump bar, and More folded away; it opens by itself when an update is waiting | Auto: `Settings` |
+| AUD-31 | Currency change | Change the main currency with transactions present | A question first that says what will happen | Auto: `settings.flow` |
+| AUD-32 | Message that waits | Hover or focus a message with Undo | It stays while you are on it, and leaves 3 seconds after; with an Undo it stays 9 seconds | Auto: `toast.flow` |
+| AUD-33 | Screen titles | Switch tabs | The browser title names the screen | Auto: `app.flow` |
+| AUD-34 | Loading | Open the app on slow storage | A grey outline of the page, never a blank page or "nothing here yet" | Auto: `ScreenSkeleton` |
+| AUD-35 | Contrast | Every text, control edge, warning and category colour in light and dark | Text 4.5:1, edges and bars 3:1 | Auto: `contrast` |
+| AUD-36 | Backup reminder | Say Later three times; look at an old month | A week, then a month, then three months; never shown on an old month | Auto: `backupSnooze`, `app.flow` |
+| AUD-37 | Spreadsheet export | Export CSV and open it in Excel | ₹ and accented names read correctly | Auto: `exporters`. **Device** |
+| AUD-38 | Looks | Look at the new Activity chips, Settings jump bar and skeleton at 360 px, both themes | Nothing clipped; readable | **Device** |

@@ -84,7 +84,7 @@ describe('Due now (recurring)', () => {
     await user.click(await screen.findByRole('button', { name: 'Skip' }))
     await waitFor(async () => expect((await db.recurring.get(id))!.nextDue > due).toBe(true))
     expect(await db.transactions.count()).toBe(0)
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Skipped this one'))
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Skipped'))
     await user.click(screen.getByRole('button', { name: 'Undo' }))
     await waitFor(async () => expect((await db.recurring.get(id))!.nextDue).toBe(due))
   })
@@ -177,7 +177,7 @@ describe('Input bar', () => {
   const setup = (onSubmit = vi.fn().mockResolvedValue(true), initialText = '') => {
     const onOpenForm = vi.fn()
     render(<ChatBar onSubmit={onSubmit} onOpenForm={onOpenForm} initialText={initialText} />)
-    return { onSubmit, onOpenForm, user: userEvent.setup(), box: screen.getByLabelText('Log an expense') }
+    return { onSubmit, onOpenForm, user: userEvent.setup(), box: screen.getByLabelText('Add a transaction') }
   }
 
   it('sends on Enter and clears the box when it was understood', async () => {
@@ -214,7 +214,7 @@ describe('Input bar', () => {
 
   it('will not send an empty or blank message', async () => {
     const { user, onSubmit, box } = setup()
-    expect(screen.getByRole('button', { name: 'Add expense' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
     await user.type(box, '   {Enter}')
     expect(onSubmit).not.toHaveBeenCalled()
   })
@@ -223,7 +223,7 @@ describe('Input bar', () => {
     let finish!: (ok: boolean) => void
     const { user, onSubmit, box } = setup(vi.fn(() => new Promise<boolean>((r) => (finish = r))))
     await user.type(box, '450 lunch{Enter}')
-    expect(screen.getByRole('button', { name: 'Add expense' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
     await user.type(box, '{Enter}')
     expect(onSubmit).toHaveBeenCalledOnce()
     finish(true)

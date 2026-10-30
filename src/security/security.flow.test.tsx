@@ -80,7 +80,7 @@ describe('App lock settings', () => {
     await enableLock('1234', 60)
     const user = userEvent.setup()
     section()
-    await user.click(await screen.findByRole('button', { name: 'Lock the app' }))
+    await user.click(await screen.findByRole('button', { name: 'Lock when I’m away' }))
     await user.click(await screen.findByRole('radio', { name: /Right away/ }))
     expect(getLockState().autoLockSeconds).toBe(0)
   })

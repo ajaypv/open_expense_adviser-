@@ -55,7 +55,7 @@ function CategoryBudgetRow({ category, limitMinor, currency }: { category: Categ
         onChange={(e) => setValue(e.target.value)}
         onBlur={() => void save()}
         onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-        className="min-h-11 w-28 rounded-xl bg-surface-2 px-3 text-right focus-visible:outline-offset-0"
+        className="min-h-11 w-28 rounded-xl bg-surface-2 shadow-[inset_0_0_0_1px_var(--edge)] px-3 text-right focus-visible:outline-offset-0"
       />
     </li>
   )

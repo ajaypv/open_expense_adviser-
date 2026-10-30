@@ -66,7 +66,7 @@ export function DueCard({ ledger, today }: { ledger: Ledger; today: Date }) {
 
   async function skip(rule: (typeof due)[number]) {
     const undo = await skipRecurring(rule)
-    toast({ message: 'Skipped this one', actionLabel: 'Undo', onAction: () => void undo() })
+    toast({ message: 'Skipped', actionLabel: 'Undo', onAction: () => void undo() })
   }
 
   async function addAll() {
@@ -130,8 +130,8 @@ export function LogNudge({ onAdd }: { onAdd: () => void }) {
         <Icon name="bell" size={20} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="font-medium">Nothing logged today yet</p>
-        <p className="text-sm text-ink-2">Type it in the bar below, or add it here.</p>
+        <p className="font-medium">Nothing added today yet</p>
+        <p className="text-sm text-ink-2">Type it below, or tap Add.</p>
       </div>
       <button type="button" onClick={onAdd} className="min-h-11 shrink-0 rounded-full bg-btn px-4 text-sm font-semibold text-btn-ink">
         Add

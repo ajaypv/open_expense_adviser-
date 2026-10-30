@@ -44,3 +44,15 @@ describe('transactionsToCsv', () => {
     expect(csv[2]).toMatch(/,manual,,,,$/)
   })
 })
+
+describe('forSpreadsheet', () => {
+  it('starts the file with a byte-order mark, so Excel reads ₹ and accented names correctly', async () => {
+    const { forSpreadsheet } = await import('./exporters')
+    expect(forSpreadsheet('date,amount\n').charCodeAt(0)).toBe(0xfeff)
+  })
+
+  it('does not add a second mark', async () => {
+    const { forSpreadsheet } = await import('./exporters')
+    expect(forSpreadsheet(forSpreadsheet('a,b'))).toBe('\uFEFFa,b')
+  })
+})

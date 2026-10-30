@@ -61,3 +61,31 @@ describe('PaceChart table toggle', () => {
     expect(html).not.toContain('<table')
   })
 })
+
+describe('PaceChart: months of different lengths', () => {
+  const august = Array.from({ length: 31 }, (_, i) => rupees((i + 1) * 10))
+  const septemberTotals = Array.from({ length: 30 }, (_, i) => rupees((i + 1) * 8))
+
+  /** The x of every point on the grey line for last month; the chart is 0 to 100 across. */
+  const greyXs = (html: string) => {
+    const d = html.match(/<path d="([^"]+)"[^>]*stroke="var\(--other\)"/)?.[1] ?? ''
+    return [...d.matchAll(/[ML]([\d.]+) [\d.]+/g)].map((m) => Number(m[1]))
+  }
+
+  it('keeps last month’s line inside the chart when that month had more days', () => {
+    const html = renderToStaticMarkup(
+      createElement(PaceChart, { ...base, monthKey: '2026-09', currentLabel: 'September', previousLabel: 'August', current: septemberTotals, previous: august, lastDay: 30 }),
+    )
+    const xs = greyXs(html)
+    expect(xs.length).toBeGreaterThan(0)
+    expect(Math.max(...xs)).toBeLessThanOrEqual(100)
+  })
+
+  it('still draws the whole of a shorter previous month', () => {
+    const february = Array.from({ length: 28 }, (_, i) => rupees((i + 1) * 5))
+    const html = renderToStaticMarkup(
+      createElement(PaceChart, { ...base, previous: february, current: october, lastDay: 28 }),
+    )
+    expect(greyXs(html)).toHaveLength(28)
+  })
+})
