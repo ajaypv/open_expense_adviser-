@@ -9,19 +9,30 @@ interface Props {
   onOpenGoals: () => void
 }
 
+/** "Good morning" until noon, "Good afternoon" until five, then "Good evening" (and through the small hours). */
+export function greetingFor(now: Date): string {
+  const h = now.getHours()
+  if (h >= 5 && h < 12) return 'Good morning'
+  if (h >= 12 && h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
 /**
- * The top of Home, laid out like an app bar: where we are (today's date) on the left, the one
- * action that belongs to the whole screen (goals) on the right. The month switcher sits below, since
- * it changes what the page shows rather than being part of the title.
+ * The top of Home, laid out like an app bar: a greeting and today's date on the left, the one action that belongs
+ * to the whole screen (goals) on the right. The month switcher sits below, since it changes what the page shows
+ * rather than being part of the title.
  */
 export function HomeHeader({ today, goals, onOpenGoals }: Props) {
-  const date = (dateFormat ??= new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' })).format(today)
+  const date = (dateFormat ??= new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' })).format(today)
   return (
     <header className="flex items-center justify-between gap-3 pt-3">
-      <h1 className="min-w-0 truncate text-xl font-semibold tracking-tight">
-        <span className="sr-only">Home, </span>
-        {date}
-      </h1>
+      <div className="min-w-0">
+        <h1 className="truncate text-2xl font-bold tracking-tight">
+          <span className="sr-only">Home. </span>
+          {greetingFor(today)}
+        </h1>
+        <p className="truncate text-sm text-ink-2">{date}</p>
+      </div>
       <GoalsButton goals={goals} onClick={onOpenGoals} />
     </header>
   )

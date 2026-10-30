@@ -82,7 +82,7 @@ describe('Home', () => {
     expect(render(false, 0, [regular], '2026-09')).not.toContain('Suggested for now') // a past month
   })
 
-  it('lists received money in Latest with a plus sign, not just spending', () => {
+  it('lists received money in Recent transactions with a plus sign, not just spending', () => {
     const html = render(false)
     expect(html).toContain('Employer')
     expect(html).toContain('+₹80,000')
@@ -103,8 +103,8 @@ describe('Home goals button', () => {
       }),
     )
 
-  it('puts the goals button in a header, at the right of the date and above the month switcher', () => {
-    const dateTitle = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).format(today)
+  it('puts the goals button in a header, at the right of the greeting and date and above the month switcher', () => {
+    const dateTitle = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(today)
     const html = renderWith([])
     expect(html).toContain('<header')
     expect(html.indexOf(dateTitle)).toBeLessThan(html.indexOf('aria-label="Goals. None yet"'))
@@ -115,10 +115,16 @@ describe('Home goals button', () => {
     expect(renderWith([{ id: 1, name: 'Goa trip', targetMinor: 2_500_000, savedMinor: 500_000, createdAt: 1 }])).toContain('aria-label="Goals. 1 goal, 20% saved"')
   })
 
-  it('keeps the goals themselves off Home; they open from the button', () => {
-    const html = renderWith([{ id: 1, name: 'Goa trip', targetMinor: 2_500_000, savedMinor: 0, createdAt: 1 }])
-    expect(html).not.toContain('Goa trip')
+  it('shows the goal that matters most on Home, with what it means, near the bottom', () => {
+    const html = renderWith([{ id: 1, name: 'Goa trip', targetMinor: 2_500_000, savedMinor: 500_000, createdAt: 1 }])
+    expect(html).toContain('Goa trip')
+    expect(html).toContain('₹5,000 of ₹25,000')
     expect(html).not.toContain('Saving for something?')
+    expect(html.indexOf('Goa trip')).toBeGreaterThan(html.indexOf('Where it went'))
+  })
+
+  it('shows no goals block when there are none', () => {
+    expect(renderWith([])).not.toContain('See goals')
   })
 
   it('is there on a first launch too, so a goal can be set before anything is logged', () => {
@@ -181,5 +187,51 @@ describe('Home recent spending', () => {
 
   it('is left out on a first launch with nothing logged', () => {
     expect(renderMonth('2026-10', [])).not.toContain('Recent spending')
+  })
+})
+
+describe('Home: what comes first', () => {
+  const renderFull = () => {
+    const summary = balanceFrom(txs, 100_000_00)
+    const ledger = makeLedger({
+      txs, expenses: txs.filter((t) => t.kind === 'expense'), income: txs.filter((t) => t.kind === 'income'), categories,
+      expenseCategories: categories.slice(0, 1), categoryById: new Map(categories.map((c) => [c.id, c])), balanceSet: true,
+      estimatedBalanceMinor: summary.estimatedMinor, netMinor: summary.netMinor,
+      goals: [{ id: 1, name: 'Goa trip', targetMinor: 2_500_000, savedMinor: 500_000, createdAt: 1 }],
+      recurring: [{ id: 1, kind: 'expense', amountMinor: 1_250_000, currency: 'INR', categoryId: 1, merchant: 'Home loan', note: '', paymentMethod: '', frequency: 'monthly', nextDue: '2026-11-05', active: true }],
+    })
+    return renderToStaticMarkup(
+      createElement(Home, {
+        ledger, month: '2026-10', onMonth: () => {}, today, onPickCategory: () => {}, onEdit: () => {}, onExample: () => {}, onOpenSettings: () => {},
+        onSeeAll: () => {}, balanceShown: false, onToggleBalance: () => {}, suggestions: [], onSuggestion: () => {}, logNudge: false, onAdd: () => {},
+        onOpenGoals: () => {}, onOpenUpcoming: () => {}, onPickPeriod: () => {}, onOpenInsights: () => {},
+      }),
+    )
+  }
+
+  it('answers "where do I stand" first, then cash, what is coming, the trend, recent activity, where it went, advice and goals', () => {
+    const html = renderFull()
+    const order = [
+      'aria-label="Summary"',
+      'aria-label="Money received and your balance"',
+      'aria-label="Coming up"',
+      'Day by day',
+      'Recent transactions',
+      'Where it went',
+      'Understand your spending',
+      'aria-label="Goals summary"',
+    ]
+    const positions = order.map((marker) => html.indexOf(marker))
+    expect(positions.every((p) => p >= 0), JSON.stringify(order.filter((_, i) => positions[i] < 0))).toBe(true)
+    expect(positions).toEqual([...positions].sort((a, b) => a - b))
+  })
+
+  it('has one calm headline number, then the tools around it, not a stack of equal cards', () => {
+    const html = renderFull()
+    expect((html.match(/text-\[clamp\(2\.25rem,10vw,2\.5rem\)\]/g) ?? []).length).toBe(1)
+  })
+
+  it('offers the insights as the next step, in words and a button', () => {
+    expect(renderFull()).toContain('>See insights<')
   })
 })
