@@ -122,9 +122,9 @@ describe('Logging from the input bar', () => {
   it("shows what was spent today on Home as soon as it is logged, and not yesterday's", async () => {
     const user = await open()
     await type(user, '450 lunch at Cafe')
-    expect(await screen.findByRole('group', { name: 'Today: ₹450' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Today: ₹450. See these transactions' })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Yesterday: ₹0' })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: 'Last 7 days: ₹450' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Last 7 days: ₹450. See these transactions' })).toBeInTheDocument()
   })
 
   it('reads several entries at once', async () => {
@@ -424,3 +424,123 @@ describe('Opening a category from Home', () => {
     expect(screen.getByRole('button', { name: 'Any time' })).toHaveAttribute('aria-pressed', 'true')
   })
 })
+
+describe('Upcoming payments', () => {
+  const addLoan = async (user: ReturnType<typeof userEvent.setup>) => {
+    const sheet = await screen.findByRole('dialog', { name: 'New regular payment' })
+    await user.type(within(sheet).getByLabelText('Name'), 'Home loan')
+    await user.type(within(sheet).getByLabelText('Amount'), '12500')
+    await user.click(within(sheet).getByRole('button', { name: 'Type' }))
+    await user.click(await screen.findByRole('radio', { name: /Loan EMI/ }))
+    const due = new Date()
+    due.setDate(due.getDate() + 6)
+    const { fireEvent } = await import('@testing-library/react')
+    fireEvent.change(within(sheet).getByLabelText('Next payment date'), { target: { value: localDateString(due) } })
+    await user.click(within(sheet).getByRole('button', { name: 'Add payment' }))
+  }
+
+  it('is offered on Home, and leads from the invitation to a payment on the card', async () => {
+    await tx()
+    const user = await open()
+    await user.click(await screen.findByRole('button', { name: /Track loans, auto-payments and salary/ }))
+    const upcoming = await screen.findByRole('dialog', { name: 'Upcoming payments' })
+    expect(within(upcoming).getByText('Nothing set up yet')).toBeInTheDocument()
+
+    await user.click(within(upcoming).getByRole('button', { name: 'Add a payment' }))
+    await addLoan(user)
+    await waitFor(async () => expect(await db.recurring.count()).toBe(1))
+
+    // The sheet it was added from now lists it, six days away.
+    expect(await within(upcoming).findByRole('button', { name: /^Edit Home loan, Loan EMI, In 6 days/ })).toBeInTheDocument()
+
+    // And once the sheet is closed, Home shows it in its card.
+    await user.click(within(upcoming).getByRole('button', { name: 'Close' }))
+    const card = await screen.findByRole('region', { name: 'Coming up' })
+    expect(within(card).getByText('Home loan')).toBeInTheDocument()
+    expect(card).toHaveTextContent('In 6 days')
+  })
+
+  it('opens a payment from the list to change it', async () => {
+    await tx()
+    await db.recurring.add({ kind: 'expense', amountMinor: 1_250_000, currency: 'INR', categoryId: 1, merchant: 'Home loan', note: '', paymentMethod: '', frequency: 'monthly', nextDue: localDateString(new Date(Date.now() + 6 * 86_400_000)), active: true, tag: 'loan' } as never)
+    const user = await open()
+    await user.click(await screen.findByRole('button', { name: 'See all upcoming payments' }))
+    const upcoming = await screen.findByRole('dialog', { name: 'Upcoming payments' })
+    await user.click(await within(upcoming).findByRole('button', { name: /^Edit Home loan/ }))
+    const edit = await screen.findByRole('dialog', { name: 'Edit regular payment' })
+    expect(within(edit).getByLabelText('Name')).toHaveValue('Home loan')
+    expect(within(edit).getByLabelText('Amount')).toHaveValue('12500')
+  })
+
+  it('stays off the page while looking back at an old month', async () => {
+    await tx()
+    const user = await open()
+    await screen.findByRole('button', { name: /Track loans, auto-payments and salary/ })
+    await user.click(screen.getByRole('button', { name: 'Previous month' }))
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Track loans, auto-payments and salary/ })).toBeNull())
+  })
+});
+
+describe('Tapping Today, Yesterday or Last 7 days on Home', () => {
+  const daysAgo = (n: number) => {
+    const d = new Date()
+    return localDateString(new Date(d.getFullYear(), d.getMonth(), d.getDate() - n))
+  }
+
+  it('shows the spending behind the figure tapped, for that day only', async () => {
+    await tx({ merchant: 'TodayCafe' })
+    await tx({ merchant: 'YesterdayCab', date: daysAgo(1) })
+    await tx({ merchant: 'Employer', kind: 'income', amountMinor: 800_000, categoryId: 4 })
+    const user = await open()
+    await user.click(await screen.findByRole('button', { name: /^Today: .*See these transactions/ }))
+    expect(await screen.findByRole('button', { name: /Edit spent TodayCafe/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Edit spent YesterdayCab/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Edit received Employer/ })).toBeNull() // the figure was what was spent
+    // What is filtering it is named, and can be taken off.
+    expect(screen.getByRole('button', { name: 'Remove Today filter' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove Spent filter' })).toBeInTheDocument()
+  })
+
+  it('shows yesterday when yesterday is tapped', async () => {
+    await tx({ merchant: 'TodayCafe' })
+    await tx({ merchant: 'YesterdayCab', date: daysAgo(1) })
+    const user = await open()
+    await user.click(await screen.findByRole('button', { name: /^Yesterday: .*See these transactions/ }))
+    expect(await screen.findByRole('button', { name: /Edit spent YesterdayCab/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Edit spent TodayCafe/ })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Remove Yesterday filter' })).toBeInTheDocument()
+  })
+
+  it('shows the whole week for Last 7 days, and not older spending', async () => {
+    await tx({ merchant: 'TodayCafe' })
+    await tx({ merchant: 'FiveDaysAgo', date: daysAgo(5) })
+    await tx({ merchant: 'TenDaysAgo', date: daysAgo(10) })
+    const user = await open()
+    await user.click(await screen.findByRole('button', { name: /^Last 7 days: .*See these transactions/ }))
+    expect(await screen.findByRole('button', { name: /Edit spent FiveDaysAgo/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Edit spent TodayCafe/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Edit spent TenDaysAgo/ })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Remove Last 7 days filter' })).toBeInTheDocument()
+  })
+
+  it('leaves a day with nothing spent as plain text, not a button to an empty list', async () => {
+    await tx({ merchant: 'TodayCafe' })
+    await open()
+    await screen.findByRole('button', { name: /^Today: .*See these transactions/ })
+    expect(screen.getByRole('group', { name: 'Yesterday: ₹0' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Yesterday:/ })).toBeNull()
+  })
+
+  it('starts fresh when Activity is opened from the tab bar afterwards', async () => {
+    await tx({ merchant: 'TodayCafe' })
+    await tx({ merchant: 'FiveDaysAgo', date: daysAgo(5) })
+    const user = await open()
+    await user.click(await screen.findByRole('button', { name: /^Today: .*See these transactions/ }))
+    await screen.findByRole('button', { name: /Edit spent TodayCafe/ })
+    const nav = within(screen.getByRole('navigation', { name: 'Main' }))
+    await user.click(nav.getByRole('button', { name: 'Home' }))
+    await user.click(nav.getByRole('button', { name: 'Activity' }))
+    expect(await screen.findByRole('button', { name: /Edit spent FiveDaysAgo/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Remove Today filter' })).toBeNull()
+  })
+});

@@ -162,15 +162,16 @@ describe('Home recent spending', () => {
   it('shows what was spent today, yesterday and over the last seven days', () => {
     const html = renderMonth('2026-10')
     expect(html).toContain('aria-label="Recent spending"')
-    expect(html).toContain('aria-label="Today: ₹500"') // 450 + 50; the salary is not spending
-    expect(html).toContain('aria-label="Yesterday: ₹230"')
-    expect(html).toContain('aria-label="Last 7 days: ₹1,730"') // 500 + 230 + 1,000
+    expect(html).toContain('aria-label="Today: ₹500. See these transactions"') // 450 + 50; the salary is not spending
+    expect(html).toContain('aria-label="Yesterday: ₹230. See these transactions"')
+    expect(html).toContain('aria-label="Last 7 days: ₹1,730. See these transactions"') // 500 + 230 + 1,000
     for (const label of ['>Today<', '>Yesterday<', '>Last 7 days<']) expect(html).toContain(label)
   })
 
   it('shows zero for a day with nothing spent', () => {
     const html = renderMonth('2026-10', [tx('expense', '2026-10-20', 100, 1, 'Old')])
     expect(html).toContain('aria-label="Today: ₹0"')
+    expect(html).not.toContain('Today: ₹0. See these transactions') // nothing to show, so nothing to tap
     expect(html).toContain('aria-label="Yesterday: ₹0"')
   })
 

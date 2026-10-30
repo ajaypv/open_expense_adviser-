@@ -47,6 +47,9 @@ export interface Account {
 }
 
 /** A transaction that repeats, such as rent or a subscription. */
+/** What a regular payment is, so a loan EMI and a UPI AutoPay can be told apart and summed up. */
+export type RecurringTag = 'loan' | 'autopay' | 'subscription' | 'bill' | 'income' | 'other'
+
 export interface Recurring {
   id: number
   kind: 'expense' | 'income'
@@ -66,6 +69,8 @@ export interface Recurring {
    * this existed take the day from their due date.
    */
   anchorDay?: number
+  /** The kind of payment. Rules made before this existed have none. */
+  tag?: RecurringTag
   active: boolean
 }
 

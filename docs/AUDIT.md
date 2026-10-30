@@ -55,6 +55,14 @@ IDs match the reports: **D** data, **L** logic, **P** performance, **A** Activit
 - **P8** The main font file is fetched with the page.
 - **D3** The first screen waits for currency, budgets and rules too, so nothing jumps or flashes the wrong currency (this race could not be reproduced in tests, so the test is a safety net, not proof).
 
+## Added since the review: upcoming payments
+
+A new view for loans, UPI AutoPay, subscriptions, bills and salary. See cases UPC-1 to UPC-19. It is built on the
+recurring payments the app already had: a card on Home with the next three and a one-line balance check, a full
+sheet (month summary, 30/60/90-day look-ahead, a balance check overall and for each account, add, change, pause and
+delete), and a type on each payment so a loan and an AutoPay can be told apart. Not included, by choice: tracking how
+many loan payments are left. The app cannot read bank or UPI mandates, so each payment is entered once by hand.
+
 ## Not done
 
 Left on purpose or for lack of time; each is described in the reports and can be picked up.

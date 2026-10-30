@@ -25,6 +25,8 @@ interface Props {
   onApplyUpdate: (() => void) | null
   onCheckUpdate: () => Promise<UpdateCheck>
   onShowWhatsNew: () => void
+  /** Opens the upcoming payments, the place to add and change regular payments. */
+  onOpenUpcoming?: () => void
 }
 
 /**
@@ -61,7 +63,7 @@ function jumpTo(id: string) {
 }
 
 /** Each group of settings lives in its own file under settings/. This only puts them in order. */
-export const Settings = memo(function Settings({ ledger, theme, onTheme, updateReady, onApplyUpdate, onCheckUpdate, onShowWhatsNew }: Props) {
+export const Settings = memo(function Settings({ ledger, theme, onTheme, updateReady, onApplyUpdate, onCheckUpdate, onShowWhatsNew, onOpenUpcoming }: Props) {
   useDisplay() // amounts are masked or regrouped by display settings, so redraw when they change
   return (
     <div className="pb-8">
@@ -95,7 +97,7 @@ export const Settings = memo(function Settings({ ledger, theme, onTheme, updateR
       </Part>
 
       <Part id="part-auto" title="Automatic">
-        <RecurringSection ledger={ledger} />
+        <RecurringSection ledger={ledger} onOpenUpcoming={onOpenUpcoming} />
         <RemindersSection />
         <SuggestionsSection />
       </Part>

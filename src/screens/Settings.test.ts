@@ -92,3 +92,15 @@ describe('Settings: how it is laid out', () => {
     expect(html).not.toContain('Coming soon')
   })
 });
+
+describe('Settings: regular payments', () => {
+  it('leads to the upcoming payments, where they are added and changed', () => {
+    const html = renderToStaticMarkup(
+      createElement(Settings, {
+        ledger: makeLedger(), theme: 'system', onTheme: () => {}, updateReady: false, onApplyUpdate: () => {}, onCheckUpdate: async () => 'latest', onShowWhatsNew: () => {}, onOpenUpcoming: () => {},
+      }),
+    )
+    expect(html).toContain('See what is coming up, or add a payment')
+    expect(html).toContain('Loans, auto-payments, subscriptions, rent and salary')
+  })
+});

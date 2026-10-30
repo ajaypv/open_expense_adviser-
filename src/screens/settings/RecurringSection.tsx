@@ -11,7 +11,7 @@ const nextOn = (date: string) =>
   (shortDate ??= new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })).format(parseLocalDate(date))
 
 /** Things that repeat, such as rent or a subscription, and ones the app has noticed in your history. */
-export function RecurringSection({ ledger }: { ledger: Ledger }) {
+export function RecurringSection({ ledger, onOpenUpcoming }: { ledger: Ledger; onOpenUpcoming?: () => void }) {
   const toast = useToast()
   const { recurring, categoryById, currency } = ledger
   const today = localDateString()
@@ -39,9 +39,18 @@ export function RecurringSection({ ledger }: { ledger: Ledger }) {
     <Group
       id="recurring-h"
       title="Recurring"
-      hint="Rent, subscriptions and salary. When one comes due, Home offers to add it with one tap. Set one up with Repeat in the add form."
+      hint="Loans, auto-payments, subscriptions, rent and salary. When one comes due, Home offers to add it with one tap."
       status={<Status on={recurring.length > 0}>{recurring.length === 0 ? 'None' : `${recurring.length}`}</Status>}
     >
+      {onOpenUpcoming && (
+        <button type="button" onClick={onOpenUpcoming} className={`${card} mb-3 flex min-h-12 w-full items-center justify-between gap-3 px-4 text-left font-medium`}>
+          See what is coming up, or add a payment
+          <span aria-hidden="true" className="text-ink-2">
+            <Icon name="chevRight" size={20} />
+          </span>
+        </button>
+      )}
+
       {recurring.length > 0 && (
         <ul className={`${card} divide-y divide-line`}>
           {recurring.map((r) => {

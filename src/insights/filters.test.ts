@@ -42,6 +42,17 @@ describe('describeRange', () => {
     expect(describeRange('2026-10-01', '2026-10-31', today)).toBe('October 2026')
   })
 
+  it('says Today and Yesterday for a single day, and the date for any other single day', () => {
+    expect(describeRange('2026-10-30', '2026-10-30', today)).toBe('Today')
+    expect(describeRange('2026-10-29', '2026-10-29', today)).toBe('Yesterday')
+    expect(describeRange('2026-10-05', '2026-10-05', today)).toMatch(/^(5 Oct|Oct 5)$/)
+  })
+
+  it('says Last 7 days for the week that ends today', () => {
+    expect(describeRange('2026-10-24', '2026-10-30', today)).toBe('Last 7 days')
+    expect(describeRange('2026-10-24', '2026-10-29', today)).not.toBe('Last 7 days') // ends yesterday: just dates
+  })
+
   it('shows both ends of any other range, and one end when only one is set', () => {
     expect(describeRange('2026-10-05', '2026-10-12', today)).toMatch(/(5 Oct|Oct 5).*(12 Oct|Oct 12)/)
     expect(describeRange('2026-10-05', '', today)).toMatch(/^From (5 Oct|Oct 5)$/)
