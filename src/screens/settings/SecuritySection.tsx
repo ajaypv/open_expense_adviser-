@@ -12,13 +12,14 @@ import {
   validPin,
   verifyPin,
 } from '../../security/lock'
+import { PickerField } from '../../ui/PickerField'
 import { useToast } from '../../ui/toast'
 import { card, dangerLink, field, Group, saveButton, secondaryButton, Status } from './parts'
 
-const AUTO_LOCK = [
-  { seconds: 0, label: 'Right away' },
-  { seconds: 60, label: 'After 1 minute' },
-  { seconds: 300, label: 'After 5 minutes' },
+const AUTO_LOCK_OPTIONS = [
+  { value: 0, label: 'Right away', detail: 'As soon as you leave the app' },
+  { value: 60, label: 'After 1 minute', detail: 'If you are away for a minute or more' },
+  { value: 300, label: 'After 5 minutes', detail: 'If you are away for five minutes or more' },
 ]
 
 type Mode = 'idle' | 'setup' | 'change' | 'disable'
@@ -104,18 +105,16 @@ export function SecuritySection() {
               <label htmlFor="auto-lock" className="text-sm text-ink-2">
                 Lock the app
               </label>
-              <select
-                id="auto-lock"
-                value={lock.autoLockSeconds}
-                onChange={(e) => setAutoLockSeconds(Number(e.target.value))}
-                className={`${field} mt-1.5`}
-              >
-                {AUTO_LOCK.map((o) => (
-                  <option key={o.seconds} value={o.seconds}>
-                    {o.label} of leaving it
-                  </option>
-                ))}
-              </select>
+              <div className="mt-1.5">
+                <PickerField
+                  id="auto-lock"
+                  title="Lock the app"
+                  value={lock.autoLockSeconds}
+                  options={AUTO_LOCK_OPTIONS}
+                  onChange={setAutoLockSeconds}
+                  className={field}
+                />
+              </div>
             </div>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={lockNow} className={secondaryButton}>
@@ -162,13 +161,9 @@ export function SecuritySection() {
                 <label htmlFor="pin-after" className="text-sm text-ink-2">
                   Lock the app
                 </label>
-                <select id="pin-after" value={after} onChange={(e) => setAfter(Number(e.target.value))} className={`${field} mt-1.5`}>
-                  {AUTO_LOCK.map((o) => (
-                    <option key={o.seconds} value={o.seconds}>
-                      {o.label} of leaving it
-                    </option>
-                  ))}
-                </select>
+                <div className="mt-1.5">
+                  <PickerField id="pin-after" title="Lock the app" value={after} options={AUTO_LOCK_OPTIONS} onChange={setAfter} className={field} />
+                </div>
               </div>
             )}
             {mode === 'setup' && (

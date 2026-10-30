@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { notificationPermission, requestNotificationPermission, schedulePeriodicReminder, type Permission } from '../../reminders/notify'
 import { setReminderPrefs, useReminderPrefs } from '../../reminders/store'
+import { TimeField } from '../../ui/TimeField'
 import { useToast } from '../../ui/toast'
 import { card, field, Group, Status, Switch } from './parts'
 
@@ -46,13 +47,15 @@ export function RemindersSection() {
               <label htmlFor="remind-time" className="text-sm text-ink-2">
                 Remind me at
               </label>
-              <input
-                id="remind-time"
-                type="time"
-                value={prefs.logTime}
-                onChange={(e) => e.target.value && void setReminderPrefs({ logTime: e.target.value })}
-                className={`${field} mt-1.5 w-40`}
-              />
+              <div className="mt-1.5">
+                <TimeField
+                  id="remind-time"
+                  title="Remind me at"
+                  value={prefs.logTime}
+                  onChange={(logTime) => void setReminderPrefs({ logTime })}
+                  className={`${field} w-44`}
+                />
+              </div>
             </div>
           )}
         </div>

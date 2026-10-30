@@ -2,7 +2,7 @@ import { memo, useEffect, useRef, useState, type FormEvent } from 'react'
 import type { LedgerTx } from '../data/buildLedger'
 import { useDisplay } from '../data/display'
 import { attachLocation, clearLocation } from '../data/location'
-import { CURRENCIES } from '../db/currencies'
+import { CURRENCIES, currencyOptions } from '../db/currencies'
 import { INCOME_CATEGORY } from '../db/defaultCategories'
 import { localDateString, parseLocalDate, toMinor } from '../db/money'
 import {
@@ -18,6 +18,7 @@ import { defaultAccountId } from '../insights/accounts'
 import { nextDueAfter } from '../insights/recurring'
 import type { Suggestion } from '../insights/suggestions'
 import { Icon } from './Icon'
+import { PickerField, type PickerOption } from './PickerField'
 import { SuggestionList } from './SuggestionList'
 import { useToast } from './toast'
 
@@ -45,6 +46,14 @@ type Kind = Transaction['kind']
 type Repeat = 'never' | 'weekly' | 'monthly'
 
 const PAYMENT_METHODS = ['Cash', 'Card', 'Online'] as const
+
+const REPEAT_OPTIONS: PickerOption<Repeat>[] = [
+  { value: 'never', label: 'Doesn’t repeat' },
+  { value: 'weekly', label: 'Every week' },
+  { value: 'monthly', label: 'Every month' },
+]
+
+const accountOptions = (accounts: Account[]): PickerOption<number>[] => accounts.map((a) => ({ value: a.id, label: a.name }))
 
 const chip =
   'flex min-h-11 cursor-pointer items-center gap-2 rounded-full bg-surface px-3.5 text-[0.9375rem] shadow-[inset_0_0_0_1px_var(--ring)] ' +
@@ -81,33 +90,26 @@ const SHAKE: Keyframe[] = [
   { transform: 'translateX(0)' },
 ]
 
-/** A labelled drop-down that looks like the other fields. */
-function Select({
+/** A labelled list picker that looks like the other fields. */
+function Select<T extends string | number>({
   id,
   label,
   value,
+  options,
   onChange,
-  children,
 }: {
   id: string
   label: string
-  value: string | number
-  onChange: (value: string) => void
-  children: React.ReactNode
+  value: T | null
+  options: PickerOption<T>[]
+  onChange: (value: T) => void
 }) {
   return (
     <div>
       <label htmlFor={id} className="text-sm text-ink-2">
         {label}
       </label>
-      <div className="relative">
-        <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={`${input} appearance-none pr-10`}>
-          {children}
-        </select>
-        <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-3 flex items-center pt-1 text-ink-2">
-          <Icon name="chevDown" size={20} />
-        </span>
-      </div>
+      <PickerField id={id} title={label} value={value} options={options} onChange={onChange} className={input} />
     </div>
   )
 }
@@ -315,7 +317,10 @@ export const AddSheet = memo(function AddSheet({
       ref={dialog}
       className="sheet"
       aria-labelledby="sheet-title"
-      onClose={onClose}
+      // Lists opened inside this form are sheets of their own; their closing must not close the form.
+      onClose={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
       onClick={(e) => {
         // Clicks on the backdrop target the dialog itself (its content fills everything else).
         if (e.target === e.currentTarget) e.currentTarget.close()
@@ -405,23 +410,18 @@ export const AddSheet = memo(function AddSheet({
               }`}
             />
             {!transfer && (
-              <div className="relative shrink-0 self-center">
+              <div className="shrink-0 self-center">
                 <label htmlFor="tx-currency" className="sr-only">
                   Currency
                 </label>
-                <select
+                <PickerField
                   id="tx-currency"
+                  title="Currency"
                   value={txCurrency}
-                  onChange={(e) => setTxCurrency(e.target.value)}
-                  className="min-h-11 appearance-none rounded-full bg-surface py-1 pl-3.5 pr-9 text-sm font-medium"
-                >
-                  {currencies.map((c) => (
-                    <option key={c}>{c}</option>
-                  ))}
-                </select>
-                <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-ink-2">
-                  <Icon name="chevDown" size={16} />
-                </span>
+                  options={currencyOptions(currencies)}
+                  onChange={setTxCurrency}
+                  className="min-h-11 rounded-full bg-surface py-1 pl-3.5 pr-3 text-sm font-medium"
+                />
               </div>
             )}
           </div>
@@ -463,20 +463,8 @@ export const AddSheet = memo(function AddSheet({
         <div className="grid grid-cols-1 gap-3 min-[26rem]:grid-cols-2">
           {transfer ? (
             <>
-              <Select id="from-account" label="From" value={fromId ?? ''} onChange={(v) => setAccountId(Number(v))}>
-                {pickable(fromId).map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </Select>
-              <Select id="to-account" label="To" value={toId ?? ''} onChange={(v) => setToAccountId(Number(v))}>
-                {pickable(toId).map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </Select>
+              <Select id="from-account" label="From" value={fromId} options={accountOptions(pickable(fromId))} onChange={setAccountId} />
+              <Select id="to-account" label="To" value={toId} options={accountOptions(pickable(toId))} onChange={setToAccountId} />
             </>
           ) : (
             <>
@@ -495,13 +483,13 @@ export const AddSheet = memo(function AddSheet({
               </div>
               {showAccounts && (
                 <div className="min-[26rem]:col-span-2">
-                  <Select id="account" label={received ? 'Received in' : 'Paid from'} value={fromId ?? ''} onChange={(v) => setAccountId(Number(v))}>
-                    {pickable(fromId).map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name}
-                      </option>
-                    ))}
-                  </Select>
+                  <Select
+                    id="account"
+                    label={received ? 'Received in' : 'Paid from'}
+                    value={fromId}
+                    options={accountOptions(pickable(fromId))}
+                    onChange={setAccountId}
+                  />
                 </div>
               )}
             </>
@@ -572,11 +560,7 @@ export const AddSheet = memo(function AddSheet({
           </div>
           {!editing && !transfer && (
             <div className="min-[26rem]:col-span-2">
-              <Select id="repeat" label="Repeat" value={repeat} onChange={(v) => setRepeat(v as Repeat)}>
-                <option value="never">Doesn’t repeat</option>
-                <option value="weekly">Every week</option>
-                <option value="monthly">Every month</option>
-              </Select>
+              <Select id="repeat" label="Repeat" value={repeat} options={REPEAT_OPTIONS} onChange={setRepeat} />
             </div>
           )}
           </div>

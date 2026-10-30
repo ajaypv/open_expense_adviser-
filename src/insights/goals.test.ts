@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Goal } from '../db/schema'
-import { describeTimeLeft, goalProgress, sortGoals } from './goals'
+import { describeDue, describeTimeLeft, goalProgress, goalsTotals, sortGoals } from './goals'
 
 const today = new Date(2026, 9, 30) // 30 Oct 2026
 
@@ -67,6 +67,32 @@ describe('describeTimeLeft', () => {
   })
 })
 
+describe('describeDue', () => {
+  it('says nothing for a goal without a date', () => {
+    expect(describeDue(goal(), today)).toBe('')
+  })
+
+  it('names the date and how long is left', () => {
+    const text = describeDue(goal({ dueDate: '2026-11-08' }), today)
+    expect(text).toMatch(/^Due .*8.*Nov.*, 9 days left$|^Due .*Nov.*8.*, 9 days left$/)
+  })
+
+  it('says "Due today" on the day, without repeating the date', () => {
+    expect(describeDue(goal({ dueDate: '2026-10-30' }), today)).toBe('Due today')
+  })
+
+  it('says how late it is and when it was due', () => {
+    const text = describeDue(goal({ dueDate: '2026-10-28' }), today)
+    expect(text).toMatch(/^Overdue by 2 days, was due /)
+    expect(text).toContain('Oct')
+  })
+
+  it('adds the year only when the date is not in this year', () => {
+    expect(describeDue(goal({ dueDate: '2027-01-28' }), today)).toContain('2027')
+    expect(describeDue(goal({ dueDate: '2026-12-28' }), today)).not.toContain('2026')
+  })
+})
+
 describe('sortGoals', () => {
   it('puts what is due soonest first, undated goals after dated ones, and reached goals last', () => {
     const later = goal({ name: 'Later', dueDate: '2027-03-01' })
@@ -82,5 +108,21 @@ describe('sortGoals', () => {
     const input = [b, a]
     expect(sortGoals(input).map((g) => g.name)).toEqual(['A', 'B'])
     expect(input.map((g) => g.name)).toEqual(['B', 'A'])
+  })
+})
+
+describe('goalsTotals', () => {
+  it('is all zeros with no goals', () => {
+    expect(goalsTotals([])).toEqual({ count: 0, reachedCount: 0, savedMinor: 0, targetMinor: 0 })
+  })
+
+  it('adds up what is saved against what everything costs', () => {
+    const totals = goalsTotals([goal({ targetMinor: 1_000_000, savedMinor: 500_000 }), goal({ targetMinor: 400_000, savedMinor: 100_000 })])
+    expect(totals).toEqual({ count: 2, reachedCount: 0, savedMinor: 600_000, targetMinor: 1_400_000 })
+  })
+
+  it('counts reached goals, and does not let money saved past a target make the total look bigger', () => {
+    const totals = goalsTotals([goal({ targetMinor: 1_000_000, savedMinor: 1_200_000 }), goal({ targetMinor: 1_000_000, savedMinor: 500_000 })])
+    expect(totals).toEqual({ count: 2, reachedCount: 1, savedMinor: 1_500_000, targetMinor: 2_000_000 })
   })
 })

@@ -36,6 +36,7 @@ import { AddSheet } from './ui/AddSheet'
 import { BottomNav, TABS, type Tab } from './ui/BottomNav'
 import { ChatBar } from './ui/ChatBar'
 import { GoalMoneySheet, GoalSheet } from './ui/GoalSheets'
+import { GoalsOverview } from './ui/GoalsOverview'
 import { PwaBanner } from './ui/PwaBanner'
 import { SuggestionList } from './ui/SuggestionList'
 import { ToastProvider, useToast } from './ui/toast'
@@ -83,6 +84,7 @@ function Shell() {
   const [draft, setDraft] = useState({ text: '', n: 0 })
   const [categoryFilter, setCategoryFilter] = useState<number | null>(null)
   const [sheet, setSheet] = useState<Sheet>({ open: false, editing: null, prefill: null, startKind: 'expense' })
+  const [goalsOpen, setGoalsOpen] = useState(false)
   const [goalSheet, setGoalSheet] = useState<GoalSheetState>({ open: false, goal: null, n: 0 })
   const [moneySheet, setMoneySheet] = useState<GoalSheetState>({ open: false, goal: null, n: 0 })
 
@@ -249,6 +251,8 @@ function Shell() {
 
   const newGoal = useCallback(() => setGoalSheet((s) => ({ open: true, goal: null, n: s.n + 1 })), [])
   const editGoal = useCallback((goal: Goal) => setGoalSheet((s) => ({ open: true, goal, n: s.n + 1 })), [])
+  const openGoals = useCallback(() => setGoalsOpen(true), [])
+  const closeGoals = useCallback(() => setGoalsOpen(false), [])
   const closeGoalSheet = useCallback(() => setGoalSheet((s) => ({ ...s, open: false })), [])
   const goalMoney = useCallback((goal: Goal) => setMoneySheet((s) => ({ open: true, goal, n: s.n + 1 })), [])
   const closeMoneySheet = useCallback(() => setMoneySheet((s) => ({ ...s, open: false })), [])
@@ -282,7 +286,7 @@ function Shell() {
       <PwaBanner pwa={pwa} />
 
       <main
-        className="flex-1 overflow-y-auto overscroll-contain pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]"
+        className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]"
         style={{ viewTransitionName: 'tab' }}
       >
         {tab === 'home' && (
@@ -302,9 +306,7 @@ function Shell() {
             onSuggestion={openSuggestion}
             logNudge={logNudge}
             onAdd={openAddDefault}
-            onNewGoal={newGoal}
-            onEditGoal={editGoal}
-            onGoalMoney={goalMoney}
+            onOpenGoals={openGoals}
           />
         )}
         {tab === 'activity' && (
@@ -361,6 +363,16 @@ function Shell() {
         onClose={closeSheet}
       />
 
+      <GoalsOverview
+        open={goalsOpen}
+        onClose={closeGoals}
+        goals={ledger.goals}
+        currency={ledger.currency}
+        today={today}
+        onNew={newGoal}
+        onEdit={editGoal}
+        onAddMoney={goalMoney}
+      />
       <GoalSheet key={`goal-${goalSheet.n}`} open={goalSheet.open} goal={goalSheet.goal} today={today} onClose={closeGoalSheet} />
       <GoalMoneySheet key={`money-${moneySheet.n}`} open={moneySheet.open} goal={moneySheet.goal} currency={ledger.currency} onClose={closeMoneySheet} />
 

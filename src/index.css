@@ -303,6 +303,34 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   }
 }
 
+/* ---------- The goals button's glow ---------- */
+
+/* One soft pulse of the accent colour to say "goals live here". It plays once, a moment after the app
+   opens. The halo sits outside the button, so it never moves anything. */
+@keyframes goal-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px var(--ring),
+      0 0 0 0 transparent;
+  }
+  35% {
+    box-shadow:
+      0 0 0 1px var(--ring),
+      0 0 18px 4px color-mix(in oklab, var(--s1) 55%, transparent);
+  }
+}
+
+.goal-glow {
+  animation: goal-glow 2.4s ease-out 0.7s 1 both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goal-glow {
+    animation: none;
+  }
+}
+
 /* ---------- Small helpers ---------- */
 
 

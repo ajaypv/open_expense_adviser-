@@ -2,7 +2,6 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import type { Goal } from '../db/schema'
-import { GoalsSection } from './Goals'
 import { GoalMoneySheet, GoalSheet } from './GoalSheets'
 
 const today = new Date(2026, 9, 30) // 30 Oct 2026
@@ -13,75 +12,6 @@ const goal = (over: Partial<Goal> = {}): Goal => ({
 })
 
 const noop = () => {}
-const section = (goals: Goal[]) =>
-  renderToStaticMarkup(createElement(GoalsSection, { goals, currency: 'INR', today, onNew: noop, onEdit: noop, onAddMoney: noop }))
-
-describe('GoalsSection', () => {
-  it('invites a first goal when there are none', () => {
-    const html = section([])
-    expect(html).toContain('Goals')
-    expect(html).toContain('Saving for something?')
-    expect(html).toContain('Set a goal')
-  })
-
-  it('shows what is saved against the cost, with a progress bar that says so in words', () => {
-    const html = section([goal()])
-    expect(html).toContain('New phone')
-    expect(html).toContain('₹15,000')
-    expect(html).toContain('of ₹60,000')
-    expect(html).toContain('role="progressbar"')
-    expect(html).toContain('aria-valuenow="25"')
-    expect(html).toContain('aria-valuetext="₹15,000 of ₹60,000 saved, 25%"')
-  })
-
-  it('says how long is left and how much to set aside, when the goal has a date', () => {
-    const html = section([goal({ dueDate: '2027-01-28' })]) // 90 days: ₹45,000 left over three months
-    expect(html).toContain('3 months left')
-    expect(html).toContain('Set aside ₹15,000 a month')
-  })
-
-  it('says nothing about time for a goal with no date', () => {
-    const html = section([goal()])
-    expect(html).not.toMatch(/left<|Overdue|Due today|Set aside/)
-  })
-
-  it('warns, in words, when the date has passed', () => {
-    expect(section([goal({ dueDate: '2026-10-25' })])).toContain('Overdue by 5 days')
-  })
-
-  it('celebrates a goal that is fully saved, and stops asking for money', () => {
-    const html = section([goal({ savedMinor: 6_000_000, dueDate: '2027-01-28' })])
-    expect(html).toContain('Goal reached')
-    expect(html).not.toContain('Add money')
-    expect(html).not.toContain('Set aside')
-  })
-
-  it('gives each goal its own named buttons to change it or add money', () => {
-    const html = section([goal({ name: 'Goa trip' })])
-    expect(html).toContain('aria-label="Edit goal Goa trip"')
-    expect(html).toContain('aria-label="Add money to Goa trip"')
-  })
-
-  it('lists the soonest first and tucks the rest behind a button', () => {
-    const goals = [
-      goal({ name: 'E', dueDate: '2027-05-01' }),
-      goal({ name: 'A', dueDate: '2026-12-01' }),
-      goal({ name: 'D', dueDate: '2027-03-01' }),
-      goal({ name: 'B', dueDate: '2027-01-01' }),
-      goal({ name: 'C', dueDate: '2027-02-01' }),
-    ]
-    const html = section(goals)
-    expect(html.indexOf('>A<')).toBeLessThan(html.indexOf('>B<'))
-    expect(html.indexOf('>B<')).toBeLessThan(html.indexOf('>C<'))
-    expect(html).not.toContain('>D<')
-    expect(html).not.toContain('>E<')
-    expect(html).toContain('Show all 5')
-  })
-
-  it('has a button to make another goal once some exist', () => {
-    expect(section([goal()])).toContain('New goal')
-  })
-})
 
 describe('GoalSheet', () => {
   const sheet = (g: Goal | null) => renderToStaticMarkup(createElement(GoalSheet, { open: true, goal: g, today, onClose: noop }))

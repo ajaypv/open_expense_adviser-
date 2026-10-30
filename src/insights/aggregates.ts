@@ -195,3 +195,28 @@ export function categoryChanges(txs: Transaction[], key: MonthKey, today: Date):
     .filter((c) => c.deltaMinor !== 0)
     .sort((a, b) => Math.abs(b.deltaMinor) - Math.abs(a.deltaMinor))
 }
+
+export interface RecentSpending {
+  todayMinor: number
+  yesterdayMinor: number
+  /** The last seven days, today included. */
+  last7Minor: number
+}
+
+/** What was spent today, yesterday and over the last seven days. Anything dated in the future is ignored. */
+export function recentSpending(txs: Transaction[], today: Date): RecentSpending {
+  const day = (back: number) => localDateString(new Date(today.getFullYear(), today.getMonth(), today.getDate() - back))
+  const todayKey = day(0)
+  const yesterdayKey = day(1)
+  const weekStart = day(6)
+  let todayMinor = 0
+  let yesterdayMinor = 0
+  let last7Minor = 0
+  for (const t of txs) {
+    if (t.date > todayKey || t.date < weekStart) continue
+    last7Minor += t.amountMinor
+    if (t.date === todayKey) todayMinor += t.amountMinor
+    else if (t.date === yesterdayKey) yesterdayMinor += t.amountMinor
+  }
+  return { todayMinor, yesterdayMinor, last7Minor }
+}
