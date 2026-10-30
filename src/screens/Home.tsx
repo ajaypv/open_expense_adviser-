@@ -27,6 +27,7 @@ import { Icon } from '../ui/Icon'
 import { MonthSwitcher } from '../ui/MonthSwitcher'
 import { SuggestionList } from '../ui/SuggestionList'
 import { TxList } from '../ui/TxList'
+import { UpcomingCard } from '../ui/UpcomingCard'
 import { WalletPanel } from '../ui/WalletPanel'
 
 type Ledger = ReturnType<typeof useLedger>
@@ -53,6 +54,10 @@ interface Props {
   onAdd: () => void
   /** Opens the goals, from the button in the top-right corner. */
   onOpenGoals: () => void
+  /** Opens the upcoming payments: loans, auto-payments, subscriptions and salary. */
+  onOpenUpcoming: () => void
+  /** Opens Activity on what was spent in a period, from the Today, Yesterday and Last 7 days figures. */
+  onPickPeriod: (range: { from: string; to: string }) => void
 }
 
 const EXAMPLES = ['450 lunch at Cafe', 'Uber 230 yesterday', 'Salary 80,000']
@@ -76,9 +81,15 @@ export const Home = memo(function Home({
   logNudge,
   onAdd,
   onOpenGoals,
+  onOpenUpcoming,
+  onPickPeriod,
 }: Props) {
   const { txs, expenses, income, categoryById, currency, budgetMinor, loading } = ledger
-  const currentMonth = localDateString(today).slice(0, 7)
+  const todayKey = localDateString(today)
+  const yesterdayKey = localDateString(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1))
+  // Last 7 days is today and the six before it, the same days the figure adds up.
+  const weekStartKey = localDateString(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6))
+  const currentMonth = todayKey.slice(0, 7)
   const isCurrent = month === currentMonth
   const display = useDisplay()
 
@@ -204,23 +215,44 @@ export const Home = memo(function Home({
       </section>
 
       {isCurrent && (
-        <section aria-label="Recent spending" className={`${card} mt-3 grid grid-cols-3 divide-x divide-line py-4`}>
+        <section aria-label="Recent spending" className={`${card} mt-3 grid grid-cols-3 divide-x divide-line overflow-hidden`}>
           {(
             [
-              ['Today', 'today', recentlySpent.todayMinor],
-              ['Yesterday', 'yesterday', recentlySpent.yesterdayMinor],
-              ['Last 7 days', 'last7', recentlySpent.last7Minor],
+              ['Today', 'today', recentlySpent.todayMinor, { from: todayKey, to: todayKey }],
+              ['Yesterday', 'yesterday', recentlySpent.yesterdayMinor, { from: yesterdayKey, to: yesterdayKey }],
+              ['Last 7 days', 'last7', recentlySpent.last7Minor, { from: weekStartKey, to: todayKey }],
             ] as const
-          ).map(([label, id, amount]) => (
-            <div key={label} role="group" aria-label={`${label}: ${formatMoney(amount, currency)}`} className="min-w-0 px-4 first:pl-5 last:pr-5">
-              <p className="text-sm font-medium text-ink-2">{label}</p>
-              <p className={`mt-0.5 truncate text-xl font-bold tracking-tight tabular-nums ${amount === 0 ? 'text-ink-2' : ''}`}>
-                <AnimatedMoney minor={amount} currency={currency} id={id} compact />
-              </p>
-            </div>
-          ))}
+          ).map(([label, id, amount, range]) => {
+            const body = (
+              <>
+                <p className="text-sm font-medium text-ink-2">{label}</p>
+                <p className={`mt-0.5 truncate text-xl font-bold tracking-tight tabular-nums ${amount === 0 ? 'text-ink-2' : ''}`}>
+                  <AnimatedMoney minor={amount} currency={currency} id={id} compact />
+                </p>
+              </>
+            )
+            const spent = formatMoney(amount, currency)
+            // A figure with something behind it opens those transactions; a day with nothing spent has nothing to open.
+            return amount > 0 ? (
+              <button
+                key={label}
+                type="button"
+                aria-label={`${label}: ${spent}. See these transactions`}
+                onClick={() => onPickPeriod(range)}
+                className="min-h-16 min-w-0 px-4 py-4 text-left first:pl-5 last:pr-5 active:bg-surface-2 [@media(hover:hover)]:hover:bg-surface-2 focus-visible:outline-offset-[-2px]"
+              >
+                {body}
+              </button>
+            ) : (
+              <div key={label} role="group" aria-label={`${label}: ${spent}`} className="min-w-0 px-4 py-4 first:pl-5 last:pr-5">
+                {body}
+              </div>
+            )
+          })}
         </section>
       )}
+
+      {isCurrent && <UpcomingCard ledger={ledger} today={today} onOpen={onOpenUpcoming} />}
 
       <WalletPanel
         monthName={name}

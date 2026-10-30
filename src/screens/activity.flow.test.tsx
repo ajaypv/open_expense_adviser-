@@ -10,7 +10,7 @@ import { db } from '../db/schema'
 import { ToastProvider } from '../ui/toast'
 import { Activity } from './Activity'
 
-type Range = { from: string; to: string } | null
+type Range = { from: string; to: string; kind?: 'all' | 'expense' | 'income' | 'transfer' } | null
 function Screen({ onEdit, initialRange = null }: { onEdit: (tx: unknown) => void; initialRange?: Range }) {
   const ledger = useLedger()
   const [category, setCategory] = useState<number | null>(null)
@@ -516,3 +516,45 @@ describe('Activity: select several, with filters', () => {
     await waitFor(async () => expect((await db.transactions.where('merchant').equals('Swiggy').first())!.categoryId).toBe(food))
   })
 })
+
+describe('Activity: where the controls sit', () => {
+  it('has Filters, Select and the date chips together on one row, so the quick dates are next to them', async () => {
+    await tx({ merchant: 'Swiggy' })
+    mount()
+    const filters = await screen.findByRole('button', { name: /Filters/ })
+    const select = screen.getByRole('button', { name: 'Select' })
+    const dates = screen.getByRole('group', { name: 'Filter by date' })
+    expect(select.parentElement).toBe(filters.parentElement)
+    expect(filters.parentElement).toContainElement(dates)
+    for (const label of ['Any time', 'This month', 'Last month', 'Last 30 days']) {
+      expect(within(dates).getByRole('button', { name: label })).toBeInTheDocument()
+    }
+  })
+
+  it('lets that row scroll sideways, so nothing is squeezed or cut off on a narrow screen', async () => {
+    await tx({ merchant: 'Swiggy' })
+    mount()
+    const row = (await screen.findByRole('button', { name: /Filters/ })).parentElement!
+    expect(row).toHaveClass('overflow-x-auto')
+    expect(screen.getByRole('button', { name: /Filters/ })).toHaveClass('shrink-0', 'whitespace-nowrap')
+    expect(screen.getByRole('button', { name: 'Select' })).toHaveClass('shrink-0', 'whitespace-nowrap')
+  })
+});
+
+describe('Activity: opened on one kind of transaction', () => {
+  it('starts on spending only when asked, and says so', async () => {
+    await tx({ merchant: 'Swiggy' })
+    await tx({ merchant: 'Employer', kind: 'income', amountMinor: 800_000 })
+    mount(() => {}, { from: daysAgo(0), to: daysAgo(0), kind: 'expense' })
+    expect(await row('Edit spent Swiggy')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Edit received Employer/ })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Remove Spent filter' })).toBeInTheDocument()
+  })
+
+  it('shows every kind when it is not asked to narrow', async () => {
+    await tx({ merchant: 'Swiggy' })
+    await tx({ merchant: 'Employer', kind: 'income', amountMinor: 800_000 })
+    mount(() => {}, { from: daysAgo(0), to: daysAgo(0) })
+    expect(await row('Edit received Employer')).toBeInTheDocument()
+  })
+});

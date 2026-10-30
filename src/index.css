@@ -173,6 +173,17 @@ html,
 body,
 #root {
   height: 100%;
+  /* The app is a fixed frame with one scrolling area inside it; the page itself never scrolls. */
+  overflow: hidden;
+}
+
+/*
+ * A switch or radio button is a label wrapping a visually hidden input. Without a positioned parent the input sits
+ * wherever the page puts it, not beside its label, and focusing it (a tap on the label does) makes the browser
+ * scroll the whole page to that spot. Anchoring the label keeps the hidden input right where it is tapped.
+ */
+label:has(input.sr-only) {
+  position: relative;
 }
 
 body {

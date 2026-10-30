@@ -78,6 +78,14 @@ let dayYearFormat: Intl.DateTimeFormat | undefined
 /** "October 2026" for a whole month, otherwise the dates themselves ("5 Oct to 12 Oct", "From 5 Oct"). */
 export function describeRange(from: string, to: string, today: Date): string {
   if (from && to) {
+    const todayKey = localDateString(today)
+    const dayBefore = (key: string, n: number) => {
+      const d = parseLocalDate(key)
+      return localDateString(new Date(d.getFullYear(), d.getMonth(), d.getDate() - n))
+    }
+    if (from === to && to === todayKey) return 'Today'
+    if (from === to && to === dayBefore(todayKey, 1)) return 'Yesterday'
+    if (to === todayKey && from === dayBefore(todayKey, 6)) return 'Last 7 days'
     const key = from.slice(0, 7)
     const whole = monthRange(key)
     if (whole.from === from && whole.to === to) return monthLabel(key)
@@ -88,7 +96,7 @@ export function describeRange(from: string, to: string, today: Date): string {
       ? (dayFormat ??= new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })).format(date)
       : (dayYearFormat ??= new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' })).format(date)
   }
-  if (from && to) return `${show(from)} to ${show(to)}`
+  if (from && to) return from === to ? show(from) : `${show(from)} to ${show(to)}`
   return from ? `From ${show(from)}` : `Until ${show(to)}`
 }
 

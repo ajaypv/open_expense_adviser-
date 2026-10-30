@@ -339,3 +339,25 @@ describe('restoring over what is already here', () => {
     expect((await db.settings.get('rates'))?.value).toEqual({})
   })
 })
+
+describe('regular payments in a backup', () => {
+  it('keeps what kind of payment each one is, and the day of the month it keeps to', async () => {
+    const { db, parseBackup, importBackup } = await load()
+    const parsed = parseBackup(
+      backupText({ recurring: [{ kind: 'expense', amountMinor: 1_250_000, merchant: 'Home loan', frequency: 'monthly', nextDue: '2026-11-30', anchorDay: 31, tag: 'loan', categoryId: 1 }] }),
+    )
+    if (!parsed.ok) throw new Error(parsed.error)
+    await importBackup(parsed.backup, 'merge')
+    expect((await db.recurring.toArray())[0]).toMatchObject({ tag: 'loan', anchorDay: 31, nextDue: '2026-11-30' })
+  })
+
+  it('still reads a file from before payments had a type', async () => {
+    const { parseBackup } = await load()
+    expect(parseBackup(backupText({ recurring: [{ kind: 'expense', amountMinor: 100, merchant: 'Rent', frequency: 'monthly', nextDue: '2026-11-01' }] })).ok).toBe(true)
+  })
+
+  it('refuses a type it does not know', async () => {
+    const { parseBackup } = await load()
+    expect(parseBackup(backupText({ recurring: [{ kind: 'expense', amountMinor: 100, merchant: 'Rent', frequency: 'monthly', nextDue: '2026-11-01', tag: 'mortgage' }] })).ok).toBe(false)
+  })
+});

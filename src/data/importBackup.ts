@@ -37,6 +37,7 @@ const recurringSchema = z.object({
   frequency: z.enum(['weekly', 'monthly']),
   nextDue: day,
   anchorDay: z.number().int().min(1).max(31).optional(),
+  tag: z.enum(['loan', 'autopay', 'subscription', 'bill', 'income', 'other']).optional(),
   active: z.boolean().default(true),
 })
 

@@ -17,7 +17,7 @@ import {
   purgeExpiredTrash,
   requestPersistentStorage,
 } from './db/repo'
-import type { Goal, Transaction } from './db/schema'
+import type { Goal, Recurring, Transaction } from './db/schema'
 import { monthOf, type MonthKey } from './insights/aggregates'
 import { monthRange } from './insights/filters'
 import { learnedCategoryId } from './ingest/learn'
@@ -36,6 +36,8 @@ import { BottomNav, TABS, type Tab } from './ui/BottomNav'
 import { ChatBar } from './ui/ChatBar'
 import { GoalMoneySheet, GoalSheet } from './ui/GoalSheets'
 import { GoalsOverview } from './ui/GoalsOverview'
+import { RuleSheet } from './ui/RuleSheet'
+import { UpcomingSheet } from './ui/UpcomingSheet'
 import { PwaBanner } from './ui/PwaBanner'
 import { ScreenSkeleton } from './ui/ScreenSkeleton'
 import { SuggestionList } from './ui/SuggestionList'
@@ -91,12 +93,15 @@ function Shell() {
   const [draft, setDraft] = useState({ text: '', n: 0 })
   const [categoryFilter, setCategoryFilter] = useState<number | null>(null)
   // The dates Activity opens on when a category is picked from Home: the month Home was showing.
-  const [activityRange, setActivityRange] = useState<{ from: string; to: string } | null>(null)
+  const [activityRange, setActivityRange] = useState<{ from: string; to: string; kind?: 'expense' } | null>(null)
   const monthRef = useRef(month)
   monthRef.current = month
   const [sheet, setSheet] = useState<Sheet>({ open: false, editing: null, prefill: null, startKind: 'expense' })
   const [goalsOpen, setGoalsOpen] = useState(false)
   const [goalSheet, setGoalSheet] = useState<GoalSheetState>({ open: false, goal: null, n: 0 })
+  // Upcoming payments are a sheet, and adding or changing one is a second sheet on top of it.
+  const [upcomingOpen, setUpcomingOpen] = useState(false)
+  const [ruleSheet, setRuleSheet] = useState<{ open: boolean; rule: Recurring | null; n: number }>({ open: false, rule: null, n: 0 })
   const [moneySheet, setMoneySheet] = useState<GoalSheetState>({ open: false, goal: null, n: 0 })
 
   // The user chooses where suggestions appear (or turns them off) in Settings.
@@ -310,12 +315,26 @@ function Shell() {
     },
     [go],
   )
+  // A figure on Home (Today, Yesterday, Last 7 days) counts what was spent, so its transactions are the spending in that period.
+  const pickPeriod = useCallback(
+    (range: { from: string; to: string }) => {
+      setCategoryFilter(null)
+      setActivityRange({ ...range, kind: 'expense' })
+      go('activity')
+    },
+    [go],
+  )
   const seeAll = useCallback(() => {
     setCategoryFilter(null)
     setActivityRange(null)
     go('activity')
   }, [go])
   const openSettings = useCallback(() => go('settings'), [go])
+  const openUpcoming = useCallback(() => setUpcomingOpen(true), [])
+  const closeUpcoming = useCallback(() => setUpcomingOpen(false), [])
+  const newRule = useCallback(() => setRuleSheet((s) => ({ open: true, rule: null, n: s.n + 1 })), [])
+  const editRule = useCallback((rule: Recurring) => setRuleSheet((s) => ({ open: true, rule, n: s.n + 1 })), [])
+  const closeRule = useCallback(() => setRuleSheet((s) => ({ ...s, open: false })), [])
   const toggleBalance = useCallback(() => setBalanceShown((s) => !s), [])
   const fillChat = useCallback((text: string) => setDraft((d) => ({ text, n: d.n + 1 })), [])
 
@@ -324,7 +343,7 @@ function Shell() {
       <PwaBanner pwa={pwa} />
 
       <main
-        className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]"
+        className="relative flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]"
         style={{ viewTransitionName: 'tab' }}
       >
         {tab === 'home' && (
@@ -345,6 +364,8 @@ function Shell() {
             logNudge={logNudge}
             onAdd={openAddDefault}
             onOpenGoals={openGoals}
+            onOpenUpcoming={openUpcoming}
+            onPickPeriod={pickPeriod}
           />
         )}
         {tab === 'activity' && (
@@ -365,6 +386,7 @@ function Shell() {
               onApplyUpdate={pwa.applyUpdate}
               onCheckUpdate={pwa.checkNow}
               onShowWhatsNew={showWhatsNew}
+              onOpenUpcoming={openUpcoming}
             />
           </Suspense>
         )}
@@ -415,6 +437,8 @@ function Shell() {
         onEdit={editGoal}
         onAddMoney={goalMoney}
       />
+      <UpcomingSheet open={upcomingOpen} onClose={closeUpcoming} ledger={ledger} today={today} onAdd={newRule} onEdit={editRule} />
+      <RuleSheet key={`rule-${ruleSheet.n}`} open={ruleSheet.open} rule={ruleSheet.rule} categories={ledger.categories} accounts={ledger.accounts} currency={ledger.currency} today={today} onClose={closeRule} />
       <GoalSheet key={`goal-${goalSheet.n}`} open={goalSheet.open} goal={goalSheet.goal} today={today} onClose={closeGoalSheet} />
       <GoalMoneySheet key={`money-${moneySheet.n}`} open={moneySheet.open} goal={moneySheet.goal} currency={ledger.currency} onClose={closeMoneySheet} />
 

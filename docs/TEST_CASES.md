@@ -16,8 +16,8 @@ Version 0.3.0. This lists what to check, how, and what is already checked by the
 
 | | |
 |---|---|
-| Test files | 67 |
-| Tests | 865 |
+| Test files | 72 |
+| Tests | 953 |
 | Statements covered | 94.4% |
 | Lines covered | 95.9% |
 
@@ -431,7 +431,7 @@ Cases added after the full review in [AUDIT.md](AUDIT.md). "Auto" names the test
 | AUD-15 | Double tap on Add | Tap Add twice in the same instant | Saved once | Auto: `AddSheet.flow` (fails without the guard) |
 | AUD-16 | Undo of a chat entry | Add by typing, then Undo | Gone; not left in Recently deleted | Auto: `app.flow`, `trash` |
 | AUD-17 | Bulk delete | Delete a selection that includes something already in the trash | Only the live rows are deleted, and Undo does not bring back the old one | Auto: `trash` |
-| AUD-18 | Quick dates in Activity | Tap This month, Last month, Last 30 days, Any time | The list narrows to that range, and the chip shows pressed | Auto: `activity.flow`, `filters` |
+| AUD-18 | Quick dates in Activity | On the row beside Filters and Select (it scrolls sideways when narrow), tap This month, Last month, Last 30 days, Any time | The list narrows to that range, and the chip shows pressed | Auto: `activity.flow`, `filters` |
 | AUD-19 | Month carried from Home | Tap a category bar on Home while viewing a month | Activity opens on that category and that month; leaving and coming back starts fresh | Auto: `app.flow` |
 | AUD-20 | Filters in use | Turn on any filter | A chip names it and removes it; "Clear search and filters" clears everything | Auto: `activity.flow` |
 | AUD-21 | Day totals | More than 80 rows in one day | The day's total counts all of them; "Showing 80 of 85" says how many are out of view | Auto: `activity.flow` |
@@ -452,3 +452,30 @@ Cases added after the full review in [AUDIT.md](AUDIT.md). "Auto" names the test
 | AUD-36 | Backup reminder | Say Later three times; look at an old month | A week, then a month, then three months; never shown on an old month | Auto: `backupSnooze`, `app.flow` |
 | AUD-37 | Spreadsheet export | Export CSV and open it in Excel | ₹ and accented names read correctly | Auto: `exporters`. **Device** |
 | AUD-38 | Looks | Look at the new Activity chips, Settings jump bar and skeleton at 360 px, both themes | Nothing clipped; readable | **Device** |
+| AUD-39 | Tap a figure on Home | Tap Today, Yesterday or Last 7 days under the big number | Activity opens on the spending behind that figure for that day or week, with chips such as "Today" and "Spent" that take the filter off; a day with nothing spent is plain text, not a button; coming back later starts fresh | Auto: `app.flow`, `Home`, `activity.flow`, `filters` |
+
+## Upcoming payments
+
+Loans, UPI AutoPay, subscriptions, bills and salary: what is due, when, and whether the balance covers it.
+
+| ID | Case | Do | Expect | Covered by |
+|---|---|---|---|---|
+| UPC-1 | Invitation | Open Home with nothing set up | One quiet line, "Track loans, auto-payments and salary", opens the upcoming payments. It is not shown while looking at an old month | Auto: `UpcomingCard.flow`, `app.flow` |
+| UPC-2 | Add a loan | From the sheet tap Add, name it "Home loan", amount 12,500, type Loan EMI, date | It is saved with its type, and the day of the month it keeps to; the sheet lists it "In 6 days" and Home shows it | Auto: `RuleSheet.flow`, `app.flow` |
+| UPC-3 | Weekly and money in | Choose Every week; choose Coming in | Repeats weekly; money in is filed under Income with the type "Salary or income" | Auto: `RuleSheet.flow` |
+| UPC-4 | Which account | With two accounts, choose HDFC | The payment is checked against HDFC. With one account there is no question | Auto: `RuleSheet.flow` |
+| UPC-5 | Mistakes | Leave out the name, amount or date; type 12abc | A plain message beside a warning icon; nothing is saved | Auto: `RuleSheet.flow` |
+| UPC-6 | Change, pause, delete | Open a payment, change its amount or date; pause it; delete it | Saved; a paused one is left out of what is coming and listed under Paused; delete asks first and a no keeps it | Auto: `RuleSheet.flow`, `UpcomingSheet.flow` |
+| UPC-7 | The schedule | Open Upcoming payments with a loan, a UPI AutoPay and a salary | Date order; each row says its type, how many days away ("Today", "Tomorrow", "In 6 days"), and the amount, with money in marked + | Auto: `UpcomingSheet.flow`, `upcoming` |
+| UPC-8 | Weekly and month-end | A weekly payment; a monthly one for the 31st | The weekly one repeats through the window; the 31st one returns to the 31st after a short month | Auto: `upcoming` |
+| UPC-9 | Look ahead | Choose 30, 60 or 90 days | The list and the totals follow; a monthly payment appears again | Auto: `UpcomingSheet.flow` |
+| UPC-10 | Late payments | A payment whose date has passed and was not added | Shown first as "Overdue by 2 days" with a warning icon, and counted from today | Auto: `UpcomingSheet.flow`, `upcoming` |
+| UPC-11 | This month | Look at the summary | What is still to go out and come in this month, how many payments are left, or "Nothing else is due this month" | Auto: `UpcomingSheet.flow`, `upcoming` |
+| UPC-12 | Is it enough? | Balance higher than what is coming; lower; salary arriving before the payment | "Your balance covers these payments" with how low it gets; or "short by ₹X from 5 Nov. Add at least ₹X"; a salary that arrives first counts | Auto: `UpcomingSheet.flow`, `UpcomingCard.flow`, `upcoming` |
+| UPC-13 | Same day | A payment and money in on the same day | The payment is counted first, so a warning is never missed | Auto: `upcoming` |
+| UPC-14 | Each account | Several accounts, each with a balance set | One line per account that has payments: enough, or short by how much; "move or add money" when one is short | Auto: `UpcomingSheet.flow`, `upcoming` |
+| UPC-15 | No balance set | Open it before ever setting a balance | No claim of a shortage (the estimate would start at zero); it says to set the balance | Auto: `UpcomingSheet.flow`, `UpcomingCard.flow` |
+| UPC-16 | Another currency | A payment in USD with and without a rate | Converted when there is a rate; counted at face value with a plain warning when there is not | Auto: `UpcomingSheet.flow`, `upcoming` |
+| UPC-17 | In a backup | Back up and restore | The type and the day of the month come back; an unknown type is refused; older files still load | Auto: `importBackup` |
+| UPC-18 | From Settings | Settings, Automatic, Recurring | A button leads to the upcoming payments | Auto: `Settings` |
+| UPC-19 | Looks | View the sheet and card at 360 px and the largest text, both themes | Nothing clipped; amounts stay on one line; the warning reads clearly | **Device** |

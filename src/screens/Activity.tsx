@@ -39,8 +39,8 @@ interface Props {
   today: Date
   categoryFilter: number | null
   onCategoryFilter: (id: number | null) => void
-  /** The dates to start on, such as the month a category was opened from on Home. */
-  initialRange?: { from: string; to: string } | null
+  /** What to start on, such as the month a category was opened from on Home, or just the spending behind a figure there. */
+  initialRange?: { from: string; to: string; kind?: KindFilter } | null
   onEdit: (tx: LedgerTx) => void
 }
 
@@ -104,7 +104,7 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
   const toast = useToast()
   const [query, setQuery] = useState('')
   const [limit, setLimit] = useState(PAGE)
-  const [filters, setFilters] = useState<ActivityFilters>(() => ({ ...NO_FILTERS, from: initialRange?.from ?? '', to: initialRange?.to ?? '' }))
+  const [filters, setFilters] = useState<ActivityFilters>(() => ({ ...NO_FILTERS, from: initialRange?.from ?? '', to: initialRange?.to ?? '', kind: initialRange?.kind ?? 'all' }))
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [minText, setMinText] = useState('')
   const [maxText, setMaxText] = useState('')
@@ -329,13 +329,14 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
         )}
       </div>
 
-      <div className="mt-3 flex items-center gap-2">
+      {/* py-0.5 stops the scroller clipping each button's 1px border; the right edge fades to hint that the row scrolls. */}
+      <div className="relative -mx-5 mt-3 flex snap-x snap-proximity scroll-px-5 items-center gap-2 overflow-x-auto px-5 py-0.5 [mask-image:linear-gradient(to_right,black_calc(100%-1.25rem),transparent)]">
         <button
           type="button"
           aria-expanded={filtersOpen}
           aria-controls="filters-panel"
           onClick={() => setFiltersOpen((o) => !o)}
-          className="flex min-h-11 items-center gap-2 rounded-full bg-surface px-4 font-medium shadow-[0_0_0_1px_var(--ring)]"
+          className="flex min-h-11 shrink-0 snap-start items-center gap-2 whitespace-nowrap rounded-full bg-surface px-4 font-medium shadow-[0_0_0_1px_var(--ring)]"
         >
           <Icon name="filter" size={18} />
           Filters
@@ -351,10 +352,19 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
           aria-pressed={selecting}
           onClick={() => (selecting ? endSelecting() : setSelecting(true))}
           disabled={txs.length === 0}
-          className="min-h-11 rounded-full bg-surface px-4 font-medium shadow-[0_0_0_1px_var(--ring)] aria-pressed:bg-btn aria-pressed:text-btn-ink aria-pressed:shadow-none disabled:opacity-40"
+          className="min-h-11 shrink-0 snap-start whitespace-nowrap rounded-full bg-surface px-4 font-medium shadow-[0_0_0_1px_var(--ring)] aria-pressed:bg-btn aria-pressed:text-btn-ink aria-pressed:shadow-none disabled:opacity-40"
         >
           {selecting ? 'Cancel' : 'Select'}
         </button>
+
+        {/* The quick dates sit right beside them, set off by a thin line. */}
+        <div role="group" aria-label="Filter by date" className="flex shrink-0 items-center gap-2 border-l border-line pl-2">
+          {WHEN.map((w) => (
+            <button key={w.id} type="button" aria-pressed={whenNow === w.id} onClick={() => patch(presetRange(w.id, today))} className={chip}>
+              {w.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {filtersOpen && (
@@ -442,18 +452,6 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
           )}
         </section>
       )}
-
-      <div
-        role="group"
-        aria-label="Filter by date"
-        className="relative -mx-5 mt-3 flex snap-x snap-proximity scroll-px-5 gap-2 overflow-x-auto px-5 py-0.5 [mask-image:linear-gradient(to_right,black_calc(100%-1.25rem),transparent)]"
-      >
-        {WHEN.map((w) => (
-          <button key={w.id} type="button" aria-pressed={whenNow === w.id} onClick={() => patch(presetRange(w.id, today))} className={chip}>
-            {w.label}
-          </button>
-        ))}
-      </div>
 
       {/* py-0.5 stops the scroller clipping each chip's 1px border; the right edge fades to hint
           that the row scrolls, and the fade ends where the side padding does. */}
