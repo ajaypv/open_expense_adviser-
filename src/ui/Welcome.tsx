@@ -5,8 +5,10 @@ import { setAccountOpening, setCurrency, setOverallBudget } from '../db/repo'
 import { defaultAccountId } from '../insights/accounts'
 import type { Account } from '../db/schema'
 import { APP_VERSION } from '../pwa/version'
+import { currencyOptions } from '../db/currencies'
 import { CURRENCIES } from '../screens/settings/parts'
 import { Dialog } from './Dialog'
+import { PickerField } from './PickerField'
 
 const input = 'mt-1 min-h-12 w-full rounded-xl bg-surface-2 px-3.5'
 
@@ -53,11 +55,15 @@ export function Welcome({ open, currency, accounts }: { open: boolean; currency:
           <label htmlFor="w-currency" className="text-sm text-ink-2">
             Currency
           </label>
-          <select id="w-currency" value={chosen} onChange={(e) => setChosen(e.target.value)} className={input}>
-            {CURRENCIES.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
+          <PickerField
+            id="w-currency"
+            title="Currency"
+            value={chosen}
+            options={currencyOptions([...new Set([chosen, ...CURRENCIES])])}
+            onChange={setChosen}
+            className={input}
+            showDetail
+          />
         </div>
         <div>
           <label htmlFor="w-balance" className="text-sm text-ink-2">

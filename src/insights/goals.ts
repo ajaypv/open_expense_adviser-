@@ -51,6 +51,21 @@ export function describeTimeLeft(daysLeft: number | null): string {
   return `${plural(Math.round(daysLeft / DAYS_PER_MONTH), 'month')} left`
 }
 
+/** "Due 15 Dec, 9 days left", "Due today", "Overdue by 2 days, was due 28 Oct". Empty when the goal has no date. */
+export function describeDue(goal: Goal, today: Date): string {
+  if (!goal.dueDate) return ''
+  const { daysLeft } = goalProgress(goal, today)
+  if (daysLeft === 0) return 'Due today'
+  const due = parseLocalDate(goal.dueDate)
+  const date = new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'short',
+    ...(due.getFullYear() === today.getFullYear() ? {} : { year: 'numeric' }),
+  }).format(due)
+  const left = describeTimeLeft(daysLeft)
+  return daysLeft !== null && daysLeft < 0 ? `${left}, was due ${date}` : `Due ${date}, ${left}`
+}
+
 /** What is due soonest first; goals without a date after those with one; reached goals last. */
 export function sortGoals(goals: Goal[]): Goal[] {
   const reached = (g: Goal) => g.savedMinor >= g.targetMinor
@@ -61,4 +76,24 @@ export function sortGoals(goals: Goal[]): Goal[] {
       a.createdAt - b.createdAt ||
       a.id - b.id,
   )
+}
+
+export interface GoalsTotals {
+  count: number
+  reachedCount: number
+  /** What is set aside across all goals, counting no goal for more than it costs. */
+  savedMinor: number
+  targetMinor: number
+}
+
+export function goalsTotals(goals: Goal[]): GoalsTotals {
+  let reachedCount = 0
+  let savedMinor = 0
+  let targetMinor = 0
+  for (const g of goals) {
+    if (g.savedMinor >= g.targetMinor) reachedCount++
+    savedMinor += Math.min(g.savedMinor, g.targetMinor)
+    targetMinor += g.targetMinor
+  }
+  return { count: goals.length, reachedCount, savedMinor, targetMinor }
 }

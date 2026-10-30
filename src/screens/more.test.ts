@@ -178,6 +178,15 @@ describe('Settings sections', () => {
     expect(out).toContain('Value of 1 USD in INR')
   })
 
+  it('Currency: the main currency opens a searchable list with names, not the browser menu', () => {
+    const out = html(createElement(CurrencySection, { ledger: makeLedger({ currency: 'INR' }) }))
+    expect(out).not.toContain('<select')
+    expect(out).toMatch(/<button[^>]*id="currency"[^>]*aria-haspopup="dialog"/)
+    expect(out).toContain('Indian Rupee')
+    expect(out).toContain('US Dollar')
+    expect(out).toContain('type="search"')
+  })
+
   it('Recurring: explains itself when empty', () => {
     expect(html(createElement(RecurringSection, { ledger }))).toContain('Nothing repeats yet')
   })

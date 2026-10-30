@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { currencyOptions } from '../../db/currencies'
 import { setCurrency, setRate } from '../../db/repo'
-import { Icon } from '../../ui/Icon'
+import { PickerField } from '../../ui/PickerField'
 import { useToast } from '../../ui/toast'
 import { card, CURRENCIES, field, Group, Status, type Ledger } from './parts'
 
@@ -75,20 +76,16 @@ export function CurrencySection({ ledger }: { ledger: Ledger }) {
         <label htmlFor="currency" className="text-sm text-ink-2">
           Main currency
         </label>
-        <div className="relative mt-1.5">
-          <select
+        <div className="mt-1.5">
+          <PickerField
             id="currency"
+            title="Main currency"
             value={currency}
-            onChange={(e) => void setCurrency(e.target.value)}
-            className={`${field} appearance-none pr-10`}
-          >
-            {CURRENCIES.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-          <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-ink-2">
-            <Icon name="chevDown" size={20} />
-          </span>
+            options={currencyOptions([...new Set([currency, ...CURRENCIES])])}
+            onChange={(c) => void setCurrency(c)}
+            className={field}
+            showDetail
+          />
         </div>
         <p className="mt-2 text-sm text-ink-2">
           All totals and charts are shown in {currency}. Amounts recorded in another currency are converted using the
@@ -119,17 +116,15 @@ export function CurrencySection({ ledger }: { ledger: Ledger }) {
               <label htmlFor="add-rate" className="text-sm text-ink-2">
                 Add a currency
               </label>
-              <select
+              <PickerField
                 id="add-rate"
-                value=""
-                onChange={(e) => e.target.value && setExtra((x) => [...x, e.target.value])}
+                title="Add a currency"
+                value={null}
+                placeholder="Choose…"
+                options={currencyOptions(addable)}
+                onChange={(c) => setExtra((x) => [...x, c])}
                 className="min-h-11 flex-1 rounded-xl bg-surface-2 px-3"
-              >
-                <option value="">Choose…</option>
-                {addable.map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
-              </select>
+              />
             </div>
           )}
         </div>

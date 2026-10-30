@@ -10,6 +10,7 @@ import {
   cumulative,
   daysInMonth,
   projectedTotal,
+  recentSpending,
   shiftMonth,
   topMerchants,
 } from './aggregates'
@@ -167,5 +168,36 @@ describe('categoryChanges', () => {
   it('compares whole months for a finished month', () => {
     const changes = categoryChanges(txs, '2026-10', new Date(2026, 10, 15))
     expect(changes.find((c) => c.categoryId === 1)).toMatchObject({ previousMinor: 100000, currentMinor: 30000 })
+  })
+})
+
+describe('recentSpending', () => {
+  const today = new Date(2026, 2, 2) // 2 March 2026
+
+  it('is all zeros with nothing spent', () => {
+    expect(recentSpending([], today)).toEqual({ todayMinor: 0, yesterdayMinor: 0, last7Minor: 0 })
+  })
+
+  it("totals today's and yesterday's spending on their own", () => {
+    const txs = [tx('2026-03-02', 450), tx('2026-03-02', 50), tx('2026-03-01', 230), tx('2026-02-20', 999)]
+    expect(recentSpending(txs, today)).toMatchObject({ todayMinor: 50_000, yesterdayMinor: 23_000 })
+  })
+
+  it('counts the last seven days including today, reaching back across a month end', () => {
+    const txs = [
+      tx('2026-03-02', 100), // today
+      tx('2026-02-24', 200), // six days ago: the first day inside the week
+      tx('2026-02-23', 400), // seven days ago: just outside it
+    ]
+    expect(recentSpending(txs, today).last7Minor).toBe(30_000)
+  })
+
+  it('leaves out anything dated in the future', () => {
+    expect(recentSpending([tx('2026-03-03', 500)], today)).toEqual({ todayMinor: 0, yesterdayMinor: 0, last7Minor: 0 })
+  })
+
+  it('counts today and yesterday within the week too', () => {
+    const r = recentSpending([tx('2026-03-02', 100), tx('2026-03-01', 50)], today)
+    expect(r).toEqual({ todayMinor: 10_000, yesterdayMinor: 5_000, last7Minor: 15_000 })
   })
 })

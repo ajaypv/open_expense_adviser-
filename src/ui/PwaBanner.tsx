@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { usePwa } from '../pwa/usePwa'
+import type { usePwa } from '../pwa/usePwa'
 
 /** One slim line at the top for: a waiting update, the install offer, or the iOS install hint. */
 export function PwaBanner({ pwa }: { pwa: ReturnType<typeof usePwa> }) {

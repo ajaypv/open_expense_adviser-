@@ -15,6 +15,7 @@ import { db, type Transaction } from '../db/schema'
 import { applyFilters, countActive, NO_FILTERS, type ActivityFilters, type KindFilter } from '../insights/filters'
 import { newestFirst } from '../insights/order'
 import { Icon } from '../ui/Icon'
+import { PickerField } from '../ui/PickerField'
 import { TxList } from '../ui/TxList'
 import { useToast } from '../ui/toast'
 
@@ -460,20 +461,16 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
           <label htmlFor="bulk-category" className="sr-only">
             Move selected to a category
           </label>
-          <select
+          <PickerField
             id="bulk-category"
-            value=""
+            title="Move selected to"
+            value={null}
+            placeholder="Move to…"
             disabled={picked.size === 0}
-            onChange={(e) => e.target.value && void moveSelected(Number(e.target.value))}
-            className="min-h-11 rounded-full bg-btn-ink/15 px-3 text-sm font-medium text-btn-ink disabled:opacity-40"
-          >
-            <option value="">Move to…</option>
-            {expenseCategories.map((c) => (
-              <option key={c.id} value={c.id} className="text-ink">
-                {c.name}
-              </option>
-            ))}
-          </select>
+            options={expenseCategories.map((c) => ({ value: c.id, label: c.name }))}
+            onChange={(id) => void moveSelected(id)}
+            className="min-h-11 rounded-full bg-btn-ink/15 px-4 text-sm font-medium text-btn-ink"
+          />
           <button
             type="button"
             disabled={picked.size === 0}

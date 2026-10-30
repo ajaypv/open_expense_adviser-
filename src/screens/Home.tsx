@@ -5,22 +5,22 @@ import { CategoryBars } from '../charts/CategoryBars'
 import { DayChart } from '../charts/DayChart'
 import { Meter } from '../charts/Meter'
 import type { useLedger } from '../data/useLedger'
-import { formatMoney, localDateString } from '../db/money'
+import { formatMoney, formatMoneyCompact, localDateString } from '../db/money'
 import {
   byCategory,
   byDay,
   compareToPrevious,
   inMonth,
   monthLabel,
+  recentSpending,
   shiftMonth,
   sum,
   type MonthKey,
 } from '../insights/aggregates'
 import { newestFirst } from '../insights/order'
 import type { Suggestion } from '../insights/suggestions'
-import type { Goal } from '../db/schema'
-import { GoalsSection } from '../ui/Goals'
 import { BackupNudge, DueCard, LogNudge } from '../ui/HomeCards'
+import { HomeHeader } from '../ui/HomeHeader'
 import { Icon } from '../ui/Icon'
 import { MonthSwitcher } from '../ui/MonthSwitcher'
 import { SuggestionList } from '../ui/SuggestionList'
@@ -49,10 +49,8 @@ interface Props {
   logNudge: boolean
   /** Opens the add form. */
   onAdd: () => void
-  /** Goals: make one, change one, or set money aside for one. */
-  onNewGoal: () => void
-  onEditGoal: (goal: Goal) => void
-  onGoalMoney: (goal: Goal) => void
+  /** Opens the goals, from the button in the top-right corner. */
+  onOpenGoals: () => void
 }
 
 const EXAMPLES = ['450 lunch at Cafe', 'Uber 230 yesterday', 'Salary 80,000']
@@ -75,9 +73,7 @@ export const Home = memo(function Home({
   onSuggestion,
   logNudge,
   onAdd,
-  onNewGoal,
-  onEditGoal,
-  onGoalMoney,
+  onOpenGoals,
 }: Props) {
   const { txs, expenses, income, categoryById, currency, budgetMinor, loading } = ledger
   const currentMonth = localDateString(today).slice(0, 7)
@@ -93,12 +89,13 @@ export const Home = memo(function Home({
       total: sum(monthTxs),
       received: sum(inMonth(income, month)),
       comparison: compareToPrevious(expenses, month, today),
+      recentlySpent: recentSpending(expenses, today),
       daily: byDay(monthTxs, month),
       categoryTotals: byCategory(monthTxs),
       recent: inMonth(txs, month).sort(newestFirst).slice(0, 5),
     }
   }, [txs, expenses, income, month, today])
-  const { total, received, comparison, daily, categoryTotals, recent } = view
+  const { total, received, comparison, daily, categoryTotals, recent, recentlySpent } = view
   // Months with something in them get a dot in the month picker.
   const activeMonths = useMemo(() => new Set(txs.map((t) => t.date.slice(0, 7))), [txs])
 
@@ -106,7 +103,9 @@ export const Home = memo(function Home({
 
   if (txs.length === 0) {
     return (
-      <div className="pt-16">
+      <div>
+        <HomeHeader today={today} goals={ledger.goals} onOpenGoals={onOpenGoals} />
+        <div className="pt-10">
         <h1 className="text-3xl font-semibold tracking-tight">Nothing logged yet.</h1>
         <p className="mt-3 max-w-sm text-lg text-ink-2">
           Type what you spent or received in the bar below, as you would say it. Tap an example to try it.
@@ -124,6 +123,7 @@ export const Home = memo(function Home({
             </li>
           ))}
         </ul>
+        </div>
       </div>
     )
   }
@@ -135,7 +135,7 @@ export const Home = memo(function Home({
 
   return (
     <div className="pb-4">
-      <h1 className="sr-only">Home</h1>
+      <HomeHeader today={today} goals={ledger.goals} onOpenGoals={onOpenGoals} />
       <MonthSwitcher month={month} currentMonth={currentMonth} onChange={onMonth} activeMonths={activeMonths} />
 
       <BackupNudge transactionCount={txs.length} />
@@ -201,6 +201,23 @@ export const Home = memo(function Home({
         </div>
       </section>
 
+      {isCurrent && (
+        <section aria-label="Recent spending" className={`${card} mt-3 grid grid-cols-3 divide-x divide-line py-4`}>
+          {(
+            [
+              ['Today', recentlySpent.todayMinor],
+              ['Yesterday', recentlySpent.yesterdayMinor],
+              ['Last 7 days', recentlySpent.last7Minor],
+            ] as const
+          ).map(([label, amount]) => (
+            <div key={label} role="group" aria-label={`${label}: ${formatMoney(amount, currency)}`} className="min-w-0 px-4 first:pl-5 last:pr-5">
+              <p className="text-sm text-ink-2">{label}</p>
+              <p className="mt-0.5 truncate text-lg font-semibold tabular-nums">{formatMoneyCompact(amount, currency)}</p>
+            </div>
+          ))}
+        </section>
+      )}
+
       <WalletPanel
         monthName={name}
         sentMinor={total}
@@ -214,7 +231,6 @@ export const Home = memo(function Home({
         onSetBalance={onOpenSettings}
       />
 
-      <GoalsSection goals={ledger.goals} currency={currency} today={today} onNew={onNewGoal} onEdit={onEditGoal} onAddMoney={onGoalMoney} />
 
       {isCurrent && suggestions.length > 0 && (
         <section aria-labelledby="suggest-h" className="mt-8">
