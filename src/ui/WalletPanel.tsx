@@ -34,75 +34,70 @@ export function WalletPanel({
   onSetBalance,
 }: Props) {
   return (
-    <section aria-label="Money received and your balance" className="mt-3 space-y-3">
-      <dl className={`${card} flex items-center justify-between gap-3 p-4`}>
-        <dt className="flex items-center gap-2 text-sm font-medium text-ink-2">
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink">
-            <Icon name="arrowDown" size={14} />
-          </span>
-          Received in {monthName}
-        </dt>
-        <dd className="text-[clamp(1.25rem,6vw,1.625rem)] font-bold leading-tight tracking-tight tabular-nums">
-          <AnimatedMoney minor={receivedMinor} currency={currency} id="received" />
-        </dd>
-      </dl>
-
-      <div className={`${card} p-4`}>
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm text-ink-2">Estimated balance</p>
-            <p
-              id="balance-value"
-              className="text-[clamp(1.375rem,6.4vw,1.75rem)] font-bold leading-tight tracking-tight tabular-nums"
-            >
-              {shown ? (
-                formatMoney(balanceMinor, currency)
-              ) : (
-                <>
-                  <span aria-hidden="true">••••••</span>
-                  <span className="sr-only">Hidden</span>
-                </>
-              )}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-controls="balance-value"
-            className="flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-surface-2 px-4 font-medium"
-          >
-            <Icon name={shown ? 'eyeOff' : 'eye'} size={20} />
-            {shown ? 'Hide balance' : 'Show balance'}
-          </button>
+    <section aria-label="Money received and your balance" className={`${card} mt-3 p-4`}>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-sm font-medium text-ink-2">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-2 text-good">
+              <Icon name="arrowDown" size={14} />
+            </span>
+            {`Received in ${monthName}`}
+          </p>
+          <p className="mt-1 truncate text-[clamp(1.25rem,6vw,1.5rem)] font-bold leading-tight tracking-tight tabular-nums text-good">
+            <AnimatedMoney minor={receivedMinor} currency={currency} id="received" />
+          </p>
         </div>
-
-        {shown && accountLines && accountLines.length > 1 && (
-          <ul aria-label="Balance by account" className="mt-3 space-y-1.5 border-t border-line pt-3">
-            {accountLines.map((a) => (
-              <li key={a.id} className="flex items-baseline justify-between gap-3">
-                <span className="truncate text-ink-2">{a.name}</span>
-                <span className="font-medium tabular-nums">{formatMoney(a.estimatedMinor, currency)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {shown && (
-          <p className="mt-3 border-t border-line pt-3 text-sm text-ink-2">
-            {balanceSet ? (
-              'Starts from the balance you set, then adds what you receive and subtracts what you spend.'
+        <div className="min-w-0 border-l border-line pl-4">
+          <p className="text-sm font-medium text-ink-2">Estimated balance</p>
+          <p id="balance-value" className="mt-1 truncate text-[clamp(1.25rem,6vw,1.5rem)] font-bold leading-tight tracking-tight tabular-nums">
+            {shown ? (
+              formatMoney(balanceMinor, currency)
             ) : (
               <>
-                Based only on what you&rsquo;ve logged.{' '}
-                <button type="button" onClick={onSetBalance} className="font-medium text-ink underline underline-offset-2">
-                  Set your balance
-                </button>{' '}
-                for a closer estimate.
+                <span aria-hidden="true">••••••</span>
+                <span className="sr-only">Hidden</span>
               </>
             )}
           </p>
-        )}
+        </div>
       </div>
+
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-controls="balance-value"
+        className="mt-3 flex min-h-11 items-center gap-2 rounded-full bg-surface-2 px-4 font-medium"
+      >
+        <Icon name={shown ? 'eyeOff' : 'eye'} size={20} />
+        {shown ? 'Hide balance' : 'Show balance'}
+      </button>
+
+      {shown && accountLines && accountLines.length > 1 && (
+        <ul aria-label="Balance by account" className="mt-3 space-y-1.5 border-t border-line pt-3">
+          {accountLines.map((a) => (
+            <li key={a.id} className="flex items-baseline justify-between gap-3">
+              <span className="truncate text-ink-2">{a.name}</span>
+              <span className="font-medium tabular-nums">{formatMoney(a.estimatedMinor, currency)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {shown && (
+        <p className="mt-3 border-t border-line pt-3 text-sm text-ink-2">
+          {balanceSet ? (
+            'Starts from the balance you set, then adds what you receive and subtracts what you spend.'
+          ) : (
+            <>
+              Based only on what you&rsquo;ve logged.{' '}
+              <button type="button" onClick={onSetBalance} className="font-medium text-ink underline underline-offset-2">
+                Set your balance
+              </button>{' '}
+              for a closer estimate.
+            </>
+          )}
+        </p>
+      )}
     </section>
   )
 }

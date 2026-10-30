@@ -54,8 +54,8 @@ export default defineConfig({
         scope: base,
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#0d0d0d',
-        theme_color: '#0d0d0d',
+        background_color: '#121314',
+        theme_color: '#121314',
         categories: ['finance', 'productivity'],
         // Long-press the icon to jump straight to the add form (handled by ?add= in App).
         shortcuts: [

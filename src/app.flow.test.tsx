@@ -185,14 +185,14 @@ describe('Moving around', () => {
   it('shows each tab and marks the current one', async () => {
     await tx()
     const user = await open()
-    await screen.findByText('Latest')
+    await screen.findByText('Recent transactions')
     for (const [name, heading] of [['Activity', /Filters/], ['Insights', /./], ['Settings', 'Appearance']] as const) {
       await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name }))
       expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name })).toHaveAttribute('aria-current', 'page')
       if (typeof heading === 'string') expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument()
     }
     await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Home' }))
-    expect(await screen.findByText('Latest')).toBeInTheDocument()
+    expect(await screen.findByText('Recent transactions')).toBeInTheDocument()
   })
 
   it('does not let any screen slide sideways, however wide something inside it is', async () => {
@@ -218,7 +218,7 @@ describe('Moving around', () => {
     await user.click(await screen.findByRole('button', { name: /Choose a month/ }))
     if (prev.getFullYear() !== now.getFullYear()) await user.click(screen.getByRole('button', { name: 'Previous year' }))
     await user.click(screen.getByRole('button', { name: new RegExp(`^${monthLabel(localDateString(prev).slice(0, 7))}`) }))
-    expect(await screen.findByText(/You spent in/)).toBeInTheDocument()
+    expect(await screen.findByText(/Spent in /)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'This month' })).toBeInTheDocument()
   })
 })
@@ -227,7 +227,7 @@ describe('Hide amounts', () => {
   it('masks amounts everywhere without rebuilding the screen, so the page and open sections stay as they were', async () => {
     await tx({ merchant: 'Cafe', amountMinor: 45_000 })
     const user = await open()
-    await screen.findByText('Latest')
+    await screen.findByText('Recent transactions')
     await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Settings' }))
     await screen.findByRole('heading', { name: 'Appearance' })
 
@@ -278,7 +278,7 @@ describe('App lock', () => {
     render(<App />)
     expect(await screen.findByRole('heading', { name: 'Enter your PIN' })).toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull()
-    expect(screen.queryByText('Latest')).toBeNull()
+    expect(screen.queryByText('Recent transactions')).toBeNull()
     await user.type(screen.getByLabelText('PIN'), '1234')
     expect(await screen.findByRole('navigation', { name: 'Main' })).toBeInTheDocument()
     expect(getLockState().locked).toBe(false)
@@ -292,7 +292,7 @@ describe('Goals from Home', () => {
     await tx()
     await db.goals.add({ name: 'Phone', targetMinor: 6_000_000, savedMinor: 0, createdAt: 1 } as never)
     const user = await open()
-    await screen.findByText('Latest')
+    await screen.findByText('Recent transactions')
     // The goals sit in a sheet that is closed, so nothing about them can be reached on the page itself.
     expect(screen.queryByRole('button', { name: 'Edit goal Phone' })).toBeNull()
     expect(screen.queryByRole('dialog', { name: 'Goals' })).toBeNull()
@@ -359,7 +359,7 @@ describe('Goals from Home', () => {
     const overview = await screen.findByRole('dialog', { name: 'Goals' })
     await user.click(within(overview).getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('dialog', { name: 'Goals' })).toBeNull()
-    expect(screen.getByText('Latest')).toBeInTheDocument()
+    expect(screen.getByText('Recent transactions')).toBeInTheDocument()
   })
 })
 
@@ -384,7 +384,7 @@ describe('The page title', () => {
   it('says which screen is open, so the browser tab, history and a screen reader all know', async () => {
     await tx()
     const user = await open()
-    await screen.findByText('Latest')
+    await screen.findByText('Recent transactions')
     expect(document.title).toBe('Expense Tracker')
     await user.click(mainNav().getByRole('button', { name: 'Activity' }))
     await waitFor(() => expect(document.title).toBe('Activity - Expense Tracker'))
@@ -542,5 +542,35 @@ describe('Tapping Today, Yesterday or Last 7 days on Home', () => {
     await user.click(nav.getByRole('button', { name: 'Activity' }))
     expect(await screen.findByRole('button', { name: /Edit spent FiveDaysAgo/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Remove Today filter' })).toBeNull()
+  })
+});
+
+describe('The redesigned Home', () => {
+  it('leads from the insight card to the Insights screen', async () => {
+    await tx({ merchant: 'Cafe' })
+    const user = await open()
+    await user.click(await screen.findByRole('button', { name: 'See insights' }))
+    expect(await screen.findByRole('heading', { name: 'Insights' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Insights' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('greets by the time of day and shows the goal that matters, with what it means', async () => {
+    await tx({ merchant: 'Cafe' })
+    await db.goals.add({ name: 'Goa trip', targetMinor: 2_500_000, savedMinor: 500_000, createdAt: 1 } as never)
+    await open()
+    expect(await screen.findByRole('heading', { level: 1, name: /Good (morning|afternoon|evening)/ })).toBeInTheDocument()
+    const goals = await screen.findByRole('region', { name: 'Goals summary' })
+    expect(goals).toHaveTextContent('Goa trip')
+    expect(goals).toHaveTextContent('₹5,000 of ₹25,000')
+    expect(goals).toHaveTextContent('₹20,000 to go')
+  })
+
+  it('shows the recent transactions before where it went', async () => {
+    await tx({ merchant: 'Cafe' })
+    await open()
+    const recent = await screen.findByRole('heading', { name: 'Recent transactions' })
+    const where = screen.getByRole('heading', { name: 'Where it went' })
+    expect(recent.compareDocumentPosition(where) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 });

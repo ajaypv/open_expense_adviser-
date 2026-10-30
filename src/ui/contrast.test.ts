@@ -64,3 +64,24 @@ describe('the two dark blocks agree', () => {
     for (const key of Object.keys(dark)) expect(forcedDark[key], key).toBe(dark[key])
   })
 })
+
+describe('the dark theme is soft, not pure black on bright white', () => {
+  it.each([
+    ['media block', dark],
+    ['forced dark', forcedDark],
+  ])('uses a charcoal page, a lighter card on it, and an off-white text (%s)', (_name, t) => {
+    expect(t.bg).not.toMatch(/^#0{6}$|^#0d0d0d$/i) // not black, and not the old near-black either
+    expect(luminance(t.bg)).toBeGreaterThan(0.004)
+    expect(luminance(t.bg)).toBeLessThan(0.02)
+    expect(luminance(t.surface)).toBeGreaterThan(luminance(t.bg)) // cards sit above the page
+    expect(luminance(t['surface-2'])).toBeGreaterThan(luminance(t.surface))
+    expect(t.ink).not.toMatch(/^#f{6}$/i) // never pure white
+    expect(ratio(t.ink, t.bg)).toBeLessThan(18) // calmer than white on black (which is 21:1)
+    expect(ratio(t.ink, t.bg)).toBeGreaterThan(12) // still very easy to read
+  })
+
+  it('keeps the card edge visible without drawing a hard line', () => {
+    expect(ratio(dark.line, dark.surface)).toBeGreaterThan(1.1)
+    expect(ratio(dark.line, dark.surface)).toBeLessThan(2)
+  })
+})

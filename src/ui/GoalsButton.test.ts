@@ -29,8 +29,8 @@ describe('GoalsButton', () => {
 
   it('says how many goals and how much is saved overall', () => {
     const html = render([goal({ targetMinor: 2_500_000, savedMinor: 500_000 }), goal({ targetMinor: 6_000_000, savedMinor: 1_500_000 })])
-    expect(html).toContain('aria-label="Goals. 2 goals, 24% saved"')
-    expect(html).toContain('>24%<')
+    expect(html).toContain('aria-label="Goals. 2 goals, 24% saved"') // the full meaning, for a screen reader
+    expect(html).not.toContain('>24%<') // a bare percentage means nothing at a glance; the Goals card on Home explains it
   })
 
   it('says one goal, not "1 goals"', () => {

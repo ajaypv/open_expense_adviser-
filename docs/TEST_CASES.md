@@ -16,8 +16,8 @@ Version 0.3.0. This lists what to check, how, and what is already checked by the
 
 | | |
 |---|---|
-| Test files | 72 |
-| Tests | 953 |
+| Test files | 75 |
+| Tests | 1000 |
 | Statements covered | 94.4% |
 | Lines covered | 95.9% |
 
@@ -479,3 +479,20 @@ Loans, UPI AutoPay, subscriptions, bills and salary: what is due, when, and whet
 | UPC-17 | In a backup | Back up and restore | The type and the day of the month come back; an unknown type is refused; older files still load | Auto: `importBackup` |
 | UPC-18 | From Settings | Settings, Automatic, Recurring | A button leads to the upcoming payments | Auto: `Settings` |
 | UPC-19 | Looks | View the sheet and card at 360 px and the largest text, both themes | Nothing clipped; amounts stay on one line; the warning reads clearly | **Device** |
+
+## Home redesign
+
+Home answers four questions in order: where do I stand, am I doing okay, where did it go, what can I improve.
+
+| ID | Case | Do | Expect | Covered by |
+|---|---|---|---|---|
+| HR-1 | The order | Open Home with a budget, a goal and a regular payment | Greeting, month, then one spending overview, then cash flow, what is coming up, the day-by-day chart, recent transactions, where it went, one insight, and goals | Auto: `Home` |
+| HR-2 | Greeting | Open Home in the morning, afternoon and evening | "Good morning" until noon, "Good afternoon" until five, "Good evening" after, with the full date beneath; a screen reader hears "Home" first | Auto: `HomeHeader`, `app.flow` |
+| HR-3 | One headline number | Look at the overview | "Spent so far in October" and one number, 36 to 40 px, not larger; the comparison with last month in words and an arrow; the daily average and expenses logged side by side | Auto: `SpendingOverview` |
+| HR-4 | The budget | With and without a budget | Without: "Your budget. Set a monthly budget to see how much you have left." and a Set budget button. With: the progress and how much is left | Auto: `SpendingOverview` |
+| HR-5 | Compact days | Look under the budget | Today, Yesterday and Last 7 days as small tiles that do not compete with the headline; each with something behind it opens those transactions; a day with nothing is plain text | Auto: `SpendingOverview`, `app.flow` |
+| HR-6 | Cash flow | Look below the overview | What was received (green) and the estimated balance side by side in one card; the balance stays hidden until Show balance | Auto: `WalletPanel`, `Home` |
+| HR-7 | Recent transactions | Scroll Home | Recent transactions come before Where it went, flat headings without extra boxes | Auto: `Home`, `app.flow` |
+| HR-8 | One real insight | Look near the bottom | "Understand your spending" with a true statement from the month's transactions, such as the biggest category's share, and a button to Insights; nothing when nothing was spent | Auto: `InsightCard`, `app.flow` |
+| HR-9 | Goals with context | Have a goal | A Goals block with the nearest goal, what is saved of what it costs, a progress bar in amber, what is left or how long, and how many more goals; the header button keeps its ring but not a bare percentage; no block when there are no goals | Auto: `GoalsSummary`, `GoalsButton`, `Home` |
+| HR-10 | Soft dark theme | Use the app in dark mode at night | A charcoal page with lighter cards and off-white text, not black on bright white; every text, edge and colour still passes the contrast check | Auto: `contrast`. **Device** (how it feels) |

@@ -330,6 +330,7 @@ function Shell() {
     go('activity')
   }, [go])
   const openSettings = useCallback(() => go('settings'), [go])
+  const openInsights = useCallback(() => go('insights'), [go])
   const openUpcoming = useCallback(() => setUpcomingOpen(true), [])
   const closeUpcoming = useCallback(() => setUpcomingOpen(false), [])
   const newRule = useCallback(() => setRuleSheet((s) => ({ open: true, rule: null, n: s.n + 1 })), [])
@@ -366,6 +367,7 @@ function Shell() {
             onOpenGoals={openGoals}
             onOpenUpcoming={openUpcoming}
             onPickPeriod={pickPeriod}
+            onOpenInsights={openInsights}
           />
         )}
         {tab === 'activity' && (

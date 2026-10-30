@@ -62,7 +62,6 @@ export function GoalsButton({ goals, onClick }: { goals: Goal[]; onClick: () => 
         <Icon name="flag" size={16} />
       </span>
       <span>Goals</span>
-      {totals.count > 0 && <span className="text-sm tabular-nums text-ink-2">{percent}%</span>}
     </button>
   )
 }

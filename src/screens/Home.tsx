@@ -3,12 +3,12 @@ import type { LedgerTx } from '../data/buildLedger'
 import { setDisplay, useDisplay } from '../data/display'
 import { CategoryBars } from '../charts/CategoryBars'
 import { DayChart } from '../charts/DayChart'
-import { Meter } from '../charts/Meter'
 import type { useLedger } from '../data/useLedger'
-import { formatMoney, localDateString } from '../db/money'
+import { localDateString } from '../db/money'
 import {
   byCategory,
   byDay,
+  daysInMonth,
   compareToPrevious,
   inMonth,
   monthLabel,
@@ -20,10 +20,11 @@ import {
 import { newestFirst } from '../insights/order'
 import { ScreenSkeleton } from '../ui/ScreenSkeleton'
 import type { Suggestion } from '../insights/suggestions'
-import { AnimatedMoney } from '../ui/AnimatedMoney'
 import { BackupNudge, DueCard, LogNudge } from '../ui/HomeCards'
+import { GoalsSummary } from '../ui/GoalsSummary'
+import { InsightCard } from '../ui/InsightCard'
+import { SpendingOverview } from '../ui/SpendingOverview'
 import { HomeHeader } from '../ui/HomeHeader'
-import { Icon } from '../ui/Icon'
 import { MonthSwitcher } from '../ui/MonthSwitcher'
 import { SuggestionList } from '../ui/SuggestionList'
 import { TxList } from '../ui/TxList'
@@ -58,6 +59,8 @@ interface Props {
   onOpenUpcoming: () => void
   /** Opens Activity on what was spent in a period, from the Today, Yesterday and Last 7 days figures. */
   onPickPeriod: (range: { from: string; to: string }) => void
+  /** Opens the Insights screen, from the card that points to it. */
+  onOpenInsights?: () => void
 }
 
 const EXAMPLES = ['450 lunch at Cafe', 'Uber 230 yesterday', 'Salary 80,000']
@@ -83,6 +86,7 @@ export const Home = memo(function Home({
   onOpenGoals,
   onOpenUpcoming,
   onPickPeriod,
+  onOpenInsights,
 }: Props) {
   const { txs, expenses, income, categoryById, currency, budgetMinor, loading } = ledger
   const todayKey = localDateString(today)
@@ -106,9 +110,10 @@ export const Home = memo(function Home({
       daily: byDay(monthTxs, month),
       categoryTotals: byCategory(monthTxs),
       recent: inMonth(txs, month).sort(newestFirst).slice(0, 5),
+      expenseCount: monthTxs.length,
     }
   }, [txs, expenses, income, month, today])
-  const { total, received, comparison, daily, categoryTotals, recent, recentlySpent } = view
+  const { total, received, comparison, daily, categoryTotals, recent, recentlySpent, expenseCount } = view
   // Months with something in them get a dot in the month picker.
   const activeMonths = useMemo(() => new Set(txs.map((t) => t.date.slice(0, 7))), [txs])
 
@@ -144,7 +149,8 @@ export const Home = memo(function Home({
   const name = monthLabel(month).split(' ')[0]
   const prevName = monthLabel(shiftMonth(month, -1)).split(' ')[0]
   const delta = comparison.deltaPct
-  const against = `${comparison.partial ? 'the same days in ' : ''}${prevName}`
+  // The average is over the days so far in the current month, and over the whole month once it is over.
+  const elapsedDays = isCurrent ? today.getDate() : daysInMonth(month)
 
   return (
     <div className="pb-4">
@@ -155,104 +161,31 @@ export const Home = memo(function Home({
       {isCurrent && <DueCard ledger={ledger} today={today} />}
       {isCurrent && logNudge && <LogNudge onAdd={onAdd} />}
 
-      <section aria-label="Summary" className={`${card} relative mt-3 p-5`}>
-        <button
-          type="button"
-          aria-pressed={display.privacy}
-          onClick={() => setDisplay({ privacy: !display.privacy })}
-          aria-label={display.privacy ? 'Show amounts' : 'Hide amounts'}
-          className="absolute right-2 top-2 flex size-11 items-center justify-center rounded-full text-ink-2 hover:bg-surface-2"
-        >
-          <Icon name={display.privacy ? 'eyeOff' : 'eye'} size={20} />
-        </button>
-        {total === 0 ? (
-          <p className="text-2xl font-semibold tracking-tight">Nothing spent in {name} yet.</p>
-        ) : (
-          <>
-            <p className="text-ink-2">
-              {isCurrent ? "You've spent so far in " : 'You spent in '}
-              {name}
-            </p>
-            <p className="mt-1 whitespace-nowrap text-[clamp(2.75rem,15vw,3.75rem)] font-extrabold leading-none tracking-[-0.04em] tabular-nums">
-              <AnimatedMoney minor={total} currency={currency} id="hero" />
-            </p>
-            {delta !== null && (
-              <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.9375rem] text-ink-2">
-                {delta === 0 ? (
-                  <>The same as {against}.</>
-                ) : (
-                  <>
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full bg-surface-2 py-1 pl-2 pr-2.5 font-medium ${
-                        delta > 0 ? 'text-critical' : 'text-good'
-                      }`}
-                    >
-                      <Icon name={delta > 0 ? 'arrowUp' : 'arrowDown'} size={16} />
-                      {Math.abs(delta)}% {delta > 0 ? 'more' : 'less'}
-                    </span>
-                    than {against}
-                  </>
-                )}
-              </p>
-            )}
-          </>
-        )}
-
-        <div className="mt-5 border-t border-line pt-4">
-          {budgetMinor === null ? (
-            <button
-              type="button"
-              onClick={onOpenSettings}
-              className="flex min-h-11 w-full items-center justify-between gap-3 text-left font-medium"
-            >
-              Set a monthly budget
-              <Icon name="chevRight" size={20} />
-            </button>
-          ) : (
-            <Meter spentMinor={total} limitMinor={budgetMinor} currency={currency} />
-          )}
-        </div>
-      </section>
-
-      {isCurrent && (
-        <section aria-label="Recent spending" className={`${card} mt-3 grid grid-cols-3 divide-x divide-line overflow-hidden`}>
-          {(
-            [
-              ['Today', 'today', recentlySpent.todayMinor, { from: todayKey, to: todayKey }],
-              ['Yesterday', 'yesterday', recentlySpent.yesterdayMinor, { from: yesterdayKey, to: yesterdayKey }],
-              ['Last 7 days', 'last7', recentlySpent.last7Minor, { from: weekStartKey, to: todayKey }],
-            ] as const
-          ).map(([label, id, amount, range]) => {
-            const body = (
-              <>
-                <p className="text-sm font-medium text-ink-2">{label}</p>
-                <p className={`mt-0.5 truncate text-xl font-bold tracking-tight tabular-nums ${amount === 0 ? 'text-ink-2' : ''}`}>
-                  <AnimatedMoney minor={amount} currency={currency} id={id} compact />
-                </p>
-              </>
-            )
-            const spent = formatMoney(amount, currency)
-            // A figure with something behind it opens those transactions; a day with nothing spent has nothing to open.
-            return amount > 0 ? (
-              <button
-                key={label}
-                type="button"
-                aria-label={`${label}: ${spent}. See these transactions`}
-                onClick={() => onPickPeriod(range)}
-                className="min-h-16 min-w-0 px-4 py-4 text-left first:pl-5 last:pr-5 active:bg-surface-2 [@media(hover:hover)]:hover:bg-surface-2 focus-visible:outline-offset-[-2px]"
-              >
-                {body}
-              </button>
-            ) : (
-              <div key={label} role="group" aria-label={`${label}: ${spent}`} className="min-w-0 px-4 py-4 first:pl-5 last:pr-5">
-                {body}
-              </div>
-            )
-          })}
-        </section>
-      )}
-
-      {isCurrent && <UpcomingCard ledger={ledger} today={today} onOpen={onOpenUpcoming} />}
+      <SpendingOverview
+        monthName={name}
+        isCurrent={isCurrent}
+        totalMinor={total}
+        deltaPct={delta}
+        partial={comparison.partial}
+        prevName={prevName}
+        dailyAverageMinor={Math.round(total / elapsedDays / 100) * 100}
+        expenseCount={expenseCount}
+        budgetMinor={budgetMinor}
+        currency={currency}
+        periods={
+          isCurrent
+            ? [
+                { id: 'today', label: 'Today', amountMinor: recentlySpent.todayMinor, from: todayKey, to: todayKey },
+                { id: 'yesterday', label: 'Yesterday', amountMinor: recentlySpent.yesterdayMinor, from: yesterdayKey, to: yesterdayKey },
+                { id: 'last7', label: 'Last 7 days', amountMinor: recentlySpent.last7Minor, from: weekStartKey, to: todayKey },
+              ]
+            : []
+        }
+        privacy={display.privacy}
+        onTogglePrivacy={() => setDisplay({ privacy: !display.privacy })}
+        onSetBudget={onOpenSettings}
+        onPickPeriod={onPickPeriod}
+      />
 
       <WalletPanel
         monthName={name}
@@ -266,6 +199,7 @@ export const Home = memo(function Home({
         onSetBalance={onOpenSettings}
       />
 
+      {isCurrent && <UpcomingCard ledger={ledger} today={today} onOpen={onOpenUpcoming} />}
 
       {isCurrent && suggestions.length > 0 && (
         <section aria-labelledby="suggest-h" className="mt-8">
@@ -283,34 +217,14 @@ export const Home = memo(function Home({
               Day by day
             </h2>
             <div className={`${card} p-4`}>
-              <DayChart
-                values={daily}
-                monthKey={month}
-                lastDay={isCurrent ? today.getDate() : null}
-                currency={currency}
-              />
-            </div>
-          </section>
-
-          <section aria-labelledby="cats-h" className="mt-8">
-            <h2 id="cats-h" className="mb-3 px-1 text-xl font-bold tracking-tight">
-              Where it went
-            </h2>
-            <div className={`${card} px-4 py-2`}>
-              <CategoryBars
-                totals={categoryTotals}
-                categoryById={categoryById}
-                currency={currency}
-                limit={5}
-                onPick={onPickCategory}
-              />
+              <DayChart values={daily} monthKey={month} lastDay={isCurrent ? today.getDate() : null} currency={currency} />
             </div>
           </section>
 
           <section aria-labelledby="recent-h" className="mt-8">
             <div className="mb-1 flex items-center justify-between px-1">
               <h2 id="recent-h" className="text-xl font-bold tracking-tight">
-                Latest
+                Recent transactions
               </h2>
               <button type="button" onClick={onSeeAll} className="min-h-11 px-2 font-medium underline underline-offset-2">
                 See all
@@ -318,8 +232,21 @@ export const Home = memo(function Home({
             </div>
             <TxList rows={recent} categoryById={categoryById} accountById={ledger.accountById} currency={currency} showDate onEdit={onEdit} />
           </section>
+
+          <section aria-labelledby="cats-h" className="mt-8">
+            <h2 id="cats-h" className="mb-1 px-1 text-xl font-bold tracking-tight">
+              Where it went
+            </h2>
+            <div className="px-1">
+              <CategoryBars totals={categoryTotals} categoryById={categoryById} currency={currency} limit={5} onPick={onPickCategory} />
+            </div>
+          </section>
+
+          {onOpenInsights && <InsightCard totals={categoryTotals} totalMinor={total} categoryById={categoryById} monthName={name} onOpen={onOpenInsights} />}
         </>
       )}
+
+      <GoalsSummary goals={ledger.goals} currency={currency} today={today} onOpen={onOpenGoals} />
     </div>
   )
 })
