@@ -77,6 +77,27 @@ describe('TxRow', () => {
   })
 })
 
+describe('TxRow: entries the app added or brought in', () => {
+  it('says "Recurring" on an entry added from a regular payment, and "Imported" on one from a file', () => {
+    expect(row(tx({ source: 'recurring' }))).toContain('>Recurring<')
+    expect(row(tx({ source: 'import' }))).toContain('>Imported<')
+  })
+
+  it('says nothing extra on an entry you typed or entered with the form', () => {
+    for (const source of ['manual', 'chat'] as const) {
+      const html = row(tx({ source }))
+      expect(html).not.toContain('>Recurring<')
+      expect(html).not.toContain('>Imported<')
+    }
+  })
+
+  it('tells a screen reader too', () => {
+    expect(row(tx({ source: 'recurring' }))).toContain('added from a regular payment')
+    expect(row(tx({ source: 'import' }))).toContain('imported from a file')
+    expect(row(tx({ source: 'manual' }))).not.toContain('added from a regular payment')
+  })
+})
+
 describe('TxList', () => {
   it('renders one row per transaction in a single card', () => {
     const rows = [tx({ id: 1, merchant: 'Swiggy' }), tx({ id: 2, merchant: 'Uber' }), tx({ id: 3, merchant: 'Cafe' })]

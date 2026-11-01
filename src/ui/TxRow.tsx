@@ -59,7 +59,7 @@ export const TxRow = memo(function TxRow({ tx, category, currency, accountById, 
   const foreign = tx.originalCurrency !== undefined && tx.originalCurrency !== currency
   const converted = foreign && !tx.unconverted ? `≈ ${formatMoney(tx.amountMinor, currency)}` : null
 
-  const spoken = `${selecting ? (selected ? 'Selected' : 'Select') : 'Edit'} ${transfer ? 'transfer' : received ? 'received' : 'spent'} ${title}, ${paid}${showCategory ? `, ${categoryName}` : ''}${showDate ? `, ${shortDate(tx.date)}` : ''}${tx.note ? `, note: ${tx.note}` : ''}${tx.location ? ', added with location' : ''}`
+  const spoken = `${selecting ? (selected ? 'Selected' : 'Select') : 'Edit'} ${transfer ? 'transfer' : received ? 'received' : 'spent'} ${title}, ${paid}${showCategory ? `, ${categoryName}` : ''}${showDate ? `, ${shortDate(tx.date)}` : ''}${tx.note ? `, note: ${tx.note}` : ''}${tx.source === 'recurring' ? ', added from a regular payment' : tx.source === 'import' ? ', imported from a file' : ''}${tx.location ? ', added with location' : ''}`
 
   return (
     <button
@@ -99,6 +99,9 @@ export const TxRow = memo(function TxRow({ tx, category, currency, accountById, 
             </span>
           )}
           {tx.paymentMethod && <span className="shrink-0 rounded-full bg-surface-2 px-2 py-px text-sm">{tx.paymentMethod}</span>}
+          {/* Entries you did not type yourself say so, so a change you did not make is easy to spot. */}
+          {tx.source === 'recurring' && <span className="shrink-0 rounded-full bg-surface-2 px-2 py-px text-sm">Recurring</span>}
+          {tx.source === 'import' && <span className="shrink-0 rounded-full bg-surface-2 px-2 py-px text-sm">Imported</span>}
           {tx.location && (
             <>
               <span aria-hidden="true" className="shrink-0">

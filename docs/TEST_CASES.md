@@ -577,6 +577,18 @@ What regular payments cost and when they fall due, on the Insights screen (curre
 | REG-7 | Looks ahead only | Look at an earlier month | The section is not there; it also shows before anything has been spent this month | Auto: `Insights.regular.flow` |
 | REG-8 | Other currencies | Set up a payment in a currency with no exchange rate | It is counted at face value, and the section says which currency | Auto: `regular`, `Insights.regular.flow` |
 
+## What changed your balance
+
+Settings, Accounts and balance: a trail of what has been moving the balance.
+
+| ID | Case | Do | Expect | Covered by |
+|---|---|---|---|---|
+| TRL-1 | The last week by source | Enter some entries by chat, with the form, from the Due now card and from an imported file, then open Settings, Accounts and balance | "What changed your balance" adds up the last 7 days by where entries came from (typed in the chat bar, added with the form, added from a regular payment, imported from a file), each with its total and how many entries | Auto: `balanceTrail`, `BalanceTrail.flow` |
+| TRL-2 | The latest changes | Look under the weekly totals | The latest entries that moved the balance, newest entered first (by when they were entered, not the date they carry), each with its source, when it was entered and what it did (−₹6,000 or +₹80,000); transfers and trashed entries are not listed | Auto: `balanceTrail`, `BalanceTrail.flow` |
+| TRL-3 | It says how the balance moves | Read the note | The balance only moves when an entry is added, edited, deleted or restored, when a file is imported, or when an exchange rate changes; regular payments never post by themselves | Auto: `BalanceTrail.flow` |
+| TRL-4 | The balance stays private | Hide the balance on Home, then open the panel | The panel shows what changed, never the balance itself | Auto: `BalanceTrail.flow` |
+| TRL-5 | Entries not typed by you | Add a payment from the Due now card; import a file | In Activity and Home the row carries a Recurring or Imported label (and a screen reader says so); entries you typed carry none | Auto: `TxRow` |
+
 ## Where you spent
 
 The map at the bottom of Insights.

@@ -3,6 +3,7 @@ import { toMinor } from '../../db/money'
 import { addAccount, deleteAccount, renameAccount, setAccountArchived, setAccountOpening } from '../../db/repo'
 import type { Account } from '../../db/schema'
 import { useToast } from '../../ui/toast'
+import { BalanceTrail } from './BalanceTrail'
 import { card, dangerLink, field, Group, saveButton, secondaryButton, Status, type Ledger } from './parts'
 
 /**
@@ -171,6 +172,7 @@ export function AccountsSection({ ledger }: { ledger: Ledger }) {
           <AccountRow key={a.id} account={a} ledger={ledger} />
         ))}
       </ul>
+      <BalanceTrail ledger={ledger} />
       <form onSubmit={(e) => void add(e)} className={`${card} mt-3 p-4`}>
         <label htmlFor="new-account" className="text-sm text-ink-2">
           Add an account
