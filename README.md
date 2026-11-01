@@ -1,6 +1,6 @@
 # Open Expense Adviser
 
-A local-first expense tracker you install on your phone as a PWA (Android and iOS). Everything is stored on the device. There is no account and no server.
+A local-first expense tracker you install on your phone as a PWA (Android and iOS). Everything is stored on the device. There is no account and no server. The one thing that leaves the phone is the optional map in Insights: when you press **Show map**, its pictures are fetched from OpenStreetMap, which tells them roughly which area you are looking at. Your transactions are never sent.
 
 Type what you spent or received in the bar at the bottom, as you would say it: `450 lunch at Cafe`, `Uber 230 yesterday`, `Salary 80000`.
 
@@ -10,6 +10,7 @@ Type what you spent or received in the bar at the bottom, as you would say it: `
 - Money sent and received, with an estimated balance that stays hidden until you reveal it
 - Home, Activity, Insights and Settings screens, in light and dark themes
 - Spending pace (scroll through months and compare up to three), daily, category and weekday charts
+- A map of where each month's spending happened (OpenStreetMap, opt-in, only when you ask for it)
 - What keeps coming back: the habits and monthly bills you pay again and again
 - Budget tracking and CSV / JSON export
 - Works offline once installed

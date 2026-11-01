@@ -25,10 +25,12 @@ import {
   topMerchants,
   type MonthKey,
 } from '../insights/aggregates'
+import { placesIn } from '../insights/places'
 import { repeatingSpend, type RepeatingSpend } from '../insights/repeats'
 import { categoryBudgetStatus, categoryTrends, monthlyTotals, savingsFor, unusualExpenses } from '../insights/trends'
 import { Icon } from '../ui/Icon'
 import { MonthStrip } from '../ui/MonthStrip'
+import { PlacesMap } from '../ui/PlacesMap'
 import { MonthSwitcher } from '../ui/MonthSwitcher'
 import { ScreenSkeleton } from '../ui/ScreenSkeleton'
 
@@ -88,7 +90,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
   // not again when only something like Hide amounts redraws the screen.
   const {
     monthTxs, total, prevTxs, hasPrevious, cats, elapsed, cmp, projected, merchants, weekdays, peakDay, changes, biggest,
-    savings, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats,
+    savings, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats, spots, hasAnyPlace,
   } = useMemo(() => {
     const prevKey = shiftMonth(month, -1)
     const monthTxs = inMonth(txs, month)
@@ -126,11 +128,16 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
 
     const repeats = repeatingSpend(txs, month, today)
 
+    // Where it was spent, for the map at the bottom; and whether any place has ever been recorded, to tell
+    // "nothing this month" from "never switched on".
+    const spots = placesIn(txs, month, categoryById)
+    const hasAnyPlace = txs.some((t) => t.location !== undefined && t.deletedAt === undefined)
+
     return {
       monthTxs, total, prevTxs, hasPrevious, cats, elapsed, cmp, projected, merchants, weekdays, peakDay, changes, biggest,
-      savings, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats,
+      savings, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats, spots, hasAnyPlace,
     }
-  }, [txs, income, month, today, isCurrent, categoryBudgets])
+  }, [txs, income, month, today, isCurrent, categoryBudgets, categoryById])
 
   // Every month from the first with spending up to this one, for the strip that scrolls along them. Looking back
   // from a past month still leaves the later ones in the strip, so there is a way forward.
@@ -414,6 +421,28 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
               </div>
             </Section>
           )}
+
+          <Section
+            id="where-h"
+            title="Where you spent"
+            intro={spots.length > 0 ? `Where your ${name} spending was recorded. Tap a pin to see what was spent there.` : undefined}
+          >
+            {spots.length > 0 ? (
+              <PlacesMap spots={spots} currency={currency} monthName={name} />
+            ) : hasAnyPlace ? (
+              <p className="mt-3 text-ink-2">{`No places were recorded in ${name}.`}</p>
+            ) : (
+              <div className="mt-3 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]">
+                <p>
+                  See where you spend. Turn on &ldquo;Save where I add transactions&rdquo; in Settings, and each new transaction adds a spot to a map
+                  here.
+                </p>
+                <button type="button" onClick={onOpenSettings} className="mt-3 min-h-11 rounded-full bg-surface-2 px-4 font-medium">
+                  Open settings
+                </button>
+              </div>
+            )}
+          </Section>
         </>
       )}
     </div>

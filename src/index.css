@@ -503,6 +503,27 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   }
 }
 
+/* ---------- Pins on the places map ---------- */
+
+/* A round pin in the category's colour, ringed in the surface colour so it stands out on any map picture. */
+.place-pin span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border: 2px solid var(--surface);
+  border-radius: 9999px;
+  box-shadow:
+    0 0 0 1px var(--ring),
+    0 2px 6px rgb(0 0 0 / 0.35);
+  color: #fff;
+  font:
+    600 0.75rem/1 system-ui,
+    sans-serif;
+  text-shadow: 0 0 2px rgb(0 0 0 / 0.6);
+}
+
 /* ---------- The spending pace lines arriving ---------- */
 
 /* The lines are drawn from the first day to the last when the chart appears, so a change of month can be seen as

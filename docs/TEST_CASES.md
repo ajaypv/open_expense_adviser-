@@ -558,6 +558,20 @@ What the Insights screen says you keep paying for.
 | REP-4 | What is left out | Blank names, other months, trashed entries, money received and transfers | None of them is counted; with nothing repeating the whole section is missing | Auto: `repeats`, `Insights.repeats` |
 | REP-5 | Following the month | Switch month | The list and its wording follow the month in view; a month that is over is judged on all of its days, the current one on the days so far | Auto: `repeats`, `Insights.repeats` |
 
+## Where you spent
+
+The map at the bottom of Insights.
+
+| ID | Case | Do | Expect | Covered by |
+|---|---|---|---|---|
+| MAP-1 | Places listed | Turn on Save where I add transactions, add a few entries, open Insights | "Where you spent" is the last section, with the biggest places as a list (name, how many times, total) and a Show map button; fixes within about 75 m are one place | Auto: `places`, `PlacesMap.flow`, `Insights.places.flow` |
+| MAP-2 | Nothing loads until asked | Open Insights without pressing Show map | No map code and no picture from OpenStreetMap is fetched; a note says showing the map tells OpenStreetMap roughly which area is being looked at | Auto: `PlacesMap.flow`, `Insights.places.flow`; check the network tab by eye |
+| MAP-3 | The map | Press Show map | An OpenStreetMap appears with a pin for each place (bigger, with a count, for more visits, in the category colour), the OpenStreetMap credit is visible, and tapping a pin says what was spent there; the map shows again straight away for the rest of the visit | Auto: `leafletMap`, `PlacesMap.flow`; look by eye |
+| MAP-4 | Scrolling past it | Drag a finger down the page over the map | The page scrolls (one finger); two fingers move and zoom the map; the mouse wheel does not zoom, the + and − buttons do | Look by eye on a phone |
+| MAP-5 | Offline | Turn the connection off and press Show map | "The map needs an internet connection." instead of a grey box; the list still works | Auto: `PlacesMap.flow` |
+| MAP-6 | Empty states | Look at a month with nothing recorded; look when no place has ever been recorded | "No places were recorded in October."; or an explanation of the setting with an Open settings button | Auto: `Insights.places.flow` |
+| MAP-7 | Names are text | Give an entry a name such as <img src=x onerror=alert(1)> and open its pin | It is shown as written, never run | Auto: `leafletMap` |
+
 ## Swiping between months
 
 | ID | Case | Do | Expect | Covered by |
