@@ -32,7 +32,15 @@ There is no AI and no network call. A small set of rules in [`src/ingest/localPa
 
 Several entries can go in one message, separated by commas, `and`, `;` or new lines. `coffee 120, lunch 340 yesterday` adds two entries, both dated yesterday.
 
-It matches words, not meaning, and only whole words: `coffee` is known but `coffees` is not. A name it does not know lands in Other. Tap **Undo** in the pop-up, or open the entry to change its category, and the app remembers the change. To teach it more words, add them to `CATEGORY_KEYWORDS` in the parser.
+It matches words, not meaning, and only whole words: `coffee` is known but `coffees` is not. A name it does not know lands in Other. Tap **Undo** in the pop-up, or open the entry to change its category, and the app remembers the change. 
+
+### Teaching it more words
+
+The words live in their own file, [`src/ingest/keywords.ts`](src/ingest/keywords.ts), apart from the parser. It holds the category words in packs (`GENERAL`, `INDIA`, `KARNATAKA`), plus the filler and payment words.
+
+- **Add a word:** put it in the pack and category it belongs to, as one lowercase word, for example `'ksrtc'` under `Transport` in `KARNATAKA`.
+- **Add a region:** make a new pack the same shape as `KARNATAKA` and add it to `PACKS`.
+- A word can appear only once across all packs, and the order in `CATEGORY_ORDER` decides ties. `src/ingest/keywords.test.ts` checks both.
 
 ## Stack
 

@@ -1,5 +1,6 @@
 import { localDateString, MAX_AMOUNT_MINOR, toMinor } from '../db/money'
 import { INCOME_CATEGORY, type DefaultCategoryName } from '../db/defaultCategories'
+import { CATEGORY_KEYWORDS, FILLER_WORDS, INCOME_FILLER_WORDS, PAYMENT_WORDS, type PaymentMethod } from './keywords'
 
 export interface ParsedExpense {
   /** 'income' when the text describes money received ("salary 80k", "received 500 from Rahul"). */
@@ -8,7 +9,7 @@ export interface ParsedExpense {
   merchant: string
   categoryName: DefaultCategoryName
   date: string
-  paymentMethod: 'Cash' | 'Card' | 'Online' | ''
+  paymentMethod: PaymentMethod
   /** Only set when the text named one ("$5", "12 usd", "₹99"); otherwise it is the person's main currency. */
   currency?: string
 }
@@ -18,11 +19,8 @@ const WEEKDAY_ABBREVIATIONS = ['sun', 'mon', 'tues', 'tue', 'wed', 'thurs', 'thu
 const MONTH_NAMES = 'january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept|sep|oct|nov|dec'
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
 
-const FILLER = new Set([
-  'spent', 'spend', 'paid', 'pay', 'bought', 'buy', 'got', 'i', 'just', 'for', 'on', 'at', 'to',
-  'from', 'using', 'via', 'with', 'by', 'the', 'a', 'an', 'of', 'my', 'me', 'and', 'rs', 'inr',
-  'rupees', 'rupee', 'usd', 'dollars', 'dollar', 'eur', 'euro', 'euros', 'gbp', 'pounds', 'sent',
-])
+// The words it knows (categories, filler, payment methods) live in keywords.ts, so adding one never touches this file.
+const FILLER = new Set(FILLER_WORDS)
 
 /**
  * Words that mean money came in. "paid" or "sent" alone mean money went out, so only the
@@ -41,34 +39,8 @@ const INCOME_PHRASE = /\b(got paid|paid me|sent me|gave me)\b|\bgot\b.*\bfrom\b/
 const PAYOUT_PATTERN =
   /\b(maid|driver|cook|staff|employee|nanny|servant|worker|watchman|gardener)\s+salary\b|\bsalary\s+(to|for)\b|\bincome\s+tax\b|\bsecurity\s+deposit\b|\b(paid|pay|paying)\b.*\b(interest|deposit|salary|bonus)\b/
 
-/** Income words that carry no meaning beyond "money came in", dropped from the merchant name. */
-const INCOME_GENERIC = new Set(['received', 'receive', 'credited', 'deposited', 'deposit', 'me', 'earned', 'sent'])
-
-const PAYMENT: Record<string, ParsedExpense['paymentMethod']> = {
-  cash: 'Cash',
-  card: 'Card',
-  credit: 'Card',
-  debit: 'Card',
-  upi: 'Online',
-  gpay: 'Online',
-  phonepe: 'Online',
-  paytm: 'Online',
-  netbanking: 'Online',
-  online: 'Online',
-}
-
-/** First matching rule wins; keep specific merchants before generic words. */
-const CATEGORY_KEYWORDS: [DefaultCategoryName, string[]][] = [
-  ['Rent & Housing', ['rent', 'maintenance', 'mortgage', 'housing', 'pg']],
-  // "chicken" and "fruit" are left out on purpose: "chicken biryani" and "fruit bowl for lunch" are meals.
-  ['Groceries', ['grocery', 'groceries', 'bigbasket', 'blinkit', 'zepto', 'instamart', 'supermarket', 'vegetables', 'vegetable', 'fruits', 'milk', 'walmart', 'costco', 'kirana', 'hopcoms', 'nandini', 'dmart', 'eggs']],
-  ['Food & Dining', ['swiggy', 'zomato', 'restaurant', 'lunch', 'dinner', 'breakfast', 'coffee', 'cafe', 'starbucks', 'pizza', 'burger', 'snacks', 'snack', 'food', 'mcdonalds', 'tea', 'biryani', 'darshini', 'idli', 'dosa', 'vada', 'udupi', 'mtr', 'chai', 'kaapi', 'tiffin', 'meals', 'thali', 'chaat', 'juice', 'sugarcane', 'coconut', 'bakery', 'mess', 'canteen']],
-  ['Transport', ['uber', 'ola', 'rapido', 'fuel', 'petrol', 'diesel', 'metro', 'bus', 'cab', 'taxi', 'auto', 'parking', 'toll', 'train', 'station', 'pump', 'ksrtc', 'bmtc', 'bmrcl', 'vajra', 'airavat', 'yatri', 'redbus', 'irctc', 'rickshaw', 'fastag', 'blusmart']],
-  ['Bills & Utilities', ['electricity', 'water', 'wifi', 'internet', 'broadband', 'recharge', 'bill', 'jio', 'airtel', 'gas', 'insurance', 'phone', 'bescom', 'bwssb', 'fibernet', 'bsnl', 'vodafone', 'dth', 'cylinder']],
-  ['Health', ['pharmacy', 'doctor', 'medicine', 'medicines', 'hospital', 'clinic', 'gym', 'dentist', 'lab', 'apollo', 'manipal', 'medplus', 'netmeds', 'pharmeasy']],
-  ['Entertainment & Travel', ['netflix', 'spotify', 'prime', 'hotstar', 'movie', 'movies', 'cinema', 'concert', 'flight', 'hotel', 'trip', 'airbnb', 'game', 'games', 'pvr', 'inox', 'bookmyshow']],
-  ['Shopping', ['amazon', 'flipkart', 'myntra', 'clothes', 'shoes', 'shopping', 'mall', 'electronics']],
-]
+const INCOME_GENERIC = new Set(INCOME_FILLER_WORDS)
+const PAYMENT = PAYMENT_WORDS
 
 // ---- Dates ---------------------------------------------------------------------------------------
 
