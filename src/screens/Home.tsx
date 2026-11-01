@@ -21,6 +21,7 @@ import { newestFirst } from '../insights/order'
 import { ScreenSkeleton } from '../ui/ScreenSkeleton'
 import type { Suggestion } from '../insights/suggestions'
 import { BackupNudge, DueCard, LogNudge } from '../ui/HomeCards'
+import { BudgetPrompt } from '../ui/BudgetPrompt'
 import { GoalsSummary } from '../ui/GoalsSummary'
 import { InsightCard } from '../ui/InsightCard'
 import { SpendingOverview } from '../ui/SpendingOverview'
@@ -183,8 +184,10 @@ export const Home = memo(function Home({
         }
         privacy={display.privacy}
         onTogglePrivacy={() => setDisplay({ privacy: !display.privacy })}
-        onSetBudget={onOpenSettings}
         onPickPeriod={onPickPeriod}
+        monthKey={month}
+        onPrevMonth={() => onMonth(shiftMonth(month, -1))}
+        onNextMonth={isCurrent ? undefined : () => onMonth(shiftMonth(month, 1))}
       />
 
       <WalletPanel
@@ -200,6 +203,8 @@ export const Home = memo(function Home({
       />
 
       {isCurrent && <UpcomingCard ledger={ledger} today={today} onOpen={onOpenUpcoming} />}
+
+      {budgetMinor === null && <BudgetPrompt onSetBudget={onOpenSettings} />}
 
       {isCurrent && suggestions.length > 0 && (
         <section aria-labelledby="suggest-h" className="mt-8">

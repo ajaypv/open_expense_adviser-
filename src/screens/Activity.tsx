@@ -231,14 +231,14 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
       const raw = await db.transactions.get(tx.id)
       if (!raw) return
       const id = await duplicateTransaction(raw)
-      toast({ message: 'Copied to today', actionLabel: 'Undo', onAction: () => void deleteTransaction(id) })
+      toast({ message: 'Copied to today', actionLabel: 'Undo', onAction: () => void deleteTransaction(id), icon: 'copy' })
     },
     [toast],
   )
   const onDelete = useCallback(
     async (tx: LedgerTx) => {
       const removed = await deleteTransaction(tx.id)
-      toast({ message: 'Transaction deleted', actionLabel: 'Undo', onAction: () => removed && void restoreTransaction(removed) })
+      toast({ message: 'Transaction deleted', actionLabel: 'Undo', onAction: () => removed && void restoreTransaction(removed), icon: 'trash' })
     },
     [toast],
   )

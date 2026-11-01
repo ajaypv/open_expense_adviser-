@@ -33,6 +33,7 @@ import { useLockState, watchVisibility } from './security/lock'
 import { useTheme } from './theme/useTheme'
 import { AddSheet } from './ui/AddSheet'
 import { useBackClose } from './ui/backStack'
+import { categoryIcon } from './ui/categoryIcon'
 import { BottomNav, TABS, type Tab } from './ui/BottomNav'
 import { ChatBar } from './ui/ChatBar'
 import { GoalMoneySheet, GoalSheet } from './ui/GoalSheets'
@@ -243,11 +244,13 @@ function Shell() {
       const ids: number[] = []
       let sent = 0
       let lastName = ''
+      let lastCategoryId = 0
       for (const parsed of entries) {
         // Your own choice for a merchant beats the keyword guess.
         const learned = parsed.kind === 'expense' ? learnedCategoryId(parsed.merchant, txs) : null
         const categoryId = learned ?? (await categoryIdByName(parsed.categoryName))
         lastName = categoryById.get(categoryId)?.name ?? parsed.categoryName
+        lastCategoryId = categoryId
         const id = await addTransaction({
           kind: parsed.kind,
           amountMinor: parsed.amountMinor,
@@ -268,7 +271,7 @@ function Shell() {
       // Undoing something just added removes it, rather than leaving a copy in the trash.
       const undo = () => void (ids.length === 1 ? purgeTransaction(ids[0]) : purgeTransactions(ids))
       if (entries.length > 1) {
-        toast({ message: `Added ${entries.length} transactions${sent ? `, ${formatMoney(sent, currency)} spent` : ''}`, actionLabel: 'Undo', onAction: undo })
+        toast({ message: `Added ${entries.length} transactions${sent ? `, ${formatMoney(sent, currency)} spent` : ''}`, actionLabel: 'Undo', onAction: undo, icon: 'list' })
       } else {
         const only = entries[0]
         const money = formatMoney(only.amountMinor, only.currency ?? currency)
@@ -277,6 +280,9 @@ function Shell() {
           message: (only.kind === 'income' ? `Received ${money}` : `Added ${money} to ${lastName}`) + (when ? `, ${when}` : ''),
           actionLabel: 'Undo',
           onAction: undo,
+          // Where the money went: the category's own icon and colour, or an arrow in for money received.
+          icon: only.kind === 'income' ? 'arrowDown' : categoryIcon(lastName),
+          color: only.kind === 'income' ? 'var(--good-text)' : categoryById.get(lastCategoryId)?.color,
         })
       }
       return true

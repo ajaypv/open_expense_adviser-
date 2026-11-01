@@ -190,6 +190,46 @@ describe('Home recent spending', () => {
   })
 })
 
+describe('Home: the budget invitation', () => {
+  const renderBudget = (budgetMinor: number | null, month = '2026-10') =>
+    renderToStaticMarkup(
+      createElement(Home, {
+        ledger: makeLedger({
+          txs, expenses: txs.filter((t) => t.kind === 'expense'), income: txs.filter((t) => t.kind === 'income'), categories,
+          expenseCategories: categories.slice(0, 1), categoryById: new Map(categories.map((c) => [c.id, c])), budgetMinor,
+          recurring: [{ id: 1, kind: 'expense', amountMinor: 1_250_000, currency: 'INR', categoryId: 1, merchant: 'Home loan', note: '', paymentMethod: '', frequency: 'monthly', nextDue: '2026-11-05', active: true }],
+        }),
+        month, onMonth: () => {}, today, onPickCategory: () => {}, onEdit: () => {}, onExample: () => {}, onOpenSettings: () => {},
+        onSeeAll: () => {}, balanceShown: false, onToggleBalance: () => {}, suggestions: [], onSuggestion: () => {}, logNudge: false, onAdd: () => {},
+        onOpenGoals: () => {}, onOpenUpcoming: () => {}, onPickPeriod: () => {}, onOpenInsights: () => {},
+      }),
+    )
+
+  it('sits below the cash flow and the payments that are coming up, not inside the spending card', () => {
+    const html = renderBudget(null)
+    expect(html).toContain('Set a monthly budget to see how much you have left.')
+    const at = (s: string) => html.indexOf(s)
+    expect(at('Set a monthly budget')).toBeGreaterThan(at('aria-label="Money received and your balance"'))
+    expect(at('Set a monthly budget')).toBeGreaterThan(at('aria-label="Coming up"'))
+    expect(at('Set a monthly budget')).toBeLessThan(at('Day by day'))
+    // and not part of the overview card above
+    const overview = html.slice(at('aria-label="Summary"'), at('aria-label="Money received and your balance"'))
+    expect(overview).not.toContain('Set a monthly budget')
+  })
+
+  it('is not shown once a budget is set, and the progress stays in the overview', () => {
+    const html = renderBudget(3_000_000)
+    expect(html).not.toContain('Set a monthly budget')
+    expect(html.indexOf('role="meter"')).toBeLessThan(html.indexOf('aria-label="Money received and your balance"'))
+  })
+
+  it('is there for a month that is over too, after the cash flow', () => {
+    const html = renderBudget(null, '2026-09')
+    expect(html).toContain('Set a monthly budget')
+    expect(html.indexOf('Set a monthly budget')).toBeGreaterThan(html.indexOf('aria-label="Money received and your balance"'))
+  })
+})
+
 describe('Home: what comes first', () => {
   const renderFull = () => {
     const summary = balanceFrom(txs, 100_000_00)
@@ -215,6 +255,7 @@ describe('Home: what comes first', () => {
       'aria-label="Summary"',
       'aria-label="Money received and your balance"',
       'aria-label="Coming up"',
+      'aria-label="Budget"',
       'Day by day',
       'Recent transactions',
       'Where it went',

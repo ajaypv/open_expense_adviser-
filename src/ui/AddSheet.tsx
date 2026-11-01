@@ -18,6 +18,7 @@ import { defaultAccountId } from '../insights/accounts'
 import { nextDueAfter } from '../insights/recurring'
 import type { Suggestion } from '../insights/suggestions'
 import { useBackClose } from './backStack'
+import { categoryIcon } from './categoryIcon'
 import { Icon } from './Icon'
 import { PickerField, type PickerOption } from './PickerField'
 import { SuggestionList } from './SuggestionList'
@@ -293,7 +294,13 @@ export const AddSheet = memo(function AddSheet({
           })
           message += repeat === 'weekly' ? '. Repeats every week.' : '. Repeats every month.'
         }
-        toast({ message })
+        const chosen = categories.find((c) => c.id === fields.categoryId)
+        toast({
+          message,
+          // What it was added to: the category's own icon and colour; an arrow in for money received; swapping arrows for a transfer.
+          icon: transfer ? 'swap' : received ? 'arrowDown' : categoryIcon(chosen?.name),
+          color: transfer ? undefined : received ? 'var(--good-text)' : chosen?.color,
+        })
       }
       onClose()
     } catch (err) {
@@ -312,6 +319,7 @@ export const AddSheet = memo(function AddSheet({
       message: 'Transaction deleted',
       actionLabel: 'Undo',
       onAction: () => removed && void restoreTransaction(removed),
+      icon: 'trash',
     })
   }
 
@@ -322,7 +330,7 @@ export const AddSheet = memo(function AddSheet({
     if (!raw) return
     const id = await duplicateTransaction(raw)
     onClose()
-    toast({ message: 'Copied to today', actionLabel: 'Undo', onAction: () => void deleteTransaction(id) })
+    toast({ message: 'Copied to today', actionLabel: 'Undo', onAction: () => void deleteTransaction(id), icon: 'copy' })
   }
 
   const title = editing ? 'Edit transaction' : 'New transaction'

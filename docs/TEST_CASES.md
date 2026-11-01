@@ -16,8 +16,8 @@ Version 0.3.0. This lists what to check, how, and what is already checked by the
 
 | | |
 |---|---|
-| Test files | 77 |
-| Tests | 1030 |
+| Test files | 80 |
+| Tests | 1072 |
 | Statements covered | 94.4% |
 | Lines covered | 95.9% |
 
@@ -489,7 +489,7 @@ Home answers four questions in order: where do I stand, am I doing okay, where d
 | HR-1 | The order | Open Home with a budget, a goal and a regular payment | Greeting, month, then one spending overview, then cash flow, what is coming up, the day-by-day chart, recent transactions, where it went, one insight, and goals | Auto: `Home` |
 | HR-2 | Greeting | Open Home in the morning, afternoon and evening | "Good morning" until noon, "Good afternoon" until five, "Good evening" after, with the full date beneath; a screen reader hears "Home" first | Auto: `HomeHeader`, `app.flow` |
 | HR-3 | One headline number | Look at the overview | "Spent so far in October" and one number, 36 to 40 px, not larger; the comparison with last month in words and an arrow; the daily average and expenses logged side by side | Auto: `SpendingOverview` |
-| HR-4 | The budget | With and without a budget | Without: "Your budget. Set a monthly budget to see how much you have left." and a Set budget button. With: the progress and how much is left | Auto: `SpendingOverview` |
+| HR-4 | The budget | With and without a budget | Without: "Your budget. Set a monthly budget to see how much you have left." and a Set budget button, as its own block lower down, after the cash flow and the payments coming up, not inside the spending card. With: the progress and how much is left, kept right under the daily average | Auto: `SpendingOverview` |
 | HR-5 | Compact days | Look under the budget | Today, Yesterday and Last 7 days as small tiles that do not compete with the headline; each with something behind it opens those transactions; a day with nothing is plain text | Auto: `SpendingOverview`, `app.flow` |
 | HR-6 | Cash flow | Look below the overview | What was received (green) and the estimated balance side by side in one card; the balance stays hidden until Show balance | Auto: `WalletPanel`, `Home` |
 | HR-7 | Recent transactions | Scroll Home | Recent transactions come before Where it went, flat headings without extra boxes | Auto: `Home`, `app.flow` |
@@ -513,3 +513,43 @@ On a phone, back moves back through the app instead of leaving it. It leaves the
 | BAK-8 | Closed another way | Close something with its Close button, Escape, or the tab bar | Nothing is left behind: the next back press is not wasted | Auto: `backStack.flow`, `backButton.flow` |
 | BAK-9 | Many times | Open and close a sheet again and again | Back does not pile up or need extra presses | Auto: `backStack.flow`, `backButton.flow` |
 | BAK-10 | After a reload | Reload the page while a sheet is open, then press back | The first press is not wasted | Auto: `backStack.flow`. **Device** |
+
+## The pop-up
+
+The message that confirms what was just done drops in from the top like an island, and shows which category the money went to.
+
+| ID | Case | Do | Expect | Covered by |
+|---|---|---|---|---|
+| POP-1 | Where it went | Type "450 lunch at Cafe", "1200 groceries", "230 uber", "999 electricity", "600 pharmacy", "500 netflix", "1500 amazon", "20 something" | The pop-up shows that category's icon (fork and knife, cart, car, bolt, heart, ticket, bag, tag) and says "Added ₹… to …" | Auto: `toastIcons.flow`, `categoryIcon` |
+| POP-2 | The category's colour | Add something to a category | The icon sits in a bubble tinted with that category's own colour | Auto: `toastIcons.flow`. **Device** |
+| POP-3 | Money in, several, delete, copy | Type "Salary 80,000"; "coffee 120, lunch 340"; delete a transaction; copy one | An arrow in (green), a list, a bin, two sheets | Auto: `toastIcons.flow`, `AddSheet.toast.flow` |
+| POP-4 | From the add form | Save a transaction from the form | The same icon and colour as typing it; a swap icon for a transfer; an arrow in for money received | Auto: `AddSheet.toast.flow` |
+| POP-5 | Brief | Watch how long it stays | About 3 seconds; 4.5 with an Undo; it shrinks away rather than just vanishing | Auto: `toast.flow`. **Device** |
+| POP-6 | Opening motion | Add something | It starts as just the icon, opens out to show the words, the icon pops in with a little bounce, and the words fade in a moment later | **Device** |
+| POP-7 | Pausing | Hold a finger on it, or focus Undo | It stays while held and goes about 2 seconds after; a finger landing while it shrinks brings it back | Auto: `toast.flow` |
+| POP-8 | Less motion | Turn on "reduce motion" | It just appears and disappears, with no opening, bounce or shrink | Auto: `toast.flow`, `contrast` |
+| POP-9 | Readable | View it in light and dark | Text is easy to read on the pill; the pill stands out from the page | Auto: `contrast`. **Device** |
+| POP-10 | Safe areas | On a phone with a notch | It sits below the notch, not under it | **Device** |
+
+## Spending pace
+
+| ID | Case | Do | Expect | Covered by |
+|---|---|---|---|---|
+| PAC-1 | At rest: last month in full | Spend only at the end of one month, then open Insights early in the next | "November (so far)" beside "October (whole month)" with October's real total, never the zero of its first day, and a line such as "22% of what October came to in all" (or "₹X more than October came to in all", "Level with…", "October had no spending.") | Auto: `PaceChart.flow`, `PaceChart.previous` |
+| PAC-2 | Pointing at a day | Touch, drag or use the arrow keys on the chart | It switches to the same day of both months ("Day 1", "October ₹0", "₹2,794 more than October") and still says "October came to ₹12,520 in all."; letting go returns to the whole-month view | Auto: `PaceChart.flow` |
+| PAC-3 | The last day counts | Spend on the 31st of a 31-day month, then look at the next month (30 days) | Last month's line and total include the 31st; the chart is as wide as the longer month and this month stops where it is up to | Auto: `PaceChart.previous` |
+| PAC-4 | First month | Open Insights in the first month of use | Nothing is said about a previous month | Auto: `PaceChart.flow`, `PaceChart.previous` |
+| PAC-5 | The table | Tap Show as table | The last-month column is headed "October by then" (the running total up to that day), and the last row is "October, whole month" with what it really came to; neither appears in the first month of use | Auto: `PaceChart.previous`, `PaceChart` |
+
+## Swiping between months
+
+| ID | Case | Do | Expect | Covered by |
+|---|---|---|---|---|
+| SWP-1 | Back a month | On Home, swipe right on the spending card | The previous month, with the figures sliding in from the left | Auto: `swipeMonths.flow`, `SpendingOverview.swipe.flow`. **Device** |
+| SWP-2 | Forward a month | After going back, swipe left on the card | The next month, sliding in from the right | Auto: `swipeMonths.flow`. **Device** |
+| SWP-3 | Nothing after now | In the month in progress, swipe left | Nothing happens | Auto: `swipeMonths.flow`, `SpendingOverview.swipe.flow` |
+| SWP-4 | Keep going | Swipe right several times | One month back for each swipe | Auto: `swipeMonths.flow` |
+| SWP-5 | Not a swipe | Tap the eye or a day tile; slip a finger a little; scroll up and down from the card | Nothing changes month, and the page still scrolls | Auto: `useSwipe.flow`, `swipeMonths.flow`. **Device** |
+| SWP-6 | Only on the card | Swipe on the cash flow or the lists | The month does not change | Auto: `swipeMonths.flow` |
+| SWP-7 | Other ways still work | Use the arrows or the month list at the top | They change the month as before | Auto: `swipeMonths.flow` |
+| SWP-8 | Mouse and motion | Drag with a mouse; turn on reduce motion | The mouse is ignored (text can still be selected); the figures change without sliding | Auto: `useSwipe.flow`, `contrast` |

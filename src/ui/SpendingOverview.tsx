@@ -1,7 +1,9 @@
 import { Meter } from '../charts/Meter'
 import { formatMoney } from '../db/money'
+import { useState } from 'react'
 import { AnimatedMoney } from './AnimatedMoney'
 import { Icon } from './Icon'
+import { useSwipe } from './useSwipe'
 
 export interface PeriodTile {
   id: string
@@ -28,8 +30,12 @@ interface Props {
   periods: PeriodTile[]
   privacy: boolean
   onTogglePrivacy: () => void
-  onSetBudget: () => void
   onPickPeriod: (range: { from: string; to: string }) => void
+  /** The month in view (YYYY-MM): when it changes, the figures slide in from the side it came from. */
+  monthKey?: string
+  /** Swiping to the right goes to the previous month; swiping to the left to the next, when there is one. */
+  onPrevMonth?: () => void
+  onNextMonth?: () => void
 }
 
 /**
@@ -51,13 +57,22 @@ export function SpendingOverview({
   periods,
   privacy,
   onTogglePrivacy,
-  onSetBudget,
   onPickPeriod,
+  monthKey,
+  onPrevMonth,
+  onNextMonth,
 }: Props) {
   const against = `${partial ? 'the same days in ' : ''}${prevName}`
+  const swipe = useSwipe({ onRight: onPrevMonth, onLeft: onNextMonth })
+
+  // Which way the month just moved, so the figures can slide in from that side. Worked out as the month changes.
+  const [shown, setShown] = useState<{ key: string | undefined; dir: 'next' | 'prev' | null }>({ key: monthKey, dir: null })
+  if (shown.key !== monthKey) {
+    setShown({ key: monthKey, dir: monthKey === undefined || shown.key === undefined ? null : monthKey > shown.key ? 'next' : 'prev' })
+  }
 
   return (
-    <section aria-label="Summary" className="relative mt-3 rounded-3xl bg-surface p-5 shadow-[0_0_0_1px_var(--ring)]">
+    <section aria-label="Summary" {...swipe} className="relative mt-3 touch-pan-y rounded-3xl bg-surface p-5 shadow-[0_0_0_1px_var(--ring)]">
       <button
         type="button"
         aria-pressed={privacy}
@@ -68,6 +83,11 @@ export function SpendingOverview({
         <Icon name={privacy ? 'eyeOff' : 'eye'} size={20} />
       </button>
 
+      <div
+        key={monthKey ?? 'month'}
+        data-month={monthKey}
+        className={shown.dir === 'next' ? 'month-slide-from-right' : shown.dir === 'prev' ? 'month-slide-from-left' : undefined}
+      >
       {totalMinor === 0 ? (
         <p className="pr-10 text-2xl font-semibold tracking-tight">{`Nothing spent in ${monthName} yet.`}</p>
       ) : (
@@ -109,19 +129,11 @@ export function SpendingOverview({
         </>
       )}
 
-      <div className="mt-4 border-t border-line pt-4">
-        {budgetMinor === null ? (
-          <>
-            <p className="font-medium">Your budget</p>
-            <p className="mt-0.5 text-ink-2">Set a monthly budget to see how much you have left.</p>
-            <button type="button" onClick={onSetBudget} className="mt-3 min-h-11 rounded-full bg-surface-2 px-4 font-medium">
-              Set budget
-            </button>
-          </>
-        ) : (
+      {budgetMinor !== null && (
+        <div className="mt-4 border-t border-line pt-4">
           <Meter spentMinor={totalMinor} limitMinor={budgetMinor} currency={currency} />
-        )}
-      </div>
+        </div>
+      )}
 
       {periods.length > 0 && (
         <section aria-label="Recent spending" className="mt-4 grid grid-cols-3 gap-2">
@@ -154,6 +166,7 @@ export function SpendingOverview({
           })}
         </section>
       )}
+      </div>
     </section>
   )
 }

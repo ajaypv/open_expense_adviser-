@@ -50,6 +50,9 @@
   --scrim: rgba(11, 11, 11, 0.45);
   --btn: #0b0b0b;
   --btn-ink: #ffffff;
+  /* The pop-up that confirms what was just done. */
+  --island: #0b0b0b;
+  --island-ink: #fafafa;
 
   --s1: #2a78d6;
   --s2: #d75f30;
@@ -84,6 +87,8 @@
     --scrim: rgba(0, 0, 0, 0.6);
     --btn: #eeeeee;
     --btn-ink: #121314;
+    --island: #2a2b2e;
+    --island-ink: #eeeeee;
 
     --s1: #3987e5;
     --s2: #d95926;
@@ -121,6 +126,8 @@
   --scrim: rgba(0, 0, 0, 0.6);
   --btn: #eeeeee;
   --btn-ink: #121314;
+  --island: #2a2b2e;
+  --island-ink: #eeeeee;
 
   --s1: #3987e5;
   --s2: #d95926;
@@ -398,16 +405,128 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 
 /* ---------- Small helpers ---------- */
 
+/* ---------- The pop-up island ---------- */
 
-@keyframes toast-in {
+/* It starts as just its icon, a small dark pill at the top of the screen, and opens out to show the words. The icon
+   pops in with a little overshoot and the words fade in a moment later. When its time is up it shrinks back. */
+.island {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  max-width: min(26rem, 100%);
+  padding: 0.375rem 0.5rem 0.375rem 0.375rem;
+  border-radius: 2rem;
+  background: var(--island);
+  color: var(--island-ink);
+  box-shadow:
+    0 0 0 1px var(--ring),
+    0 14px 32px -10px rgb(0 0 0 / 0.5);
+  overflow: hidden;
+  animation: island-open 0.5s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+
+.island-leave {
+  animation: island-close 0.22s ease-in both;
+}
+
+.island-icon {
+  display: flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  /* The category's own colour, softened into the pill, with the icon in a lighter shade of it. */
+  background: color-mix(in oklab, var(--c, var(--island-ink)) 26%, var(--island));
+  color: color-mix(in oklab, var(--c, var(--island-ink)) 55%, white);
+  animation: island-pop 0.55s cubic-bezier(0.3, 1.7, 0.5, 1) 0.06s both;
+}
+
+.island-text {
+  animation: island-text 0.3s ease-out 0.16s both;
+}
+
+@keyframes island-open {
   from {
-    transform: translateY(8px);
+    max-width: 3rem;
     opacity: 0;
+    transform: translateY(-10px) scale(0.9);
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    max-width: min(26rem, 100%);
+    transform: none;
   }
 }
-.toast {
-  animation: toast-in 0.2s ease-out;
-  @media (prefers-reduced-motion: reduce) {
+
+@keyframes island-close {
+  to {
+    max-width: 3rem;
+    opacity: 0;
+    transform: translateY(-6px) scale(0.92);
+  }
+}
+
+@keyframes island-pop {
+  from {
+    transform: scale(0.2) rotate(-25deg);
+  }
+  60% {
+    transform: scale(1.18) rotate(6deg);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes island-text {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .island,
+  .island-leave,
+  .island-icon,
+  .island-text {
+    animation: none;
+  }
+}
+
+/* ---------- Changing month by swiping ---------- */
+
+/* The figures come in from the side the new month is on: later months from the right, earlier ones from the left. */
+@keyframes month-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+@keyframes month-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+.month-slide-from-right {
+  animation: month-from-right 0.28s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+.month-slide-from-left {
+  animation: month-from-left 0.28s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .month-slide-from-right,
+  .month-slide-from-left {
     animation: none;
   }
 }

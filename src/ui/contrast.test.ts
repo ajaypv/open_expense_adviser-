@@ -85,3 +85,46 @@ describe('the dark theme is soft, not pure black on bright white', () => {
     expect(ratio(dark.line, dark.surface)).toBeLessThan(2)
   })
 })
+
+describe('the toast island', () => {
+  it.each(Object.entries(themes))('keeps its text easy to read on its own background in the %s theme', (_name, t) => {
+    expect(ratio(t['island-ink'], t.island), 'island text').toBeGreaterThanOrEqual(7)
+  })
+
+  it('stands out from the page behind it in both themes', () => {
+    // On light the island is nearly black on a pale page; on dark it is a lighter card with a hairline.
+    expect(ratio(light.island, light.bg)).toBeGreaterThan(10)
+    expect(luminance(dark.island)).toBeGreaterThan(luminance(dark.bg))
+  })
+})
+
+describe('the toast island: its motion', () => {
+  const sheet = readFileSync('src/index.css', 'utf8')
+
+  it('opens, pops its icon and fades its words in, and shrinks away', () => {
+    for (const name of ['island-open', 'island-pop', 'island-text', 'island-close']) {
+      expect(sheet, name).toContain(`@keyframes ${name} {`)
+    }
+  })
+
+  it('stops all of that for someone who asked for less motion', () => {
+    const block = sheet.slice(sheet.indexOf('.island {'))
+    expect(block).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*\.island[\s\S]*animation: none/)
+  })
+})
+
+describe('the slide that goes with swiping between months', () => {
+  const sheet = readFileSync('src/index.css', 'utf8')
+
+  it('comes in from the side the new month is on', () => {
+    expect(sheet).toContain('@keyframes month-from-right {')
+    expect(sheet).toContain('@keyframes month-from-left {')
+    expect(sheet).toMatch(/\.month-slide-from-right \{[^}]*animation: month-from-right/)
+    expect(sheet).toMatch(/\.month-slide-from-left \{[^}]*animation: month-from-left/)
+  })
+
+  it('does not move for someone who asked for less motion', () => {
+    const block = sheet.slice(sheet.indexOf('/* ---------- Changing month by swiping'))
+    expect(block).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*month-slide-from-right[\s\S]*animation: none/)
+  })
+})
