@@ -503,6 +503,27 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   }
 }
 
+/* ---------- The spending pace lines arriving ---------- */
+
+/* The lines are drawn from the first day to the last when the chart appears, so a change of month can be seen as
+   well as read. Clipped rather than drawn stroke by stroke, so it works the same for solid and dashed lines. */
+@keyframes pace-reveal {
+  from {
+    clip-path: inset(-4px 100% -4px -4px);
+  }
+  to {
+    clip-path: inset(-4px -4px -4px -4px);
+  }
+}
+.pace-reveal {
+  animation: pace-reveal 0.7s cubic-bezier(0.3, 0.7, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pace-reveal {
+    animation: none;
+  }
+}
+
 /* ---------- Changing month by swiping ---------- */
 
 /* The figures come in from the side the new month is on: later months from the right, earlier ones from the left. */

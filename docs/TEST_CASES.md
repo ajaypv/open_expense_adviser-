@@ -540,6 +540,23 @@ The message that confirms what was just done drops in from the top like an islan
 | PAC-3 | The last day counts | Spend on the 31st of a 31-day month, then look at the next month (30 days) | Last month's line and total include the 31st; the chart is as wide as the longer month and this month stops where it is up to | Auto: `PaceChart.previous` |
 | PAC-4 | First month | Open Insights in the first month of use | Nothing is said about a previous month | Auto: `PaceChart.flow`, `PaceChart.previous` |
 | PAC-5 | The table | Tap Show as table | The last-month column is headed "October by then" (the running total up to that day), and the last row is "October, whole month" with what it really came to; neither appears in the first month of use | Auto: `PaceChart.previous`, `PaceChart` |
+| PAC-6 | Scrolling through months | Open Insights with several months of spending; swipe along the strip of months above the chart and tap one | Each month shows what it came to (a dash when nothing was spent), the chosen one is highlighted and centred, the whole screen moves to it, and the chart is drawn afresh for that month | Auto: `MonthStrip`, `Insights.pace.flow` |
+| PAC-7 | Comparing several months | With three earlier months of spending, choose Last 3 months | The chart adds a dashed line for each earlier month (each dashed differently), the legend lists every month with its whole-month total, and the sentence compares this month with the average of the three; pointing at a day reads every month at that day | Auto: `PaceChart.older.flow` |
+| PAC-8 | Only real history | Look at a month whose earlier months include one with no spending, or the first months of use | The choice appears only for months that have history, offers "Last 2 months" when there are two, and stops at the first month with no spending, so there is never a hole | Auto: `Insights.pace.flow` |
+| PAC-9 | Table with several months | Choose Last 3 months, then Show table | A column for each earlier month ("September by then"…) and a whole-month row for each; the table scrolls sideways instead of squeezing | Auto: `PaceChart.older.flow` |
+| PAC-10 | Lines arriving | Change month, or open Insights | The lines are drawn from the first day to the last; with reduced motion they simply appear | Auto: `PaceChart.older.flow` (class only); look by eye |
+
+## Keeps coming back
+
+What the Insights screen says you keep paying for.
+
+| ID | Case | Do | Expect | Covered by |
+|---|---|---|---|---|
+| REP-1 | A habit | In one month, pay the same name at least three times (any capital letters) | Insights shows "Keeps coming back" with the name, a badge such as "12×", how often ("almost every day", "about every week") and the usual amount, most often first | Auto: `repeats`, `Insights.repeats` |
+| REP-2 | A monthly bill | Pay the same name once a month for three of the last four months, including the month in view | It is listed after the habits as "Every month, usually ₹6,000"; a name seen in only two of the four months, or not in the month in view, is not | Auto: `repeats` |
+| REP-3 | The total | Look at the line under the list | "Together ₹X, N% of what you spent in October." using only what is listed | Auto: `Insights.repeats` |
+| REP-4 | What is left out | Blank names, other months, trashed entries, money received and transfers | None of them is counted; with nothing repeating the whole section is missing | Auto: `repeats`, `Insights.repeats` |
+| REP-5 | Following the month | Switch month | The list and its wording follow the month in view; a month that is over is judged on all of its days, the current one on the days so far | Auto: `repeats`, `Insights.repeats` |
 
 ## Swiping between months
 

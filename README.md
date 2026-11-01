@@ -9,7 +9,8 @@ Type what you spent or received in the bar at the bottom, as you would say it: `
 - Chat-bar logging with an offline parser, plus a full add form
 - Money sent and received, with an estimated balance that stays hidden until you reveal it
 - Home, Activity, Insights and Settings screens, in light and dark themes
-- Spending pace, daily, category and weekday charts
+- Spending pace (scroll through months and compare up to three), daily, category and weekday charts
+- What keeps coming back: the habits and monthly bills you pay again and again
 - Budget tracking and CSV / JSON export
 - Works offline once installed
 

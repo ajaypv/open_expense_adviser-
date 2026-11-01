@@ -25,8 +25,10 @@ import {
   topMerchants,
   type MonthKey,
 } from '../insights/aggregates'
+import { repeatingSpend, type RepeatingSpend } from '../insights/repeats'
 import { categoryBudgetStatus, categoryTrends, monthlyTotals, savingsFor, unusualExpenses } from '../insights/trends'
 import { Icon } from '../ui/Icon'
+import { MonthStrip } from '../ui/MonthStrip'
 import { MonthSwitcher } from '../ui/MonthSwitcher'
 import { ScreenSkeleton } from '../ui/ScreenSkeleton'
 
@@ -47,6 +49,13 @@ const firstWord = (key: MonthKey) => monthLabel(key).split(' ')[0]
 // 2026-10-26 is a Monday; index 0 = Monday.
 const weekdayName = (i: number) =>
   new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(new Date(2026, 9, 26 + i))
+
+/** "11 times, almost every day, usually ₹20": how often, and what it usually costs. */
+function repeatDetail(r: RepeatingSpend, money: (minor: number) => string): string {
+  const how = { daily: 'almost every day', weekly: 'about every week', monthly: 'every month', regular: null }[r.pattern]
+  const text = [r.count > 1 ? `${r.count} times` : null, how, `usually ${money(r.typicalMinor)}`].filter(Boolean).join(', ')
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
 
 function Section({ id, title, intro, children }: { id: string; title: string; intro?: string; children: React.ReactNode }) {
   return (
@@ -79,7 +88,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
   // not again when only something like Hide amounts redraws the screen.
   const {
     monthTxs, total, prevTxs, hasPrevious, cats, elapsed, cmp, projected, merchants, weekdays, peakDay, changes, biggest,
-    savings, budgetRows, unusual, trends, yearTotals, monthsWithData,
+    savings, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats,
   } = useMemo(() => {
     const prevKey = shiftMonth(month, -1)
     const monthTxs = inMonth(txs, month)
@@ -105,11 +114,38 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
     const yearTotals = monthlyTotals(txs, month, 12)
     const monthsWithData = yearTotals.filter((m) => m.totalMinor > 0).length
 
+    // The months before last month, for the pace chart's "last 3 months". They run back from last month's
+    // neighbour and stop at the first one with no spending, so the comparison never has a hole in it.
+    const olderMonths: { label: string; series: (number | null)[] }[] = []
+    for (let back = 2; back <= 3 && hasPrevious; back++) {
+      const key = shiftMonth(month, -back)
+      const rows = inMonth(txs, key)
+      if (rows.length === 0) break
+      olderMonths.push({ label: firstWord(key), series: cumulative(rows, key, null) })
+    }
+
+    const repeats = repeatingSpend(txs, month, today)
+
     return {
       monthTxs, total, prevTxs, hasPrevious, cats, elapsed, cmp, projected, merchants, weekdays, peakDay, changes, biggest,
-      savings, budgetRows, unusual, trends, yearTotals, monthsWithData,
+      savings, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats,
     }
   }, [txs, income, month, today, isCurrent, categoryBudgets])
+
+  // Every month from the first with spending up to this one, for the strip that scrolls along them. Looking back
+  // from a past month still leaves the later ones in the strip, so there is a way forward.
+  const stripMonths = useMemo(() => {
+    const totals = new Map<MonthKey, number>()
+    for (const t of txs) totals.set(t.date.slice(0, 7), (totals.get(t.date.slice(0, 7)) ?? 0) + t.amountMinor)
+    const first = [...totals.keys()].sort()[0]
+    if (first === undefined) return []
+    const last = month > currentMonth ? month : currentMonth
+    const out: { key: MonthKey; totalMinor: number }[] = []
+    for (let key = first < month ? first : month; key <= last && out.length < 60; key = shiftMonth(key, 1)) {
+      out.push({ key, totalMinor: totals.get(key) ?? 0 })
+    }
+    return out
+  }, [txs, month, currentMonth])
 
   let pace: string | null = null
   if (projected !== null) {
@@ -133,6 +169,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
   ]
 
   const latestMonth = [...activeMonths].sort().at(-1)
+  const repeatTotal = repeats.reduce((acc, r) => acc + r.totalMinor, 0)
 
   const moneyInOut =
     savings.receivedMinor > 0 ? (
@@ -227,9 +264,13 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
             <h2 id="pace-h" className="mb-3 text-lg font-semibold">
               Spending pace
             </h2>
+            <MonthStrip months={stripMonths} selected={month} currency={currency} onSelect={onMonth} />
+            {/* Keyed by the month, so each month's lines are drawn afresh and nothing chosen on one carries to the next. */}
             <PaceChart
+              key={month}
               current={cumulative(monthTxs, month, isCurrent ? elapsed : null)}
               previous={hasPrevious ? cumulative(prevTxs, prevKey, null) : []}
+              older={olderMonths}
               monthKey={month}
               currentLabel={name}
               previousLabel={prevName}
@@ -299,6 +340,28 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
                   detail: `${m.count} ${m.count === 1 ? 'time' : 'times'}`,
                 }))}
               />
+            </Section>
+          )}
+
+          {repeats.length > 0 && (
+            <Section id="repeats-h" title="Keeps coming back" intro={`What you paid for again and again in ${name}.`}>
+              <ul className="mt-3 divide-y divide-line rounded-3xl bg-surface px-4 shadow-[0_0_0_1px_var(--ring)]">
+                {repeats.map((r) => (
+                  <li key={r.name.toLowerCase()} className="flex items-center gap-3 py-3">
+                    <span aria-hidden="true" className="flex h-9 min-w-11 shrink-0 items-center justify-center rounded-full bg-surface-2 px-2 text-sm font-semibold tabular-nums">
+                      {`${r.count}×`}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{r.name}</p>
+                      <p className="text-sm text-ink-2">{repeatDetail(r, money)}</p>
+                    </div>
+                    <span className="shrink-0 font-semibold tabular-nums">{money(r.totalMinor)}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-ink-2">
+                {`Together ${money(repeatTotal)}, ${Math.round((repeatTotal / total) * 100)}% of what you spent in ${name}.`}
+              </p>
             </Section>
           )}
 
