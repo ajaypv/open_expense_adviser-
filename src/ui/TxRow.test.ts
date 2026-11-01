@@ -35,7 +35,27 @@ describe('TxRow', () => {
     expect(html).toContain('text-good')
     expect(html).toContain('<svg') // the arrow replaces the initial
     expect(html).not.toContain('>E<')
-    expect(row(tx())).toContain('>S<') // a purchase keeps its initial
+  })
+
+  it('draws a purchase with the icon of its category instead of a letter', () => {
+    const html = row(tx())
+    expect(html).toContain('data-icon="utensils"')
+    expect(html).toContain('<svg')
+    expect(html).not.toContain('>S<')
+    const shopping: Category = { id: 4, name: 'Shopping', color: 'var(--s4)' }
+    expect(row(tx({ categoryId: 4 }), shopping)).toContain('data-icon="bag"')
+  })
+
+  it('falls back to the tag icon when the category is unknown or missing', () => {
+    expect(row(tx(), { id: 9, name: 'Pottery supplies', color: 'var(--s2)' })).toContain('data-icon="tag"')
+    // Passed straight in: the row() helper would fill in its default category for undefined.
+    const none = renderToStaticMarkup(createElement(TxRow, { tx: tx(), category: undefined, currency: 'INR', onClick: () => {} }))
+    expect(none).toContain('data-icon="tag"')
+  })
+
+  it('keeps the arrow for money received and the swap for a transfer', () => {
+    expect(row(tx({ kind: 'income', categoryId: 2 }), income)).toContain('data-icon="arrowDown"')
+    expect(row(tx({ kind: 'transfer' }))).toContain('data-icon="swap"')
   })
 
   it('shows the time only when asked and only when it is the time of the transaction itself', () => {

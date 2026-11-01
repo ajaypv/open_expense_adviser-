@@ -3,7 +3,8 @@ import type { LedgerTx } from '../data/buildLedger'
 import { useDisplay } from '../data/display'
 import { formatMoney, localDateString, parseLocalDate } from '../db/money'
 import type { Account, Category } from '../db/schema'
-import { Icon } from './Icon'
+import { categoryIcon } from './categoryIcon'
+import { Icon, type IconName } from './Icon'
 
 interface Props {
   tx: LedgerTx
@@ -50,6 +51,7 @@ export const TxRow = memo(function TxRow({ tx, category, currency, accountById, 
   const color = category?.color ?? 'var(--other)'
   // When the title is already the category (no merchant given), don't say it twice.
   const showCategory = !transfer && title !== categoryName
+  const glyph: IconName = transfer ? 'swap' : received ? 'arrowDown' : categoryIcon(category?.name)
   const time = showTime ? timeOf(tx) : null
 
   // What was actually paid, in the currency it was paid in; the converted figure goes beneath it.
@@ -78,13 +80,12 @@ export const TxRow = memo(function TxRow({ tx, category, currency, accountById, 
           <span className={`flex size-6 items-center justify-center rounded-full ${selected ? 'bg-btn text-btn-ink' : 'shadow-[inset_0_0_0_1.5px_var(--edge)] text-transparent'}`}>
             <Icon name="check" size={16} />
           </span>
-        ) : transfer ? (
-          <Icon name="swap" size={22} />
-        ) : received ? (
-          // Money received gets an arrow in, so it reads differently from a purchase at a glance.
-          <Icon name="arrowDown" size={22} />
         ) : (
-          title.charAt(0).toUpperCase()
+          // A purchase shows what it was for, drawn the same way as the category's pop-up icon.
+          // Money received gets an arrow in and a transfer a swap, so they read differently at a glance.
+          <span data-icon={glyph} className="flex">
+            <Icon name={glyph} size={22} />
+          </span>
         )}
       </span>
       <span className="min-w-0 flex-1">
