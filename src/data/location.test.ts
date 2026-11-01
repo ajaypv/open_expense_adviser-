@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const position = (lat: number, lon: number, accuracy: number) => ({ coords: { latitude: lat, longitude: lon, accuracy } })
 
-function stubGeolocation(impl: (ok: (p: unknown) => void, fail: (e: unknown) => void) => void) {
+function stubGeolocation(impl: (ok: (p: unknown) => void, fail: (e: unknown) => void, options?: unknown) => void) {
   vi.stubGlobal('navigator', { geolocation: { getCurrentPosition: impl } })
 }
 
@@ -81,6 +81,43 @@ describe('location recording', () => {
     expect(await clearAllLocations()).toBe(1)
     expect((await db.transactions.get(b))!.location).toBeUndefined()
     expect((await db.transactions.get(c))!.merchant).toBe('C')
+  })
+
+  it('asks the device for a fresh fix, never one it already had, when an entry is saved', async () => {
+    const seen: Record<string, unknown>[] = []
+    stubGeolocation((ok, _fail, options) => {
+      seen.push(options as Record<string, unknown>)
+      ok(position(12.9716, 77.5946, 10))
+    })
+    const { addTransaction, attachLocation, setRecordLocation } = await load()
+    await setRecordLocation(true)
+    await attachLocation(await addTransaction(tx('Cafe')))
+    expect(seen).toHaveLength(1)
+    expect(seen[0].maximumAge).toBe(0)
+  })
+
+  it('asks for a fresh fix by default, and only takes an older one when told how old is fine', async () => {
+    const seen: Record<string, unknown>[] = []
+    stubGeolocation((ok, _fail, options) => {
+      seen.push(options as Record<string, unknown>)
+      ok(position(1, 2, 3))
+    })
+    const { getPlace } = await load()
+    await getPlace()
+    await getPlace(5000, 60_000)
+    expect(seen.map((o) => o.maximumAge)).toEqual([0, 60_000])
+    expect(seen[1].timeout).toBe(5000)
+  })
+
+  it('gives a fresh fix a little longer to arrive than a cached one would need', async () => {
+    const seen: Record<string, unknown>[] = []
+    stubGeolocation((ok, _fail, options) => {
+      seen.push(options as Record<string, unknown>)
+      ok(position(1, 2, 3))
+    })
+    const { getPlace } = await load()
+    await getPlace()
+    expect(seen[0].timeout).toBe(10_000)
   })
 
   it('says unsupported when the browser has no geolocation', async () => {

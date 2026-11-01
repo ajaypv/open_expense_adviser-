@@ -3,35 +3,29 @@ import type { Here } from '../insights/suggestions'
 import { getPlace, isRecordingLocation, permissionState } from './location'
 
 /**
- * Where the user is right now, only if they have turned location on and the browser already
- * allows it. It never triggers a permission prompt of its own, and it never keeps a history:
- * the position is held in memory just to rank suggestions. Re-checked whenever the app comes
- * back to the front, or `refreshKey` changes (for example when the add form opens).
+ * Where the user is right now, to rank suggestions, but only while they are entering something: it looks when
+ * the add form opens (`active` turns true) and at no other time. Not when the app starts, not when it comes back
+ * to the front, not when the form shuts. It asks the device for where it is now, never for an older fix; it never
+ * triggers a permission prompt of its own, and it only runs if the user turned location on and the browser
+ * already allows it. The position is held in memory while the form is open and dropped when it shuts, so there
+ * is no history and a stale position is never shown the next time.
  */
-export function useNearby(refreshKey: unknown): Here | null {
+export function useNearby(active: boolean): Here | null {
   const [here, setHere] = useState<Here | null>(null)
-  const [visible, setVisible] = useState(0)
 
   useEffect(() => {
-    const onVisible = () => document.visibilityState === 'visible' && setVisible((v) => v + 1)
-    document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [])
-
-  useEffect(() => {
+    if (!active) return
     let cancelled = false
     void (async () => {
-      if (!(await isRecordingLocation()) || (await permissionState()) !== 'granted') {
-        if (!cancelled) setHere(null)
-        return
-      }
-      const result = await getPlace(6000) // a cached fix up to five minutes old is fine
-      if (!cancelled) setHere(result.ok ? { lat: result.place.lat, lon: result.place.lon } : null)
+      if (!(await isRecordingLocation()) || (await permissionState()) !== 'granted') return
+      const result = await getPlace(6000)
+      if (!cancelled && result.ok) setHere({ lat: result.place.lat, lon: result.place.lon })
     })()
     return () => {
       cancelled = true
+      setHere(null)
     }
-  }, [refreshKey, visible])
+  }, [active])
 
   return here
 }

@@ -64,7 +64,7 @@ export function LocationSection({ ledger }: { ledger: Ledger }) {
         <p id="location-note" className="mt-2 text-sm text-ink-2">
           {locating
             ? 'Asking for your location…'
-            : 'Off by default. When on, new transactions get your approximate position, rounded to about 10 metres. It stays on this device and is never sent anywhere. It also lets suggestions favour places you are near.'}
+            : 'Off by default. When on, new transactions get your approximate position, rounded to about 10 metres. It stays on this device and is never sent anywhere. Your position is read only at the moment you add a transaction or open the add form, never in the background, and it is always a fresh reading. It also lets suggestions favour places you are near.'}
         </p>
         {error && (
           <p role="alert" className="mt-2 text-sm text-critical">

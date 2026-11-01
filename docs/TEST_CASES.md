@@ -304,6 +304,9 @@ I checked that the tests can fail by planting ten bugs one at a time. All ten we
 | LOC-3 | Saved with entries | Add an entry | Edit it: "Added at this location" with View map and Remove | Auto: `location.test`. Also on device |
 | LOC-4 | Remove all | Tap Remove location from n transactions | After confirming, places are removed | Auto: `settings.flow` |
 | LOC-5 | Never slows saving | Add an entry with a slow GPS | The entry saves at once; the place is added when it arrives | Auto: `location.test` |
+| LOC-6 | A fresh position | Move to a new place and add an entry (chat bar or the form) | The saved place is where you are now, never a position the phone worked out minutes ago | Auto: `location.test`. Check on device |
+| LOC-7 | Only while entering | Open the app, switch to another app and back, open and close the add form | The position is read when an entry is saved and when the add form opens, and at no other time: not at launch, not on returning to the app, not when the form shuts | Auto: `useNearby.flow`. Check on device |
+| LOC-8 | Nothing kept | Open the add form, close it, open it again | Nearby suggestions never use the last position: it is dropped when the form shuts and read again when it opens | Auto: `useNearby.flow` |
 
 ### 11.8 Updates
 

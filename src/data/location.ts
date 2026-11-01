@@ -8,10 +8,13 @@ export type PlaceResult = { ok: true; place: Place } | { ok: false; reason: 'den
 const round = (n: number) => Math.round(n * 1e4) / 1e4
 
 /**
- * One position fix. Never throws. Calling it from a tap is what makes the browser show its
- * permission prompt; a cached fix up to five minutes old is fine for "where was this added".
+ * One position fix. Never throws. Calling it from a tap is what makes the browser show its permission prompt.
+ * By default the device is asked for where it is now, not for a position it worked out earlier: a place is only
+ * worth recording if it is where the entry was made. A fresh fix can take a few seconds, hence the longer wait;
+ * nothing waits on it, because a transaction is saved first and the place added when it arrives. Pass
+ * `maxAgeMs` only for a use that does not mind an older fix.
  */
-export function getPlace(timeoutMs = 8000): Promise<PlaceResult> {
+export function getPlace(timeoutMs = 10_000, maxAgeMs = 0): Promise<PlaceResult> {
   if (!('geolocation' in navigator)) return Promise.resolve({ ok: false, reason: 'unsupported' })
   return new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
@@ -21,7 +24,7 @@ export function getPlace(timeoutMs = 8000): Promise<PlaceResult> {
           place: { lat: round(p.coords.latitude), lon: round(p.coords.longitude), accuracyM: Math.round(p.coords.accuracy) },
         }),
       (e) => resolve({ ok: false, reason: e.code === e.PERMISSION_DENIED ? 'denied' : e.code === e.TIMEOUT ? 'timeout' : 'unavailable' }),
-      { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: 5 * 60_000 },
+      { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: maxAgeMs },
     )
   })
 }
@@ -45,8 +48,9 @@ export async function setRecordLocation(on: boolean): Promise<void> {
 }
 
 /**
- * Called right after a transaction is saved. The save never waits for the position fix: if the
- * fix arrives, it is added to the row (and quietly dropped if the row was undone meanwhile).
+ * Called right after a transaction is saved, and only then: this and the add form opening are the only times
+ * the app looks for the device's position. It asks for a fresh fix. The save never waits for it: if the fix
+ * arrives, it is added to the row (and quietly dropped if the row was undone meanwhile).
  */
 export async function attachLocation(id: number): Promise<void> {
   if (!(await isRecordingLocation())) return
