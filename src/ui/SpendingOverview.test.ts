@@ -67,11 +67,11 @@ describe('SpendingOverview: the two facts under it', () => {
 })
 
 describe('SpendingOverview: the budget', () => {
-  it('explains what setting one does, rather than just inviting it', () => {
+  it('leaves the invitation to set one out of the overview: it is a separate block lower down the page', () => {
     const t = text(render())
-    expect(t).toContain('Your budget')
-    expect(t).toContain('Set a monthly budget to see how much you have left.')
-    expect(render()).toContain('>Set budget<')
+    expect(t).not.toContain('Your budget')
+    expect(t).not.toContain('Set a monthly budget')
+    expect(render()).not.toContain('>Set budget<')
   })
 
   it('shows progress once there is one, and no invitation', () => {
@@ -87,7 +87,17 @@ describe('SpendingOverview: today, yesterday and the week, kept small', () => {
     const html = render()
     expect(html).toContain('aria-label="Recent spending"')
     for (const label of ['Today', 'Yesterday', 'Last 7 days']) expect(html).toContain(`>${label}<`)
-    expect(html.indexOf('aria-label="Recent spending"')).toBeGreaterThan(html.indexOf('Your budget'))
+    expect(html).toContain('aria-label="Recent spending"')
+  })
+
+  it('keeps the budget progress up under the headline once there is one, since that answers "am I okay?"', () => {
+    const html = render({ budgetMinor: 3_000_000 })
+    expect(html.indexOf('role="meter"')).toBeLessThan(html.indexOf('aria-label="Recent spending"'))
+    expect(html.indexOf('role="meter"')).toBeGreaterThan(html.indexOf('Daily average'))
+  })
+
+  it('has no day tiles for a month that is over', () => {
+    expect(render({ isCurrent: false, periods: [] })).not.toContain('aria-label="Recent spending"')
   })
 
   it('opens the transactions behind a figure, and leaves a day with nothing spent as plain text', () => {

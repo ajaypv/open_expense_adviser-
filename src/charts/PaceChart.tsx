@@ -34,9 +34,10 @@ export function PaceChart({ current, previous: previousMonth, monthKey, currentL
   const plot = useRef<HTMLDivElement>(null)
   const [selected, setSelected] = useState<number | null>(null)
   const n = current.length
-  // Both lines share one x scale, so a longer previous month (31 days against 30) stops where this month does
-  // instead of running off the end of the chart.
-  const previous = previousMonth.slice(0, n)
+  const previous = previousMonth
+  // Both lines share one x scale, wide enough for the longer month. Cutting last month short to fit (31 days against
+  // 30) would drop its last day, and with it any spending on that day.
+  const span = Math.max(n, previous.length)
   const day = selected ?? lastDay - 1
   // With no previous month (first month of use) the chart shows only the month in view.
   const hasPrevious = previous.length > 0
@@ -49,7 +50,7 @@ export function PaceChart({ current, previous: previousMonth, monthKey, currentL
   const showBudget = budgetMinor !== null && budgetMinor <= dataMax * 1.5
   const yMax = niceCeil(Math.max(dataMax, showBudget ? budgetMinor : 0))
 
-  const x = (i: number) => (n === 1 ? 0 : (i / (n - 1)) * 100)
+  const x = (i: number) => (span === 1 ? 0 : (i / (span - 1)) * 100)
   const y = (v: number) => 100 - (v / yMax) * 100
   const path = (series: (number | null)[]) =>
     series
@@ -62,7 +63,7 @@ export function PaceChart({ current, previous: previousMonth, monthKey, currentL
 
   function indexAt(e: PointerEvent) {
     const box = plot.current!.getBoundingClientRect()
-    const i = Math.round(((e.clientX - box.left) / box.width) * (n - 1))
+    const i = Math.round(((e.clientX - box.left) / box.width) * (span - 1))
     return Math.min(lastDay - 1, Math.max(0, i))
   }
 
@@ -79,15 +80,31 @@ export function PaceChart({ current, previous: previousMonth, monthKey, currentL
     setSelected((s) => Math.min(lastDay - 1, Math.max(0, move(s ?? lastDay - 1))))
   }
 
+  // At rest the question is "where am I against last month?", so this month so far sits beside the whole of last
+  // month. Comparing only the first day or two of each (last month's first days may well have been nothing) says
+  // nothing useful. Pointing at a day switches to the fair comparison: the same days of both months.
+  const whole = selected === null
+  const previousTotal = at(previous, previous.length - 1)
   const diff = currentNow - previousNow
-  const comparison =
+  const sameDay =
     diff === 0
       ? `Level with ${previousLabel}`
       : `${formatMoney(Math.abs(diff), currency)} ${diff > 0 ? 'more' : 'less'} than ${previousLabel}`
+  const againstWhole =
+    previousTotal === 0
+      ? `${previousLabel} had no spending.`
+      : currentNow === previousTotal
+        ? `Level with what ${previousLabel} came to in all`
+        : currentNow > previousTotal
+          ? `${formatMoney(currentNow - previousTotal, currency)} more than ${previousLabel} came to in all`
+          : `${Math.round((currentNow / previousTotal) * 100)}% of what ${previousLabel} came to in all`
+  const comparison = whole ? againstWhole : sameDay
 
   const lines = [
-    { key: 'current', label: currentLabel, value: currentNow, color: 'var(--s1)' },
-    ...(hasPrevious ? [{ key: 'previous', label: previousLabel, value: previousNow, color: 'var(--other)' }] : []),
+    { key: 'current', label: whole && hasPrevious ? `${currentLabel} (so far)` : currentLabel, value: currentNow, color: 'var(--s1)' },
+    ...(hasPrevious
+      ? [{ key: 'previous', label: whole ? `${previousLabel} (whole month)` : previousLabel, value: whole ? previousTotal : previousNow, color: 'var(--other)' }]
+      : []),
   ]
 
   return (
@@ -105,9 +122,13 @@ export function PaceChart({ current, previous: previousMonth, monthKey, currentL
         ))}
       </ul>
       {hasPrevious && (
-        <p aria-live="polite" className="mt-1.5 text-[0.9375rem] text-ink-2">
-          {comparison}
-        </p>
+        <>
+          <p aria-live="polite" className="mt-1.5 text-[0.9375rem] text-ink-2">
+            {comparison}
+          </p>
+          {/* Beside a chosen day the figure for last month is for that day, which can be nothing yet: this says what it came to. */}
+          {!whole && <p className="text-[0.9375rem] text-ink-2">{`${previousLabel} came to ${formatMoney(previousTotal, currency)} in all.`}</p>}
+        </>
       )}
 
       {/* mt-6 leaves room for the top axis label; the container includes the x-axis band below. */}
@@ -176,8 +197,8 @@ export function PaceChart({ current, previous: previousMonth, monthKey, currentL
         </div>
         <div className="mt-1.5 flex justify-between text-sm text-ink-2" aria-hidden="true">
           <span>1</span>
-          <span>{Math.ceil(n / 2)}</span>
-          <span>{n}</span>
+          <span>{Math.ceil(span / 2)}</span>
+          <span>{span}</span>
         </div>
       </div>
 
@@ -243,7 +264,7 @@ export function PaceTable({ current, previous, lastDay, monthKey, currentLabel, 
             <th scope="col" className="pb-2 pr-2 font-normal">Day</th>
             <th scope="col" className="pb-2 pr-2 text-right font-normal">That day</th>
             <th scope="col" className="pb-2 pr-2 text-right font-normal">{currentLabel} total</th>
-            {hasPrevious && <th scope="col" className="pb-2 text-right font-normal">{previousLabel} total</th>}
+            {hasPrevious && <th scope="col" className="pb-2 text-right font-normal">{`${previousLabel} by then`}</th>}
           </tr>
         </thead>
         <tbody>
@@ -270,6 +291,16 @@ export function PaceTable({ current, previous, lastDay, monthKey, currentLabel, 
             </tr>
           ))}
         </tbody>
+        {hasPrevious && (
+          <tfoot>
+            <tr className="border-t border-line">
+              <th scope="row" colSpan={3} className="pr-2 pt-3 text-left text-sm font-medium text-ink-2">
+                {`${previousLabel}, whole month`}
+              </th>
+              <td className="pt-3 text-right font-semibold tabular-nums">{formatMoney(previous[previous.length - 1] ?? 0, currency)}</td>
+            </tr>
+          </tfoot>
+        )}
       </table>
       {rows.length > FIRST_ROWS && (
         <button

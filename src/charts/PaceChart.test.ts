@@ -36,14 +36,15 @@ describe('PaceTable', () => {
   it('shows 10 days first and offers the rest', () => {
     const html = table()
     expect(html).toContain('Show all 28 days')
-    expect((html.match(/<tr class="border-t/g) ?? []).length).toBe(10) // body rows; the header row is separate
+    const body = html.slice(html.indexOf('<tbody>'), html.indexOf('</tbody>'))
+    expect((body.match(/<tr /g) ?? []).length).toBe(10) // the days; the header and the last-month row are separate
   })
 
   it('drops the comparison columns when there is no previous month', () => {
     const html = table({ previous: [] })
     expect(html).not.toContain('September')
     expect(html).not.toMatch(/more|less/)
-    expect(html).toContain('October total')
+    expect(html).toContain('October total') // this month's own running total is still there
   })
 
   it('has no NaN or undefined anywhere', () => {
