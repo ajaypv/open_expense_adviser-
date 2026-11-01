@@ -394,6 +394,7 @@ See INS-4 to INS-8.
 | VIS-5 | Dark and light | View every screen in both | No white flashes, no unreadable text | Device |
 | VIS-6 | Rotate | Rotate the phone | Layout stays usable | Device |
 | VIS-7 | Speed | Scroll Activity with 1,000+ entries | Smooth; typing in search stays responsive | Device |
+| VIS-14 | Even card edges | In dark mode, open Activity and look at the edge of each day's card (top, sides, bottom, corners) | The same fine edge all the way round, with no brighter line along the top or corners only | Auto: `TxRow` (the edge is drawn inside the card, where the per-day clipping cannot cut it); look by eye |
 
 ---
 

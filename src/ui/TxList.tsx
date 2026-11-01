@@ -27,7 +27,10 @@ interface Props {
  */
 export const TxList = memo(function TxList({ rows, categoryById, accountById, currency, showDate, showTime, onEdit, selection, swipe }: Props) {
   return (
-    <ul className="overflow-hidden rounded-3xl bg-surface shadow-[0_0_0_1px_var(--ring)]">
+    // The edge ring is drawn inside the card, as an overlay, not as a shadow around it: Activity gives each day
+    // content-visibility:auto, which clips anything painted outside the day's box, and an outer ring showed only along
+    // the top and the corners. Inside, it is the same on every side, and a pressed row's highlight cannot cover it.
+    <ul className="relative overflow-hidden rounded-3xl bg-surface after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:shadow-[inset_0_0_0_1px_var(--ring)]">
       {rows.map((t) => {
         const row = (
           <TxRow

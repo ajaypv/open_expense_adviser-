@@ -87,6 +87,22 @@ describe('TxList', () => {
     expect((html.match(/<ul /g) ?? []).length).toBe(1)
     for (const name of ['Swiggy', 'Uber', 'Cafe']) expect(html).toContain(name)
   })
+
+  // Activity wraps each day in content-visibility:auto, which clips whatever is painted outside the section's box.
+  // A shadow ring around the card is outside it, so it was cut off along the sides and bottom and showed only at the
+  // top and the corners, as an uneven light edge. The ring is drawn inside the card instead, where nothing can clip it.
+  it('draws its edge ring inside the card, over the rows, so nothing around it can clip it', () => {
+    const html = renderToStaticMarkup(createElement(TxList, { rows: [tx()], categoryById: new Map([[1, food]]), currency: 'INR', onEdit: () => {} }))
+    const list = html.slice(html.indexOf('<ul'), html.indexOf('>', html.indexOf('<ul')))
+    expect(list).toContain('after:shadow-[inset_0_0_0_1px_var(--ring)]')
+    expect(list).toContain('after:absolute')
+    expect(list).toContain('after:inset-0')
+    expect(list).toContain('after:rounded-[inherit]')
+    expect(list).toContain('after:pointer-events-none')
+    expect(list).toContain('relative')
+    // No ring outside the card.
+    expect(list).not.toMatch(/(^|\s)shadow-\[0_0_0_1px_var\(--ring\)\]/)
+  })
 })
 
 describe('TxRow spoken label', () => {
