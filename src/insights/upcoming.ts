@@ -49,6 +49,21 @@ const addDays = (key: string, days: number) => {
 const validRate = (r: unknown): r is number => typeof r === 'number' && Number.isFinite(r) && r > 0
 
 /**
+ * What a rule's amount comes to in the main currency. With no usable exchange rate for its own currency it is
+ * counted at face value, and `unconverted` says so, so the figure can be flagged rather than trusted.
+ */
+export function amountInMain(
+  rule: Pick<Recurring, 'amountMinor' | 'currency'>,
+  money: { currency: string; rates: Record<string, number> },
+): { amountMinor: number; unconverted: boolean } {
+  const code = rule.currency || money.currency
+  const rate = money.rates[code]
+  const sameCurrency = code === money.currency
+  const unconverted = !sameCurrency && !validRate(rate)
+  return { amountMinor: sameCurrency || unconverted ? rule.amountMinor : Math.round(rule.amountMinor * rate), unconverted }
+}
+
+/**
  * Everything that will be paid or received in the next `horizonDays`, with how many days away each one is.
  * A weekly payment appears every week and a monthly one every month, on the day it was set for (a payment on
  * the 31st moves to the 30th or 28th only in the months that are shorter). Payments that are switched off are
@@ -66,11 +81,7 @@ export function upcomingPayments(
   for (const rule of rules) {
     if (!rule.active) continue
     const anchor = rule.anchorDay ?? parseLocalDate(rule.nextDue).getDate()
-    const code = rule.currency || money.currency
-    const rate = money.rates[code]
-    const sameCurrency = code === money.currency
-    const unconverted = !sameCurrency && !validRate(rate)
-    const amountMinor = sameCurrency || unconverted ? rule.amountMinor : Math.round(rule.amountMinor * rate)
+    const { amountMinor, unconverted } = amountInMain(rule, money)
 
     let date = rule.nextDue
     let lateShown = 0

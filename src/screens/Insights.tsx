@@ -26,9 +26,13 @@ import {
   type MonthKey,
 } from '../insights/aggregates'
 import { placesIn } from '../insights/places'
+import { regularPayments } from '../insights/regular'
+import { detectRecurring } from '../insights/recurring'
+import { describeWhen, forecast, TAG_LABELS, tagOf, upcomingPayments, type UpcomingPayment } from '../insights/upcoming'
 import { repeatingSpend, type RepeatingSpend } from '../insights/repeats'
 import { categoryBudgetStatus, categoryTrends, monthlyTotals, savingsFor, unusualExpenses } from '../insights/trends'
 import { Icon } from '../ui/Icon'
+import { paymentName, shortDay, shortfallPhrase, signedAmount } from '../ui/upcomingText'
 import { MonthStrip } from '../ui/MonthStrip'
 import { PlacesMap } from '../ui/PlacesMap'
 import { MonthSwitcher } from '../ui/MonthSwitcher'
@@ -44,6 +48,8 @@ interface Props {
   onOpenSettings: () => void
   /** Opens Activity on one category for this month. */
   onPickCategory?: (categoryId: number) => void
+  /** Opens the list of regular payments, to see them all or add one. */
+  onOpenUpcoming?: () => void
 }
 
 const firstWord = (key: MonthKey) => monthLabel(key).split(' ')[0]
@@ -72,10 +78,10 @@ function Section({ id, title, intro, children }: { id: string; title: string; in
 }
 
 /** What the logged expenses say, computed on the device. Each block answers one question. */
-export const Insights = memo(function Insights({ ledger, month, onMonth, today, onOpenSettings, onPickCategory }: Props) {
+export const Insights = memo(function Insights({ ledger, month, onMonth, today, onOpenSettings, onPickCategory, onOpenUpcoming }: Props) {
   useDisplay() // amounts are masked or regrouped by display settings, so redraw when they change
   // Insights describe spending, so they use money sent only; received money feeds the balance.
-  const { expenses: txs, income, categoryById, currency, budgetMinor, categoryBudgets } = ledger
+  const { expenses: txs, income, categoryById, currency, budgetMinor, categoryBudgets, recurring, rates, balanceSet, estimatedBalanceMinor } = ledger
   const currentMonth = localDateString(today).slice(0, 7)
   const isCurrent = month === currentMonth
   const money = (m: number) => formatMoney(m, currency)
@@ -91,6 +97,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
   const {
     monthTxs, total, prevTxs, hasPrevious, cats, elapsed, cmp, projected, merchants, weekdays, peakDay, changes, biggest,
     savings, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats, spots, hasAnyPlace,
+    regular, looksRegular, balanceCheck,
   } = useMemo(() => {
     const prevKey = shiftMonth(month, -1)
     const monthTxs = inMonth(txs, month)
@@ -133,11 +140,21 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
     const spots = placesIn(txs, month, categoryById)
     const hasAnyPlace = txs.some((t) => t.location !== undefined && t.deletedAt === undefined)
 
+    // Regular payments look ahead from today, so they are only worked out for the current month: what they come
+    // to, spending that looks regular but is not set up, and whether the estimated balance covers the next 30 days.
+    const todayKey = localDateString(today)
+    const moneyIn = { currency, rates }
+    const regular = isCurrent ? regularPayments(recurring, todayKey, moneyIn) : null
+    const looksRegular = isCurrent ? detectRecurring(txs, recurring, todayKey).filter((d) => d.kind === 'expense') : []
+    const balanceCheck =
+      regular && balanceSet ? forecast(estimatedBalanceMinor, upcomingPayments(recurring, todayKey, 30, moneyIn), todayKey) : null
+
     return {
       monthTxs, total, prevTxs, hasPrevious, cats, elapsed, cmp, projected, merchants, weekdays, peakDay, changes, biggest,
       savings, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats, spots, hasAnyPlace,
+      regular, looksRegular, balanceCheck,
     }
-  }, [txs, income, month, today, isCurrent, categoryBudgets, categoryById])
+  }, [txs, income, month, today, isCurrent, categoryBudgets, categoryById, recurring, rates, currency, balanceSet, estimatedBalanceMinor])
 
   // Every month from the first with spending up to this one, for the strip that scrolls along them. Looking back
   // from a past month still leaves the later ones in the strip, so there is a way forward.
@@ -213,6 +230,140 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
       </Section>
     ) : null
 
+  // What regular payments come to and when they fall due. Only for the current month, since it looks ahead from today.
+  const lookNames = (p: UpcomingPayment) => paymentName(p, categoryById.get(p.rule.categoryId)?.name)
+  const lateCount = regular?.overdue ?? 0
+  const regularSection = isCurrent ? (
+    <Section
+      id="regular-h"
+      title="Regular payments"
+      intro={regular ? 'What your set-up payments cost, and what is due next.' : 'Payments that repeat, such as rent, loan EMIs and subscriptions.'}
+    >
+      {regular && (
+        <>
+          <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-4 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]">
+            {[
+              { label: 'Every month', value: regular.monthlyMinor },
+              { label: 'A year', value: regular.yearlyMinor },
+              { label: `Still to pay in ${name}`, value: regular.leftThisMonth.outMinor },
+              { label: 'Next 30 days', value: regular.next30.outMinor },
+            ].map((s) => (
+              <div key={s.label} className="flex flex-col-reverse">
+                <dt className="text-sm text-ink-2">{s.label}</dt>
+                <dd className="text-xl font-semibold tabular-nums">{money(s.value)}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {regular.next && (
+            <p className="mt-3 text-lg">
+              {`Next: ${lookNames(regular.next)}, ${money(regular.next.amountMinor)} on ${shortDay(regular.next.date, today)}, ${describeWhen(regular.next.daysLeft).toLowerCase()}.`}
+            </p>
+          )}
+          {lateCount > 0 && (
+            <p className="mt-2 flex items-start gap-2 font-medium text-critical">
+              <span aria-hidden="true" className="mt-0.5 shrink-0">
+                <Icon name="warn" size={18} />
+              </span>
+              {`${lateCount} payment${lateCount === 1 ? ' is' : 's are'} late and ${lateCount === 1 ? 'has' : 'have'} not been added.`}
+            </p>
+          )}
+          {regular.incomeMonthlyMinor > 0 && (
+            <p className="mt-2 text-ink-2">
+              {`Regular payments take ${Math.round((regular.monthlyMinor / regular.incomeMonthlyMinor) * 100)}% of the ${money(regular.incomeMonthlyMinor)} you expect each month.`}
+            </p>
+          )}
+          {balanceCheck &&
+            (shortfallPhrase(balanceCheck, currency, today) ? (
+              <p className="mt-2 font-medium text-critical">
+                {`Your estimated balance would be ${shortfallPhrase(balanceCheck, currency, today)} over the next 30 days.`}
+              </p>
+            ) : (
+              <p className="mt-2 text-ink-2">
+                {`Your estimated balance covers all of it, with about ${money(balanceCheck.endMinor)} left after 30 days.`}
+              </p>
+            ))}
+          {regular.unconverted.length > 0 && (
+            <p className="mt-2 text-sm text-ink-2">
+              {`Amounts in ${regular.unconverted.join(', ')} have no exchange rate, so they are counted at face value.`}
+            </p>
+          )}
+
+          {regular.byType.length >= 2 && (
+            <>
+              <p className="mt-5 font-medium">A month, by kind of payment</p>
+              <BarList
+                currency={currency}
+                rows={regular.byType.map((t) => ({
+                  key: t.tag,
+                  label: t.label,
+                  color: 'var(--s1)',
+                  valueMinor: t.monthlyMinor,
+                  detail: `${t.count} ${t.count === 1 ? 'payment' : 'payments'}`,
+                }))}
+              />
+            </>
+          )}
+
+          <p className="mt-5 font-medium">Due next</p>
+          <ul aria-label="Due next" className="mt-1 divide-y divide-line rounded-3xl bg-surface px-4 shadow-[0_0_0_1px_var(--ring)]">
+            {regular.upcoming.map((p) => (
+              <li key={p.key} className="flex items-center justify-between gap-3 py-3">
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{lookNames(p)}</span>
+                  <span className="block text-sm text-ink-2">{`${TAG_LABELS[tagOf(p.rule)]}, ${shortDay(p.date, today)}`}</span>
+                </span>
+                <span className="shrink-0 text-right">
+                  <span className={`block font-semibold tabular-nums ${p.kind === 'income' ? 'text-good' : ''}`}>{signedAmount(p, currency)}</span>
+                  <span className={`block text-sm ${p.overdue ? 'font-medium text-critical' : 'text-ink-2'}`}>{describeWhen(p.daysLeft)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {looksRegular.length > 0 && (
+        <>
+          <p className="mt-5 font-medium">Looks regular, not set up yet</p>
+          <ul className="mt-1 divide-y divide-line rounded-3xl bg-surface px-4 shadow-[0_0_0_1px_var(--ring)]">
+            {looksRegular.slice(0, 3).map((d) => (
+              <li key={d.key} className="flex items-center justify-between gap-3 py-3">
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{d.merchant}</span>
+                  <span className="block text-sm text-ink-2">{`Every month for ${d.count} months, next about ${shortDay(d.nextDue, today)}`}</span>
+                </span>
+                <span className="shrink-0 font-semibold tabular-nums">{money(d.amountMinor)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-ink-2">
+            {`If these carry on, that is about ${money(looksRegular.reduce((s, d) => s + d.amountMinor, 0))} more a month. Set them up to see when each falls due.`}
+          </p>
+        </>
+      )}
+
+      {!regular && looksRegular.length === 0 && (
+        <div className="mt-3 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]">
+          <p>
+            Add the payments that repeat, such as rent, loan EMIs, UPI AutoPay and subscriptions, and this shows what they cost a month and what is due
+            next.
+          </p>
+        </div>
+      )}
+
+      {onOpenUpcoming && (
+        <button
+          type="button"
+          onClick={onOpenUpcoming}
+          className={`mt-4 min-h-12 w-full rounded-full px-5 font-semibold ${regular ? 'bg-surface-2' : 'bg-btn text-btn-ink'}`}
+        >
+          {regular ? 'See all regular payments' : 'Add regular payments'}
+        </button>
+      )}
+    </Section>
+  ) : null
+
   if (ledger.loading) return <ScreenSkeleton label="Insights" />
 
   return (
@@ -251,6 +402,8 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
               </button>
             </div>
           )}
+          {regularSection}
+
           {moneyInOut}
         </>
       ) : (
@@ -332,6 +485,8 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
               </ul>
             </Section>
           )}
+
+          {regularSection}
 
           {moneyInOut}
 

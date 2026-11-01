@@ -574,3 +574,39 @@ describe('The redesigned Home', () => {
     expect(recent.compareDocumentPosition(where) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 });
+
+describe('Regular payments in Insights', () => {
+  const rule = (over: Record<string, unknown> = {}) => {
+    const due = new Date()
+    due.setDate(due.getDate() + 3)
+    return db.recurring.add({
+      kind: 'expense', amountMinor: 600_000, currency: 'INR', categoryId: 1, merchant: 'Rent', note: '', paymentMethod: '',
+      frequency: 'monthly', nextDue: localDateString(due), active: true, tag: 'bill', ...over,
+    } as never)
+  }
+
+  it('shows what regular payments cost, and leads to the full list', async () => {
+    await tx()
+    await rule()
+    const user = await open()
+    await user.click(nav('Insights'))
+
+    const section = await screen.findByRole('region', { name: 'Regular payments' })
+    expect(section).toHaveTextContent('Every month₹6,000')
+    expect(section).toHaveTextContent('A year₹72,000')
+    expect(within(section).getByText(/Next: Rent, ₹6,000/)).toBeInTheDocument()
+
+    await user.click(within(section).getByRole('button', { name: 'See all regular payments' }))
+    const upcoming = await screen.findByRole('dialog', { name: 'Upcoming payments' })
+    expect(within(upcoming).getByRole('button', { name: /^Edit Rent/ })).toBeInTheDocument()
+  })
+
+  it('invites you to add some when none is set up', async () => {
+    await tx()
+    const user = await open()
+    await user.click(nav('Insights'))
+    const section = await screen.findByRole('region', { name: 'Regular payments' })
+    await user.click(within(section).getByRole('button', { name: 'Add regular payments' }))
+    expect(await screen.findByRole('dialog', { name: 'Upcoming payments' })).toBeInTheDocument()
+  })
+})

@@ -558,6 +558,21 @@ What the Insights screen says you keep paying for.
 | REP-4 | What is left out | Blank names, other months, trashed entries, money received and transfers | None of them is counted; with nothing repeating the whole section is missing | Auto: `repeats`, `Insights.repeats` |
 | REP-5 | Following the month | Switch month | The list and its wording follow the month in view; a month that is over is judged on all of its days, the current one on the days so far | Auto: `repeats`, `Insights.repeats` |
 
+## Regular payments in Insights
+
+What regular payments cost and when they fall due, on the Insights screen (current month only).
+
+| ID | Case | Do | Expect | Covered by |
+|---|---|---|---|---|
+| REG-1 | The totals | Set up a few regular payments (monthly and weekly) and open Insights | "Regular payments" shows what they cost every month (a weekly one counts 52 weeks over 12 months) and in a year, what is still to pay this month, and the next 30 days | Auto: `regular`, `Insights.regular.flow`, `app.flow` |
+| REG-2 | What is next | Look under the totals | "Next: Rent, ₹6,000 on …, in 3 days."; a list of the next five (money coming in marked with +); a bar list by kind of payment (Loan EMI, Bill…) when there are two or more kinds | Auto: `regular`, `Insights.regular.flow` |
+| REG-3 | Share of income | Also set up a regular salary | "Regular payments take 24% of the ₹80,000 you expect each month." | Auto: `Insights.regular.flow` |
+| REG-4 | Late and short | Leave a payment unadded past its date; set a low balance | "1 payment is late and has not been added."; with a balance set, either "covers all of it, with about ₹X left" or "would be short by ₹X from …"; nothing about the balance when none is set | Auto: `regular`, `Insights.regular.flow` |
+| REG-5 | Not set up yet | Pay the same name for three months running without setting it up | "Looks regular, not set up yet" lists it with the amount and when it is next due, and what it would add a month; names already set up are not suggested | Auto: `Insights.regular.flow` |
+| REG-6 | Nothing set up | Open Insights with none | An invitation and an Add regular payments button that opens the Upcoming list | Auto: `Insights.regular.flow`, `app.flow` |
+| REG-7 | Looks ahead only | Look at an earlier month | The section is not there; it also shows before anything has been spent this month | Auto: `Insights.regular.flow` |
+| REG-8 | Other currencies | Set up a payment in a currency with no exchange rate | It is counted at face value, and the section says which currency | Auto: `regular`, `Insights.regular.flow` |
+
 ## Where you spent
 
 The map at the bottom of Insights.

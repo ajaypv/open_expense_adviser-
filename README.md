@@ -11,6 +11,7 @@ Type what you spent or received in the bar at the bottom, as you would say it: `
 - Home, Activity, Insights and Settings screens, in light and dark themes
 - Spending pace (scroll through months and compare up to three), daily, category and weekday charts
 - A map of where each month's spending happened (OpenStreetMap, opt-in, only when you ask for it)
+- Regular payments in Insights: what they cost a month and a year, what is left to pay this month, the next 30 days, what is due next, and spending that looks regular but is not set up yet
 - What keeps coming back: the habits and monthly bills you pay again and again
 - Budget tracking and CSV / JSON export
 - Works offline once installed

@@ -396,7 +396,7 @@ function Shell() {
         )}
         {tab === 'insights' && (
           <Suspense fallback={<ScreenSkeleton label="Insights" />}>
-            <Insights ledger={ledger} month={month} onMonth={setMonth} today={today} onOpenSettings={openSettings} onPickCategory={pickCategory} />
+            <Insights ledger={ledger} month={month} onMonth={setMonth} today={today} onOpenSettings={openSettings} onPickCategory={pickCategory} onOpenUpcoming={openUpcoming} />
           </Suspense>
         )}
         {tab === 'settings' && (
