@@ -59,13 +59,14 @@ const PAYMENT: Record<string, ParsedExpense['paymentMethod']> = {
 
 /** First matching rule wins; keep specific merchants before generic words. */
 const CATEGORY_KEYWORDS: [DefaultCategoryName, string[]][] = [
-  ['Rent & Housing', ['rent', 'maintenance', 'mortgage', 'housing']],
-  ['Groceries', ['grocery', 'groceries', 'bigbasket', 'blinkit', 'zepto', 'instamart', 'supermarket', 'vegetables', 'fruits', 'milk', 'walmart', 'costco']],
-  ['Food & Dining', ['swiggy', 'zomato', 'restaurant', 'lunch', 'dinner', 'breakfast', 'coffee', 'cafe', 'starbucks', 'pizza', 'burger', 'snacks', 'food', 'mcdonalds', 'tea', 'biryani']],
-  ['Transport', ['uber', 'ola', 'rapido', 'fuel', 'petrol', 'diesel', 'metro', 'bus', 'cab', 'taxi', 'auto', 'parking', 'toll', 'train', 'station', 'pump']],
-  ['Bills & Utilities', ['electricity', 'water', 'wifi', 'internet', 'broadband', 'recharge', 'bill', 'jio', 'airtel', 'gas', 'insurance', 'phone']],
-  ['Health', ['pharmacy', 'doctor', 'medicine', 'medicines', 'hospital', 'clinic', 'gym', 'dentist', 'lab']],
-  ['Entertainment & Travel', ['netflix', 'spotify', 'prime', 'hotstar', 'movie', 'movies', 'cinema', 'concert', 'flight', 'hotel', 'trip', 'airbnb', 'game', 'games']],
+  ['Rent & Housing', ['rent', 'maintenance', 'mortgage', 'housing', 'pg']],
+  // "chicken" and "fruit" are left out on purpose: "chicken biryani" and "fruit bowl for lunch" are meals.
+  ['Groceries', ['grocery', 'groceries', 'bigbasket', 'blinkit', 'zepto', 'instamart', 'supermarket', 'vegetables', 'vegetable', 'fruits', 'milk', 'walmart', 'costco', 'kirana', 'hopcoms', 'nandini', 'dmart', 'eggs']],
+  ['Food & Dining', ['swiggy', 'zomato', 'restaurant', 'lunch', 'dinner', 'breakfast', 'coffee', 'cafe', 'starbucks', 'pizza', 'burger', 'snacks', 'snack', 'food', 'mcdonalds', 'tea', 'biryani', 'darshini', 'idli', 'dosa', 'vada', 'udupi', 'mtr', 'chai', 'kaapi', 'tiffin', 'meals', 'thali', 'chaat', 'juice', 'sugarcane', 'coconut', 'bakery', 'mess', 'canteen']],
+  ['Transport', ['uber', 'ola', 'rapido', 'fuel', 'petrol', 'diesel', 'metro', 'bus', 'cab', 'taxi', 'auto', 'parking', 'toll', 'train', 'station', 'pump', 'ksrtc', 'bmtc', 'bmrcl', 'vajra', 'airavat', 'yatri', 'redbus', 'irctc', 'rickshaw', 'fastag', 'blusmart']],
+  ['Bills & Utilities', ['electricity', 'water', 'wifi', 'internet', 'broadband', 'recharge', 'bill', 'jio', 'airtel', 'gas', 'insurance', 'phone', 'bescom', 'bwssb', 'fibernet', 'bsnl', 'vodafone', 'dth', 'cylinder']],
+  ['Health', ['pharmacy', 'doctor', 'medicine', 'medicines', 'hospital', 'clinic', 'gym', 'dentist', 'lab', 'apollo', 'manipal', 'medplus', 'netmeds', 'pharmeasy']],
+  ['Entertainment & Travel', ['netflix', 'spotify', 'prime', 'hotstar', 'movie', 'movies', 'cinema', 'concert', 'flight', 'hotel', 'trip', 'airbnb', 'game', 'games', 'pvr', 'inox', 'bookmyshow']],
   ['Shopping', ['amazon', 'flipkart', 'myntra', 'clothes', 'shoes', 'shopping', 'mall', 'electronics']],
 ]
 

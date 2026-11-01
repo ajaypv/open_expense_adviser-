@@ -174,6 +174,47 @@ describe('categories', () => {
   })
 })
 
+describe('Karnataka words', () => {
+  it.each([
+    ['KSRTC bus fare from Bagepalli to Bangalore 137', 'Transport'],
+    ['BMTC 20', 'Transport'],
+    ['bmtc vajra 280', 'Transport'],
+    ['airavat 450', 'Transport'],
+    ['bmrcl metro card recharge 200', 'Transport'],
+    ['namma yatri 90', 'Transport'],
+    ['redbus 850', 'Transport'],
+    ['irctc 1200', 'Transport'],
+    ['fastag 500', 'Transport'],
+    ['masala dosa 60', 'Food & Dining'],
+    ['darshini 80', 'Food & Dining'],
+    ['idli vada 50', 'Food & Dining'],
+    ['kaapi 15', 'Food & Dining'],
+    ['mtr tiffin 120', 'Food & Dining'],
+    ['sugarcane juice 20', 'Food & Dining'],
+    ['kirana 340', 'Groceries'],
+    ['hopcoms 210', 'Groceries'],
+    ['nandini 28', 'Groceries'],
+    ['dmart 1800', 'Groceries'],
+    ['bescom 1450', 'Bills & Utilities'],
+    ['bwssb 300', 'Bills & Utilities'],
+    ['act fibernet 1100', 'Bills & Utilities'],
+    ['manipal hospital 900', 'Health'],
+    ['pvr 600', 'Entertainment & Travel'],
+    ['bookmyshow 500', 'Entertainment & Travel'],
+  ])('files "%s" under %s', (text, category) => {
+    expect(parse(text)?.categoryName).toBe(category)
+  })
+
+  it('keeps the merchant as it was typed, in title case', () => {
+    expect(parse('KSRTC bus fare 137')?.merchant).toBe('Ksrtc Bus Fare')
+  })
+
+  it('does not take a dish with chicken or fruit in it for groceries', () => {
+    expect(parse('chicken biryani 220')?.categoryName).toBe('Food & Dining')
+    expect(parse('fruit bowl for lunch 50')?.categoryName).toBe('Food & Dining')
+  })
+})
+
 describe('describeDay', () => {
   it('says nothing for today, so the usual message stays short', () => {
     expect(describeDay('2026-10-30', today)).toBe('')
