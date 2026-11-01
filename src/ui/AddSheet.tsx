@@ -10,10 +10,12 @@ import {
   addTransaction,
   deleteTransaction,
   duplicateTransaction,
+  recategorizeTransactions,
   restoreTransaction,
   updateTransaction,
 } from '../db/repo'
 import { db, type Account, type Category, type Place, type Transaction } from '../db/schema'
+import { earlierEntriesToMove } from '../ingest/recategorize'
 import { defaultAccountId } from '../insights/accounts'
 import { nextDueAfter } from '../insights/recurring'
 import type { Suggestion } from '../insights/suggestions'
@@ -272,7 +274,34 @@ export const AddSheet = memo(function AddSheet({
       if (editing) {
         // A transaction that stopped being a transfer must forget its second account.
         await updateTransaction(editing.id, transfer ? fields : { ...fields, toAccountId: undefined })
-        toast({ message: 'Changes saved' })
+        // A new category for a name is worth offering to the others with that name; it is also what the chat bar learns from.
+        const categoryChanged = !transfer && fields.merchant !== '' && editing.categoryId !== selectedCategory
+        const others = categoryChanged
+          ? earlierEntriesToMove({ id: editing.id, merchant: fields.merchant, kind, categoryId: selectedCategory }, await db.transactions.toArray())
+          : []
+        if (others.length === 0) {
+          toast({ message: 'Changes saved' })
+        } else {
+          const chosen = categories.find((c) => c.id === selectedCategory)
+          const count = others.length
+          const target = selectedCategory
+          toast({
+            message: `Saved. Move ${count} earlier “${fields.merchant}” ${count === 1 ? 'entry' : 'entries'} to ${chosen?.name ?? 'this category'} too?`,
+            actionLabel: 'Move',
+            // Shown after the button has closed this pop-up, so the answer is not wiped with it.
+            onAction: () =>
+              void recategorizeTransactions(others, target).then(() =>
+                toast({
+                  message: `Moved ${count} ${count === 1 ? 'entry' : 'entries'} to ${chosen?.name ?? 'this category'}`,
+                  icon: categoryIcon(chosen?.name),
+                  color: chosen?.color,
+                }),
+              ),
+            icon: categoryIcon(chosen?.name),
+            color: chosen?.color,
+            holdMs: 8000,
+          })
+        }
       } else {
         void attachLocation(await addTransaction({ ...fields, source: 'manual' }))
         const money = formatMoney(fields.amountMinor, fields.currency)

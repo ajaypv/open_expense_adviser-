@@ -281,6 +281,16 @@ function Shell() {
           message: (only.kind === 'income' ? `Received ${money}` : `Added ${money} to ${lastName}`) + (when ? `, ${when}` : ''),
           actionLabel: 'Undo',
           onAction: undo,
+          // A guess that fell through to Other is the one most worth correcting, and the correction is what gets learned.
+          ...(only.kind === 'expense' && lastName === 'Other'
+            ? {
+                secondaryLabel: 'Change',
+                onSecondary: () => {
+                  const added = dataRef.current.txs.find((t) => t.id === ids[0])
+                  if (added) setSheet({ open: true, editing: added, prefill: null, startKind: 'expense' })
+                },
+              }
+            : {}),
           // Where the money went: the category's own icon and colour, or an arrow in for money received.
           icon: only.kind === 'income' ? 'arrowDown' : categoryIcon(lastName),
           color: only.kind === 'income' ? 'var(--good-text)' : categoryById.get(lastCategoryId)?.color,

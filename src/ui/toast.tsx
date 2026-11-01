@@ -5,6 +5,11 @@ export interface ToastOptions {
   message: string
   actionLabel?: string
   onAction?: () => void
+  /** A second button, shown before the first (such as "Change" beside "Undo"). */
+  secondaryLabel?: string
+  onSecondary?: () => void
+  /** How long it stays, in milliseconds, when the usual time is too short to read what it asks. */
+  holdMs?: number
   /** What the message is about, drawn in the pop-up. A tick when none is given. */
   icon?: IconName
   /** The colour that goes with it, such as a category's own colour. */
@@ -56,7 +61,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (options: ToastOptions) => {
       setLeaving(false)
       setToast({ ...options, id: Date.now() })
-      hideIn(options.actionLabel ? VISIBLE_WITH_ACTION_MS : VISIBLE_MS)
+      hideIn(options.holdMs ?? (options.actionLabel ? VISIBLE_WITH_ACTION_MS : VISIBLE_MS))
     },
     [hideIn],
   )
@@ -90,6 +95,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <Icon name={toast.icon ?? 'check'} size={20} />
             </span>
             <span className="island-text min-w-0 py-1 leading-snug">{toast.message}</span>
+            {toast.secondaryLabel && (
+              <button
+                type="button"
+                onClick={() => {
+                  toast.onSecondary?.()
+                  window.clearTimeout(timer.current)
+                  setToast(null)
+                  setLeaving(false)
+                }}
+                className="island-text min-h-11 shrink-0 rounded-full px-3 font-semibold underline underline-offset-2"
+              >
+                {toast.secondaryLabel}
+              </button>
+            )}
             {toast.actionLabel && (
               <button
                 type="button"

@@ -106,6 +106,32 @@ describe('toast: it shows where the money went', () => {
   })
 })
 
+describe('toast: a second button and a longer stay', () => {
+  it('shows a second button beside the first, and runs it without running the first', () => {
+    const first = vi.fn()
+    const second = vi.fn()
+    open({ message: 'Added ₹20 to Other', actionLabel: 'Undo', onAction: first, secondaryLabel: 'Change', onSecondary: second })
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }))
+    expect(second).toHaveBeenCalledOnce()
+    expect(first).not.toHaveBeenCalled()
+    expect(screen.queryByText('Added ₹20 to Other')).toBeNull() // using it closes the pop-up
+  })
+
+  it('has no second button unless asked', () => {
+    open({ message: 'Deleted', actionLabel: 'Undo', onAction: () => {} })
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['show', 'Undo'])
+  })
+
+  it('stays as long as it was asked to', () => {
+    open({ message: 'Move them?', actionLabel: 'Move', onAction: () => {}, holdMs: 8000 })
+    wait(7500)
+    expect(box('Move them?')).not.toHaveClass('island-leave')
+    wait(700)
+    wait(400)
+    expect(screen.queryByText('Move them?')).toBeNull()
+  })
+})
+
 describe('toast: while it is being read or used', () => {
   it('stays while a finger or pointer is on it, and leaves a moment after it lets go', () => {
     open({ message: 'Deleted', actionLabel: 'Undo', onAction: () => {} })

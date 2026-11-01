@@ -36,7 +36,12 @@ There is no AI and no network call. A small set of rules in [`src/ingest/localPa
 
 Several entries can go in one message, separated by commas, `and`, `;` or new lines. `coffee 120, lunch 340 yesterday` adds two entries, both dated yesterday.
 
-It matches words, not meaning, and only whole words: `coffee` is known but `coffees` is not. A name it does not know lands in Other. Tap **Undo** in the pop-up, or open the entry to change its category, and the app remembers the change. 
+It matches words, not meaning. A plural is read as its singular (`coffees` as `coffee`, `taxis` as `taxi`), and a leading count is left out of the name (`2 coffees 100` is "Coffees", ₹100). A name it does not know lands in Other.
+
+Fixing a guess teaches the app:
+- When an entry lands in Other, the pop-up has a **Change** button next to **Undo** that opens the entry.
+- When you give an entry a new category in the edit form, the app offers to move the earlier entries with the same name too (**Move**). Only the exact name counts.
+- Both feed the learning above, so the next entry with that name goes to the right place. 
 
 ### Teaching it more words
 

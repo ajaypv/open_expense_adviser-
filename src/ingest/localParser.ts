@@ -209,7 +209,14 @@ const titleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase())
  * learned from the person, so learning can tell a real choice from a guess that was left alone.
  */
 export function guessCategoryName(name: string): DefaultCategoryName {
-  const words = new Set(name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean))
+  const words = new Set<string>()
+  for (const w of name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)) {
+    words.add(w)
+    // "coffees", "lunches", "taxis" are read as "coffee", "lunch", "taxi" as well.
+    if (w.endsWith('ies') && w.length > 4) words.add(`${w.slice(0, -3)}y`)
+    if (w.endsWith('es') && w.length > 3) words.add(w.slice(0, -2))
+    if (w.endsWith('s') && w.length > 2 && !w.endsWith('ss')) words.add(w.slice(0, -1))
+  }
   return CATEGORY_KEYWORDS.find(([, keys]) => keys.some((k) => words.has(k)))?.[0] ?? 'Other'
 }
 
@@ -237,6 +244,9 @@ function parseOne(text: string, today: Date): Piece | null {
     if (FILLER.has(t) || (kind === 'income' && INCOME_GENERIC.has(t))) continue
     words.push(t)
   }
+
+  // "2 coffees" and "3x coffee" are a count, not part of the name; "7 eleven" and "2 coffee" are left alone.
+  if (words.length > 1 && (/^x\d{1,2}$|^\d{1,2}x$/.test(words[0]) || (/^\d{1,2}$/.test(words[0]) && /[^s]s$/.test(words[1])))) words.shift()
 
   const merchant = titleCase(words.join(' ').replace(/[^\w&'. -]/g, '').trim())
   const categoryName: DefaultCategoryName = kind === 'income' ? INCOME_CATEGORY : guessCategoryName(words.join(' '))

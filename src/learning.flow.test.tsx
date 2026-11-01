@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import './test/dom'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -44,6 +44,35 @@ const log = async (user: ReturnType<typeof userEvent.setup>, text: string) => {
   const saved = (await db.transactions.orderBy('id').last())!
   return { saved, category: (await db.categories.get(saved.categoryId))!.name }
 }
+
+describe('the pop-up offers a way to change a guess that landed in Other', () => {
+  const popup = () => document.querySelector('.toast')
+
+  it('has a Change button next to Undo when the entry was filed under Other, and it opens that entry', async () => {
+    const user = await open()
+    await log(user, '20 something')
+    await waitFor(() => expect(popup()).not.toBeNull())
+    await user.click(within(popup() as HTMLElement).getByRole('button', { name: 'Change' }))
+    expect(await screen.findByRole('dialog', { name: 'Edit transaction' })).toBeInTheDocument()
+    const field = screen.getAllByLabelText('Amount').find((el) => el.tagName === 'INPUT') as HTMLInputElement
+    expect(field.value).toBe('20')
+  })
+
+  it('has no Change button when the category was found', async () => {
+    const user = await open()
+    await log(user, '230 uber')
+    await waitFor(() => expect(popup()).not.toBeNull())
+    expect(within(popup() as HTMLElement).queryByRole('button', { name: 'Change' })).toBeNull()
+    expect(within(popup() as HTMLElement).getByRole('button', { name: 'Undo' })).toBeInTheDocument()
+  })
+
+  it('has no Change button for money received', async () => {
+    const user = await open()
+    await log(user, 'salary 80000')
+    await waitFor(() => expect(popup()).not.toBeNull())
+    expect(within(popup() as HTMLElement).queryByRole('button', { name: 'Change' })).toBeNull()
+  })
+})
 
 describe('the chat bar learns from what you did before', () => {
   it('files a name under the category you chose for similar names, not the keyword guess', async () => {

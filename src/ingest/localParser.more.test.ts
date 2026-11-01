@@ -47,7 +47,7 @@ describe('commas in numbers', () => {
 
 describe('more than one number in a line', () => {
   it('takes the price, not the quantity or the model name', () => {
-    expect(parse('2 coffees 100')).toMatchObject({ amountMinor: 10_000, merchant: '2 Coffees' })
+    expect(parse('2 coffees 100')).toMatchObject({ amountMinor: 10_000, merchant: 'Coffees' })
     expect(parse('dinner for 4 1200')?.amountMinor).toBe(120_000)
     expect(parse('iphone 12 pro 79900')).toMatchObject({ amountMinor: 7_990_000, merchant: 'Iphone 12 Pro' })
     expect(parse('lunch 450 for 2')?.amountMinor).toBe(45_000)
@@ -171,6 +171,39 @@ describe('currency words and symbols', () => {
 describe('categories', () => {
   it('files a petrol station under Transport, not Bills', () => {
     expect(parse('gas station 500')?.categoryName).toBe('Transport')
+  })
+})
+
+describe('plurals and quantities', () => {
+  it.each([
+    ['coffees 100', 'Food & Dining'],
+    ['lunches 300', 'Food & Dining'],
+    ['dosas 60', 'Food & Dining'],
+    ['cafes 200', 'Food & Dining'],
+    ['taxis 200', 'Transport'],
+    ['cabs 150', 'Transport'],
+    ['groceries 900', 'Groceries'],
+    ['movies 600', 'Entertainment & Travel'],
+    ['cookies 40', 'Other'],
+  ])('reads "%s" as %s', (text, category) => {
+    expect(parse(text)?.categoryName).toBe(category)
+  })
+
+  it('still reads words that merely end in s as themselves', () => {
+    expect(parse('bus 20')?.categoryName).toBe('Transport')
+    expect(parse('gas 500')?.categoryName).toBe('Bills & Utilities')
+    expect(parse('mess 80')?.categoryName).toBe('Food & Dining')
+  })
+
+  it('leaves a leading count out of the name', () => {
+    expect(parse('2 coffees 100')).toMatchObject({ merchant: 'Coffees', amountMinor: 10000, categoryName: 'Food & Dining' })
+    expect(parse('3x coffee 150')?.merchant).toBe('Coffee')
+    expect(parse('x2 samosa 40')?.merchant).toBe('Samosa')
+  })
+
+  it('keeps a number that is part of a name', () => {
+    expect(parse('7 eleven 50')?.merchant).toBe('7 Eleven')
+    expect(parse('2 coffee 100')?.merchant).toBe('2 Coffee')
   })
 })
 
