@@ -22,7 +22,11 @@ There is no AI and no network call. A small set of rules in [`src/ingest/localPa
 3. **Money in or out.** `salary`, `received`, `refund`, `credited`, `cashback`, `bonus`, `got paid`, `paid me` and `got … from` mean money came in. Anything else is spending. Wages you pay are spending: `maid salary 8000`, `salary to driver`.
 4. **Name.** Filler words (`spent`, `paid`, `on`, `at`, `to`, `for`, `the`) are dropped. Payment words (`cash`, `card`, `UPI`, `gpay`) set the payment method. What is left, in title case, is the name.
 5. **Category.** The words are matched against a keyword list per category and the first match wins, for example `lunch`, `cafe`, `swiggy` → Food & Dining and `uber`, `petrol`, `metro` → Transport. Nothing matched means Other.
-6. **Your own choice wins.** If you have changed the category for a name before, the app uses your category the next time ([`src/ingest/learn.ts`](src/ingest/learn.ts)).
+6. **It learns from you** ([`src/ingest/learn.ts`](src/ingest/learn.ts)):
+   - **Your corrections win.** If you filed a name under a different category than the keywords guessed, the app uses your category next time. An entry that only agrees with the guess teaches nothing, and the chat bar's own fall-back to Other is not counted as a choice, so a keyword added later still works.
+   - **Newer choices count more.** A choice loses half its weight every 90 days, so a few recent corrections beat many old ones.
+   - **Words count too.** If two or more entries agree on a distinctive word (`Zudio kurta` and `Zudio shirts` both Shopping), a later `zudio 500` goes there as well. The exact name is tried first.
+   - **How you pay.** If the message names no payment method, the app uses the one you usually use for that name.
 
 | You type | Date | Amount | Name | Category |
 | --- | --- | --- | --- | --- |

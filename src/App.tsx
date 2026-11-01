@@ -20,7 +20,7 @@ import {
 import type { Goal, Recurring, Transaction } from './db/schema'
 import { monthOf, type MonthKey } from './insights/aggregates'
 import { monthRange } from './insights/filters'
-import { learnedCategoryId } from './ingest/learn'
+import { learnedCategoryId, learnedPaymentMethod } from './ingest/learn'
 import { describeDay, parseMany } from './ingest/localParser'
 import { suggest, type Suggestion } from './insights/suggestions'
 import { usePwa } from './pwa/usePwa'
@@ -247,7 +247,7 @@ function Shell() {
       let lastCategoryId = 0
       for (const parsed of entries) {
         // Your own choice for a merchant beats the keyword guess.
-        const learned = parsed.kind === 'expense' ? learnedCategoryId(parsed.merchant, txs) : null
+        const learned = parsed.kind === 'expense' ? learnedCategoryId(parsed.merchant, txs, categoryById) : null
         const categoryId = learned ?? (await categoryIdByName(parsed.categoryName))
         lastName = categoryById.get(categoryId)?.name ?? parsed.categoryName
         lastCategoryId = categoryId
@@ -259,7 +259,8 @@ function Shell() {
           merchant: parsed.merchant,
           note: '',
           date: parsed.date,
-          paymentMethod: parsed.paymentMethod,
+          // What was typed ("by upi") wins; otherwise how you usually pay for this name.
+          paymentMethod: parsed.paymentMethod || learnedPaymentMethod(parsed.merchant, parsed.kind, txs),
           source: 'chat',
         })
         void attachLocation(id) // no-op unless the user turned location recording on

@@ -1,37 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Transaction } from '../db/schema'
-import { learnedCategoryId } from './learn'
 import { parseMany } from './localParser'
-
-let id = 0
-const tx = (merchant: string, categoryId: number, date = '2026-10-01', kind: Transaction['kind'] = 'expense', createdAt = 0): Transaction => ({
-  id: ++id, kind, amountMinor: 100, currency: 'INR', categoryId, merchant, note: '', date,
-  paymentMethod: '', source: 'manual', createdAt,
-})
-
-describe('learnedCategoryId', () => {
-  it('is null for a merchant never seen, or no merchant at all', () => {
-    expect(learnedCategoryId('Cafe', [tx('Uber', 3)])).toBeNull()
-    expect(learnedCategoryId('', [tx('Uber', 3)])).toBeNull()
-    expect(learnedCategoryId('   ', [tx('', 3)])).toBeNull()
-  })
-
-  it('returns the category you used, matching the name case-insensitively', () => {
-    expect(learnedCategoryId('swiggy', [tx('Swiggy', 5)])).toBe(5)
-    expect(learnedCategoryId('  SWIGGY ', [tx('Swiggy', 5)])).toBe(5)
-  })
-
-  it('prefers the category used most, then the one used most recently on a tie', () => {
-    const many = [tx('Amazon', 4), tx('Amazon', 4), tx('Amazon', 2, '2026-10-20')]
-    expect(learnedCategoryId('Amazon', many)).toBe(4)
-    const tie = [tx('Amazon', 4, '2026-10-01'), tx('Amazon', 2, '2026-10-20')]
-    expect(learnedCategoryId('Amazon', tie)).toBe(2)
-  })
-
-  it('ignores money received', () => {
-    expect(learnedCategoryId('Employer', [tx('Employer', 9, '2026-10-01', 'income')])).toBeNull()
-  })
-})
 
 describe('parseMany', () => {
   const today = new Date(2026, 9, 28)

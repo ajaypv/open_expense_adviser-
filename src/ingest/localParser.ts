@@ -204,6 +204,15 @@ function findAmount(text: string): Found | null {
 
 const titleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase())
 
+/**
+ * The category the keywords give a name, or Other. This is the app's own guess, before anything it has
+ * learned from the person, so learning can tell a real choice from a guess that was left alone.
+ */
+export function guessCategoryName(name: string): DefaultCategoryName {
+  const words = new Set(name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean))
+  return CATEGORY_KEYWORDS.find(([, keys]) => keys.some((k) => words.has(k)))?.[0] ?? 'Other'
+}
+
 type Piece = { parsed: ParsedExpense; explicitDate: boolean }
 
 function parseOne(text: string, today: Date): Piece | null {
@@ -230,11 +239,7 @@ function parseOne(text: string, today: Date): Piece | null {
   }
 
   const merchant = titleCase(words.join(' ').replace(/[^\w&'. -]/g, '').trim())
-  const haystack = new Set(words.flatMap((w) => w.split(/[^a-z0-9]+/)))
-  const categoryName: DefaultCategoryName =
-    kind === 'income'
-      ? INCOME_CATEGORY
-      : (CATEGORY_KEYWORDS.find(([, keys]) => keys.some((k) => haystack.has(k)))?.[0] ?? 'Other')
+  const categoryName: DefaultCategoryName = kind === 'income' ? INCOME_CATEGORY : guessCategoryName(words.join(' '))
 
   const parsed: ParsedExpense = { kind, amountMinor: amount.minor, merchant, categoryName, date, paymentMethod }
   if (amount.currency) parsed.currency = amount.currency
