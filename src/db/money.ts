@@ -73,6 +73,9 @@ export function formatMoneyCompact(amountMinor: number, currency: string): strin
     style: 'currency',
     currency,
     notation: 'compact',
+    // Said outright: a currency's default of two decimals is cut back to the maximum by some Node and browser
+    // versions, which turns ₹40K into ₹40.0K.
+    minimumFractionDigits: 0,
     maximumFractionDigits: 1,
   }).format(amountMinor / 100)
 }
