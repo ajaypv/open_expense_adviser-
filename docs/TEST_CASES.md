@@ -577,6 +577,40 @@ What regular payments cost and when they fall due, on the Insights screen (curre
 | REG-7 | Looks ahead only | Look at an earlier month | The section is not there; it also shows before anything has been spent this month | Auto: `Insights.regular.flow` |
 | REG-8 | Other currencies | Set up a payment in a currency with no exchange rate | It is counted at face value, and the section says which currency | Auto: `regular`, `Insights.regular.flow` |
 
+## Category bubbles
+
+The Where it went section of Insights, shown as bubbles.
+
+| ID | Case | Do | Expect | Covered by |
+|---|---|---|---|---|
+| BUB-1 | Bubbles by default | Open Insights in a month with spending | "Where it went" has a Bubbles / List choice with Bubbles chosen; each category is a glassy bubble with its icon, name and share to one decimal (32.8%), the area of the bubble matching its share, and a pie wedge and rim arc showing the share as an angle from the top going left | Auto: `bubblePack`, `CategoryBubbles.flow`, `Insights.bubbles.flow`; look by eye |
+| BUB-2 | Tap to open | Tap a bubble | Activity opens on that category for the month, as the list rows do | Auto: `CategoryBubbles.flow`, `Insights.bubbles.flow` |
+| BUB-3 | Small shares | Have a category with only a few percent among many | Its bubble is never tiny: it keeps its icon and share, drops the name if it will not fit, and is still big enough to tap | Auto: `bubblePack`, `CategoryBubbles.flow` |
+| BUB-4 | Many categories | Spend in more than eight categories | The eight biggest are bubbles and the rest are one grey Everything else bubble that opens nothing | Auto: `CategoryBubbles.flow` |
+| BUB-5 | Nothing hidden | Switch to Donut or List, and use a screen reader on the bubbles | The list shows the same categories ranked with bars and amounts; each bubble is read as name, share and amount | Auto: `Insights.bubbles.flow`, `CategoryBubbles.flow` |
+| BUB-6 | Looks right in both themes | View it in light and dark, at 360 px and on a wider screen | Bubbles keep their proportions and their text stays readable on every colour; they arrive one after another (at once with reduced motion) | Device |
+
+## Month bars, donut and status pills
+
+The Insights look taken from the dark dashboard reference: hatched pill bars, a donut with a legend, and status pills.
+
+| ID | Case | Do | Expect | Covered by |
+|---|---|---|---|---|
+| DSN-1 | Month bars | Open Insights and look at The last 12 months | A big total for the chosen month (the latest to begin with) with its change on the month before as an arrow, a percentage and words (▲ 12%, read as "Up 12% on September"), and "vs ₹5,000 in September"; hatched pill bars with a short cap line; the chosen bar solid with the change in a badge above it; a scale up the side and a label under every bar | Auto: `MonthColumns.flow`; look by eye |
+| DSN-2 | Choosing a month | Tap a bar, drag a finger along them, hover with a mouse, or use the arrow keys | A tap or drag keeps its month until another is chosen; a mouse only looks and goes back when it leaves; the arrows stop at both ends | Auto: `MonthColumns.flow` |
+| DSN-3 | A quiet month | Have a month with nothing spent | It is a thin flat bar, and the next month says "Nothing was spent in …" instead of a percentage | Auto: `MonthColumns.flow` |
+| DSN-4 | Donut | In Where it went, choose Donut | A ring of rounded segments in the category colours with a gap between, the total in the middle, a legend of every category with share and amount, and a sentence such as "Most of it went on Groceries and Shopping, 70.0% together." | Auto: `CategoryDonut.flow`, `Insights.bubbles.flow`; look by eye |
+| DSN-5 | Looking at one category | Tap a segment, or hover or focus a legend row | That segment gets thicker and the rest fade, and the middle shows its amount, name and share; tapping the segment again, or leaving the row, goes back to the total | Auto: `CategoryDonut.flow` |
+| DSN-6 | Donut opens a category | Tap a legend row | Activity opens on that category; the grey Everything else row opens nothing | Auto: `CategoryDonut.flow` |
+| DSN-7 | Status pills | Set up regular payments due soon, later, late, and a salary | In Due next each row has a pill with a dot and the words (In 2 days, Overdue by 3 days); the dot is amber within three days, red when late, green for money coming in | Auto: `Insights.regular.flow` |
+| ANI-1 | Bubbles arrive | Open Where it went on Bubbles | The biggest bubble rises and pops in first and the others follow a beat apart; each wedge and rim arc then sweeps open to its share, a band of light crosses the glass once, and each percentage counts up from 0 to its figure | Auto: `categoryMotion.flow`; look by eye |
+| ANI-2 | Bubbles move | Change month while on Bubbles | A bubble that is in both months glides to its new place and size; one that is new pops in; pressing a bubble shrinks it a little | Auto: `categoryMotion.flow`; look by eye |
+| ANI-3 | Donut draws | Choose Donut | The ring is drawn round, segment by segment in order, then the legend rows and the sentence rise in; the middle pops in | Auto: `categoryMotion.flow`; look by eye |
+| ANI-4 | Donut responds | Tap a segment or hover a legend row | The middle pops in with the new reading; the ring is not drawn again | Auto: `categoryMotion.flow` |
+| ANI-5 | List grows | Choose List, or open Places you spend most | Rows fade up one after another and each bar grows from the left; after ten rows the rest arrive together; a bar changes length smoothly when the figures change; pressing a row shrinks it a little | Auto: `categoryMotion.flow`; look by eye |
+| ANI-6 | Less motion | Turn on reduce motion in the phone settings, then open all three views | Everything is already in place with nothing moving | Auto: style sheet check in `categoryMotion.flow`; Device |
+| ANI-7 | Starts when seen | Open Insights and leave Where it went below the fold, then scroll down to it (try Bubbles, Donut and List) | Nothing plays while it is off screen; the animation starts from its first frame as it scrolls into view, and does not play again on scrolling away and back | Auto: `categoryMotion.flow` (observer faked); Device |
+
 ## What changed your balance
 
 Settings, Accounts and balance: a trail of what has been moving the balance.

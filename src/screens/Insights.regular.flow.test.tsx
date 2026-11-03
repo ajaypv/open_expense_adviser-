@@ -87,6 +87,41 @@ describe('Insights: Regular payments, the totals', () => {
   })
 })
 
+describe('Insights: Regular payments, status pills', () => {
+  const pillOf = (name: string) => {
+    const row = within(within(section()).getByRole('list', { name: 'Due next' })).getAllByRole('listitem').find((li) => li.textContent?.includes(name))!
+    return row.querySelector<HTMLElement>('[data-status]')!
+  }
+
+  it('gives each payment a pill that says when, with a dot for how urgent', () => {
+    mount({ rules: all })
+    expect(pillOf('Maid')).toHaveTextContent('In 2 days')
+    expect(pillOf('Maid')).toHaveAttribute('data-status', 'soon') // within three days
+    expect(pillOf('Rent')).toHaveAttribute('data-status', 'soon')
+    expect(pillOf('Home loan')).toHaveTextContent('In 8 days')
+    expect(pillOf('Home loan')).toHaveAttribute('data-status', 'later')
+  })
+
+  it('marks a payment that is late, in words as well as colour', () => {
+    mount({ rules: [rent, rule({ merchant: 'Electricity', nextDue: '2026-10-25' })] })
+    expect(pillOf('Electricity')).toHaveTextContent('Overdue by 3 days')
+    expect(pillOf('Electricity')).toHaveAttribute('data-status', 'late')
+  })
+
+  it('marks money on its way in as arriving', () => {
+    mount({ rules: all })
+    expect(pillOf('Salary')).toHaveAttribute('data-status', 'arriving')
+  })
+
+  it('colours the dot, and never leaves the colour to carry the meaning alone', () => {
+    mount({ rules: all })
+    const dot = pillOf('Home loan').querySelector<HTMLElement>('[data-dot]')!
+    expect(dot).toHaveAttribute('aria-hidden', 'true')
+    expect(dot.style.background).toBeTruthy()
+    expect(pillOf('Home loan').textContent?.trim()).not.toBe('')
+  })
+})
+
 describe('Insights: Regular payments, warnings', () => {
   it('says when payments are late and have not been added', () => {
     mount({ rules: [rent, rule({ merchant: 'Electricity', nextDue: '2026-10-25' })] })

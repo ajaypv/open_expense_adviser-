@@ -68,3 +68,63 @@ export function useIntro(): boolean {
   }, [])
   return intro
 }
+
+/**
+ * A ref to put on a box, and whether it has come into view yet. It turns true the first time a fair share of the box
+ * is on screen and stays true, so an entrance can wait until the person can actually see it rather than playing
+ * unseen further down the page. Where the browser cannot tell (no IntersectionObserver) it is true straight away.
+ */
+export function useSeen(threshold = 0.25) {
+  const [box, setBox] = useState<Element | null>(null)
+  const [seen, setSeen] = useState(() => typeof IntersectionObserver === 'undefined')
+
+  useEffect(() => {
+    if (seen || !box) return
+    const watcher = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return
+        setSeen(true)
+        watcher.disconnect()
+      },
+      { threshold },
+    )
+    watcher.observe(box)
+    return () => watcher.disconnect()
+  }, [box, seen, threshold])
+
+  return [setBox, seen] as const
+}
+
+/**
+ * A number that counts up from zero to `target` once `run` is true, after `delayMs`, and glides to a new `target`
+ * if it changes later. With reduced motion it is `target` straight away.
+ */
+export function useCountWhen(target: number, run: boolean, delayMs = 0): number {
+  const allowed = motionAllowed()
+  const [shown, setShown] = useState(0)
+  const current = useRef(0)
+  const played = useRef(false)
+
+  useEffect(() => {
+    if (!allowed || !run) return
+    const from = current.current
+    if (from === target) return
+    // The wait is only for the first count, so a later change starts at once.
+    const wait = played.current ? 0 : delayMs
+    played.current = true
+    let start: number | undefined
+    let frame = 0
+    const step = (now: number) => {
+      start ??= now
+      const t = Math.min(1, Math.max(0, (now - start - wait) / DURATION_MS))
+      const value = t === 1 ? target : from + (target - from) * easeOutQuart(t)
+      current.current = value
+      setShown(value)
+      if (t < 1) frame = requestAnimationFrame(step)
+    }
+    frame = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(frame)
+  }, [target, run, allowed, delayMs])
+
+  return allowed ? shown : target
+}

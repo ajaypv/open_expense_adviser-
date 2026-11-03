@@ -503,6 +503,250 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   }
 }
 
+/* ---------- Pill bars (the months chart) ---------- */
+
+/* A hatched pill with a short cap line near the top; the chosen month is solid. The hatch is a very light diagonal
+   in the ink colour over the raised surface, so it reads as texture in both themes and never as a second colour. */
+.pill-bar {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 100%;
+  max-width: 1.5rem;
+  translate: -50% 0;
+  border-radius: 0.875rem;
+  background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--ink) 9%, var(--surface-2)) 0 1.5px, var(--surface-2) 1.5px 5px);
+  box-shadow: inset 0 0 0 1px var(--line);
+  transform-origin: bottom;
+  transition:
+    height 0.5s cubic-bezier(0.2, 0.9, 0.25, 1),
+    background-color 0.2s;
+  animation: bar-rise 0.6s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+.pill-bar::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 45%;
+  height: 3px;
+  translate: -50% 0;
+  border-radius: 9999px;
+  background: var(--ink-2);
+  opacity: 0.85;
+}
+.pill-bar-selected {
+  background: var(--s1);
+  box-shadow: none;
+}
+.pill-bar-selected::before {
+  background: rgb(255 255 255 / 0.85);
+}
+.pill-bar-quiet {
+  border-radius: 9999px;
+  animation: none;
+}
+.pill-bar-quiet::before {
+  display: none;
+}
+@keyframes bar-rise {
+  from {
+    transform: scaleY(0.25);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pill-bar {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* ---------- Category bubbles ---------- */
+
+/* A glass bubble in the category's colour. The body is only a light tint of the colour over the surface, so the text
+   keeps its normal contrast whatever the colour; the colour itself is carried by the wedge, the rim and the icon's
+   ring. The wedge is the category's share as an angle, counted from the top and going left, as in the reference. */
+.bubble {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  text-align: center;
+  color: var(--ink);
+  background: radial-gradient(
+    circle at 32% 24%,
+    color-mix(in oklab, var(--c) 30%, var(--surface)) 0%,
+    color-mix(in oklab, var(--c) 14%, var(--surface)) 62%,
+    color-mix(in oklab, var(--c) 8%, var(--surface)) 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--c) 38%, transparent),
+    inset 0 6px 14px -8px rgb(255 255 255 / 0.35),
+    0 10px 20px -12px color-mix(in oklab, var(--c) 70%, transparent);
+  animation: bubble-in 0.75s cubic-bezier(0.3, 1.45, 0.5, 1) var(--d, 0ms) backwards;
+}
+.bubble-wedge,
+.bubble-arc {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.bubble-wedge {
+  background: conic-gradient(from calc(360deg - var(--a)), color-mix(in oklab, var(--c) 30%, transparent) 0 var(--a), transparent var(--a) 360deg);
+}
+.bubble-arc {
+  background: conic-gradient(from calc(360deg - var(--a)), var(--c) 0 var(--a), transparent var(--a) 360deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+}
+.bubble-text {
+  position: relative;
+  display: flex;
+  max-width: 82%;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15em;
+  font-size: max(0.6875rem, var(--fs));
+  line-height: 1.15;
+}
+.bubble-icon {
+  display: flex;
+  width: max(1rem, var(--ic));
+  color: var(--ink);
+}
+.bubble-icon svg {
+  width: 100%;
+  height: auto;
+}
+.bubble-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 0.8em;
+  color: var(--ink-2);
+}
+.bubble-share {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* Each bubble rises a little as it swells and overshoots, then settles. */
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(24%) scale(0.5);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bubble {
+    animation: none;
+  }
+}
+
+/* ---------- The category views arriving ---------- */
+
+/* Each view plays once when it appears: the bubbles pop, then their wedges sweep open; the donut's segments draw round
+   one after another; list bars grow from the left. The delay of each comes from --d, set in steps by the component so the
+   biggest arrives first. `backwards` fill, so nothing is left holding a value once it has played. */
+@property --a {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0deg;
+}
+/* Nothing starts until the box is on screen: the component marks it data-seen, and until then every animation inside
+   is held at its first frame (the delay and the backwards fill keep it hidden). Pausing rather than not applying the
+   animation means it begins from the start at the moment the person can see it. */
+.when-seen[data-seen='false'] *,
+.when-seen[data-seen='false'] *::before,
+.when-seen[data-seen='false'] *::after {
+  animation-play-state: paused;
+}
+@keyframes bubble-sweep {
+  from {
+    --a: 0deg;
+  }
+}
+/* A band of light crosses each bubble once, after it has landed, like light moving over glass. The band sits just
+   outside the window at rest and at the end, so nothing is left behind. */
+.bubble::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 40%, rgb(255 255 255 / 0.4) 50%, transparent 60%) 100% 0 / 250% 100% no-repeat;
+  animation: bubble-glint 0.9s ease-out calc(var(--d, 0ms) + 650ms) backwards;
+}
+@keyframes bubble-glint {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}
+.bubble-wedge,
+.bubble-arc {
+  animation: bubble-sweep 0.9s cubic-bezier(0.3, 0.7, 0.3, 1) calc(var(--d, 0ms) + 250ms) backwards;
+}
+@keyframes donut-draw {
+  from {
+    stroke-dasharray: 0.01 300;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+}
+.donut-seg {
+  animation: donut-draw 0.8s cubic-bezier(0.3, 0.7, 0.3, 1) var(--d, 0ms) backwards;
+}
+@keyframes donut-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+}
+.donut-pop {
+  animation: donut-pop 0.3s cubic-bezier(0.2, 0.9, 0.25, 1) backwards;
+}
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.row-in {
+  animation: row-in 0.45s cubic-bezier(0.2, 0.9, 0.25, 1) var(--d, 0ms) backwards;
+}
+@keyframes bar-grow {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+.bar-grow {
+  animation: bar-grow 0.8s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--d, 0ms) + 120ms) backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bubble::after,
+  .bubble-wedge,
+  .bubble-arc,
+  .donut-seg,
+  .donut-pop,
+  .row-in,
+  .bar-grow {
+    animation: none;
+  }
+}
+
 /* ---------- Pins on the places map ---------- */
 
 /* A round pin in the category's colour, ringed in the surface colour so it stands out on any map picture. */

@@ -1,6 +1,8 @@
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { BarList } from '../charts/BarList'
 import { CategoryBars } from '../charts/CategoryBars'
+import { CategoryBubbles } from '../charts/CategoryBubbles'
+import { CategoryDonut } from '../charts/CategoryDonut'
 import { Meter } from '../charts/Meter'
 import { MonthColumns } from '../charts/MonthColumns'
 import { Movers } from '../charts/Movers'
@@ -58,6 +60,21 @@ const firstWord = (key: MonthKey) => monthLabel(key).split(' ')[0]
 const weekdayName = (i: number) =>
   new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(new Date(2026, 9, 26 + i))
 
+/** How soon a payment matters: late, within three days, further off, or money on its way in. */
+const statusOf = (p: UpcomingPayment) => (p.overdue ? 'late' : p.kind === 'income' ? 'arriving' : p.daysLeft <= 3 ? 'soon' : 'later')
+const DOT = { late: 'var(--critical)', soon: 'var(--warn-ui)', arriving: 'var(--good-text)', later: 'var(--ink-2)' } as const
+
+/** A small pill with a coloured dot and when the payment is due. The words carry the meaning; the dot only backs them up. */
+function StatusPill({ payment }: { payment: UpcomingPayment }) {
+  const status = statusOf(payment)
+  return (
+    <span data-status={status} className={`inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-0.5 text-sm ${status === 'late' ? 'font-medium text-critical' : 'text-ink-2'}`}>
+      <span data-dot aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: DOT[status] }} />
+      {describeWhen(payment.daysLeft)}
+    </span>
+  )
+}
+
 /** "11 times, almost every day, usually ₹20": how often, and what it usually costs. */
 function repeatDetail(r: RepeatingSpend, money: (minor: number) => string): string {
   const how = { daily: 'almost every day', weekly: 'about every week', monthly: 'every month', regular: null }[r.pattern]
@@ -80,6 +97,7 @@ function Section({ id, title, intro, children }: { id: string; title: string; in
 /** What the logged expenses say, computed on the device. Each block answers one question. */
 export const Insights = memo(function Insights({ ledger, month, onMonth, today, onOpenSettings, onPickCategory, onOpenUpcoming }: Props) {
   useDisplay() // amounts are masked or regrouped by display settings, so redraw when they change
+  const [categoryView, setCategoryView] = useState<'bubbles' | 'donut' | 'list'>('bubbles')
   // Insights describe spending, so they use money sent only; received money feeds the balance.
   const { expenses: txs, income, categoryById, currency, budgetMinor, categoryBudgets, recurring, rates, balanceSet, estimatedBalanceMinor } = ledger
   const currentMonth = localDateString(today).slice(0, 7)
@@ -315,7 +333,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
                 </span>
                 <span className="shrink-0 text-right">
                   <span className={`block font-semibold tabular-nums ${p.kind === 'income' ? 'text-good' : ''}`}>{signedAmount(p, currency)}</span>
-                  <span className={`block text-sm ${p.overdue ? 'font-medium text-critical' : 'text-ink-2'}`}>{describeWhen(p.daysLeft)}</span>
+                  <StatusPill payment={p} />
                 </span>
               </li>
             ))}
@@ -454,7 +472,34 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
             title="Where it went"
             intro={`Where your ${name} spending went, biggest first.${onPickCategory ? ' Tap one to see those expenses.' : ''}`}
           >
-            <CategoryBars totals={cats} categoryById={categoryById} currency={currency} onPick={onPickCategory} />
+            <div role="group" aria-label="How to show the categories" className="mt-3 flex gap-1 rounded-full bg-surface-2 p-1">
+              {(
+                [
+                  ['bubbles', 'Bubbles'],
+                  ['donut', 'Donut'],
+                  ['list', 'List'],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={categoryView === id}
+                  onClick={() => setCategoryView(id)}
+                  className={`min-h-11 flex-1 rounded-full px-3 text-sm font-medium transition-colors motion-reduce:transition-none ${categoryView === id ? 'bg-btn text-btn-ink' : 'text-ink-2'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-3">
+              {categoryView === 'bubbles' ? (
+                <CategoryBubbles totals={cats} categoryById={categoryById} currency={currency} onPick={onPickCategory} />
+              ) : categoryView === 'donut' ? (
+                <CategoryDonut totals={cats} categoryById={categoryById} currency={currency} onPick={onPickCategory} />
+              ) : (
+                <CategoryBars totals={cats} categoryById={categoryById} currency={currency} onPick={onPickCategory} />
+              )}
+            </div>
           </Section>
 
           {changes.length > 0 && (

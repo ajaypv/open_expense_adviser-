@@ -1,4 +1,6 @@
+import type { CSSProperties } from 'react'
 import { formatMoney } from '../db/money'
+import { useSeen } from '../ui/motion'
 
 export interface BarRow {
   key: string
@@ -17,10 +19,14 @@ export interface BarRow {
  */
 export function BarList({ rows, currency }: { rows: BarRow[]; currency: string }) {
   const max = Math.max(...rows.map((r) => r.valueMinor), 1)
+  // The rows arrive when the person can see them, not when the page was drawn.
+  const [watch, seen] = useSeen()
 
   return (
-    <ul>
-      {rows.map((r) => {
+    <ul ref={watch} data-seen={seen} className="when-seen">
+      {rows.map((r, i) => {
+        // Each row arrives a beat after the one above it; past the tenth they come together.
+        const step = { '--d': `${Math.min(i, 9) * 50}ms` } as CSSProperties
         const body = (
           <>
             <span className="flex items-baseline justify-between gap-3">
@@ -35,19 +41,19 @@ export function BarList({ rows, currency }: { rows: BarRow[]; currency: string }
             </span>
             <span className="mt-1.5 block h-2 rounded-r-[4px] bg-surface-2">
               <span
-                className="block h-full rounded-r-[4px]"
+                className="bar-grow block h-full rounded-r-[4px] transition-[width] duration-500 ease-out motion-reduce:transition-none"
                 style={{ width: `${Math.max((r.valueMinor / max) * 100, 2)}%`, background: r.color }}
               />
             </span>
           </>
         )
         return (
-          <li key={r.key}>
+          <li key={r.key} className="row-in" style={step}>
             {r.onPick ? (
               <button
                 type="button"
                 onClick={r.onPick}
-                className="block min-h-14 w-full py-2.5 text-left"
+                className="block min-h-14 w-full py-2.5 text-left transition-transform active:scale-[0.985] motion-reduce:transition-none"
                 aria-label={`${r.label}, ${formatMoney(r.valueMinor, currency)}. Show these expenses`}
               >
                 {body}

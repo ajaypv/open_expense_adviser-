@@ -1,5 +1,6 @@
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { formatMoney, formatMoneyCompact } from '../db/money'
+import { niceCeil } from './scale'
 import { TableDisclosure } from './TableDisclosure'
 
 /** An earlier month, drawn for comparison: a full month of running totals. */
@@ -23,14 +24,6 @@ interface Props {
   /** Last day (1-based) that has data: today for the current month, the month length otherwise. */
   lastDay: number
   currency: string
-}
-
-/** Rounds up to a tidy axis maximum (1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10 × a power of ten). */
-function niceCeil(value: number): number {
-  const power = 10 ** Math.floor(Math.log10(value))
-  const m = value / power
-  const step = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find((s) => m <= s) ?? 10
-  return step * power
 }
 
 /**
