@@ -1,7 +1,7 @@
 import { localDateString } from '../db/money'
-import type { Category, Recurring, Transaction } from '../db/schema'
+import type { Category, Recurring, RecurringTag, Transaction } from '../db/schema'
 import { planAhead } from './ahead'
-import { byCategory, categoryChanges, compareToPrevious, cumulative, daysInMonth, inMonth, monthLabel, shiftMonth, sum, type MonthKey } from './aggregates'
+import { byCategory, categoryChanges, compareToPrevious, cumulative, daysInMonth, inMonth, monthLabel, monthOf, shiftMonth, sum, type MonthKey } from './aggregates'
 import { dayInsights, dayView } from './days'
 import { regularPayments } from './regular'
 import { repeatingSpend } from './repeats'
@@ -67,6 +67,65 @@ export interface AiCommitments {
   nextEmi: { name: string; date: string; amountMinor: number; daysLeft: number } | null
 }
 
+/** One payment that comes out of the account on its own: an EMI, an autopay, a subscription, a bill. */
+export interface AiDeduction {
+  key: string
+  name: string
+  tag: RecurringTag
+  amountMinor: number
+  date: string
+  /** Day of the month it is drawn on, for the timeline. */
+  day: number
+  /** done: it has left this month; due: it is yet to leave; late: it should have, and has not been added. */
+  state: 'done' | 'due' | 'late'
+}
+
+/** What leaves on its own this month, what has and what has not yet, and when money comes in on its own. */
+export interface AiDeductions {
+  items: AiDeduction[]
+  /** Regular money in, for the timeline: received, or still to arrive. */
+  income: { name: string; date: string; day: number; amountMinor: number; done: boolean }[]
+  doneMinor: number
+  dueMinor: number
+  totalMinor: number
+  /** What regular payments going out come to in an average month, by kind. */
+  monthlyMinor: number
+  kinds: { tag: RecurringTag; label: string; monthlyMinor: number; count: number }[]
+}
+
+/** The month as one bar: what is spent, what left on its own, what is still to leave, and what is likely to be spent. */
+export interface AiMonthBar {
+  everydayMinor: number
+  autoDoneMinor: number
+  autoDueMinor: number
+  expectedEverydayMinor: number
+  totalMinor: number
+  /** What the full width stands for: the month's total, or the budget if that is more. */
+  scaleMinor: number
+  budgetMinor: number | null
+}
+
+/** Somewhere money is going that could stay: what it is, the evidence, and what cutting it would keep. */
+export interface AiLeak {
+  key: string
+  title: string
+  evidence: string
+  monthlyMinor: number
+  yearlyMinor: number
+}
+
+/** The next month in two parts, with the range it will probably land in. */
+export interface AiOutlook {
+  /** What leaves on its own. */
+  fixedMinor: number
+  /** Everything else, from the recent months. */
+  everydayMinor: number
+  totalMinor: number
+  lowMinor: number
+  highMinor: number
+  yearMinor: number
+}
+
 export interface AiSummary {
   month: MonthKey
   monthName: string
@@ -107,6 +166,17 @@ export interface AiSummary {
   months: { month: MonthKey; label: string; totalMinor: number; projected: boolean }[]
   trend: { direction: 'up' | 'down' | 'flat' | null; monthlyChangePct: number | null; nextMonthMinor: number | null }
   commitments: AiCommitments | null
+  /** The month as one bar, for the page's centrepiece; null when nothing has been spent. */
+  monthBar: AiMonthBar | null
+  /** What leaves on its own, done and to come; null when no regular payment is set up and none has left. */
+  deductions: AiDeductions | null
+  /** Where money is leaking, biggest first, each with what cutting it would keep. */
+  leaks: AiLeak[]
+  /** What needs doing first: a budget passed, a balance that will not cover what is due, payments that take too much. */
+  alerts: AiTip[]
+  /** The aim to keep a share of what comes in, with what that means in spending; null if already met or no income. */
+  goal: AiTip | null
+  outlook: AiOutlook | null
   tips: AiTip[]
   /** Up to what the tips would keep a month, together. */
   potentialSavingMinor: number
@@ -283,6 +353,34 @@ export function buildAiSummary(input: AiInput): AiSummary {
     }
   }
 
+  // ---- The next month, in two parts: what leaves on its own, and everything else, with the range it is likely to land in. ----
+  const fixedIn = (key: MonthKey) => sum(inMonth(expenses, key).filter(isFixed))
+  const monthsUsed = firstUsed === -1 ? [] : completed.slice(firstUsed)
+  let outlook: AiOutlook | null = null
+  if (monthsUsed.length >= 2) {
+    const everydayUsed = monthsUsed.map((m) => Math.max(m.totalMinor - fixedIn(m.month), 0))
+    const k = everydayUsed.length
+    const mean = everydayUsed.reduce((a, b) => a + b, 0) / k
+    const xMean = (k - 1) / 2
+    const slope = everydayUsed.reduce((a, v, i) => a + (i - xMean) * (v - mean), 0) / everydayUsed.reduce((a, _, i) => a + (i - xMean) ** 2, 0)
+    const last3 = everydayUsed.slice(-3)
+    const weighted = last3.reduce((a, v, i) => a + v * (i + 1), 0) / last3.reduce((a, _, i) => a + (i + 1), 0)
+    const everydayNext = Math.max(0, weighted + slope / 2)
+    const fixedHistory = monthsUsed.slice(-3).map((m) => fixedIn(m.month))
+    // What is set up is what will leave; with nothing set up, what has left in the last months.
+    const fixedNext = regular ? regular.monthlyMinor : fixedHistory.reduce((a, b) => a + b, 0) / fixedHistory.length
+    // The spread of the everyday part: how far the months have strayed from their mean, or a seventh if there are too few to say.
+    const spread = k >= 3 ? Math.sqrt(everydayUsed.reduce((a, v) => a + (v - mean) ** 2, 0) / k) : everydayNext * 0.15
+    outlook = {
+      fixedMinor: whole(fixedNext),
+      everydayMinor: whole(everydayNext),
+      totalMinor: whole(fixedNext + everydayNext),
+      lowMinor: whole(fixedNext + Math.max(0, everydayNext - spread)),
+      highMinor: whole(fixedNext + everydayNext + spread),
+      yearMinor: whole((fixedNext + everydayNext) * 12),
+    }
+  }
+
   // ---- What is already committed. ----
   const nextEmiPayment = upcomingPayments(input.recurring, todayKey, 62, moneyIn).find((p) => p.kind === 'expense' && tagOf(p.rule) === 'loan') ?? null
   let commitments: AiCommitments | null = null
@@ -303,6 +401,55 @@ export function buildAiSummary(input: AiInput): AiSummary {
         : null,
     }
   }
+
+  // ---- What leaves on its own: what has, and what is still to come, so the month's end counts it. ----
+  const activeRules = new Map(input.recurring.filter((r) => r.active).map((r) => [nameKey(r.merchant), r]))
+  const doneTxs = monthTxs.filter(isFixed).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.id ?? 0) - (b.id ?? 0)))
+  const autoDoneMinor = sum(doneTxs)
+  const monthStart = `${month}-01`
+  const deductionItems: AiDeduction[] = [
+    ...doneTxs.map((t): AiDeduction => {
+      const rule = activeRules.get(nameKey(t.merchant))
+      return { key: `done-${t.id}`, name: t.merchant.trim() || nameOf(t.categoryId), tag: rule ? tagOf(rule) : 'other', amountMinor: t.amountMinor, date: t.date, day: dayOf(t), state: 'done' }
+    }),
+    ...committed.map((p): AiDeduction => ({
+      key: `due-${p.key}`,
+      name: p.rule.merchant || nameOf(p.rule.categoryId),
+      tag: tagOf(p.rule),
+      amountMinor: p.amountMinor,
+      date: p.date,
+      day: p.date < monthStart ? 1 : dayOf(p),
+      state: p.overdue ? 'late' : 'due',
+    })),
+  ]
+  const incomeItems: AiDeductions['income'] = [
+    ...income
+      .filter((t) => monthOf(t.date) === month && t.source === 'recurring')
+      .map((t) => ({ name: t.merchant.trim() || 'Income', date: t.date, day: dayOf(t), amountMinor: t.amountMinor, done: true })),
+    ...restOfMonth(dueItems, todayKey)
+      .filter((p) => p.kind === 'income')
+      .map((p) => ({ name: p.rule.merchant || 'Income', date: p.date, day: p.date < monthStart ? 1 : dayOf(p), amountMinor: p.amountMinor, done: false })),
+  ]
+  const deductions: AiDeductions | null =
+    deductionItems.length === 0 && !regular
+      ? null
+      : {
+          items: deductionItems,
+          income: incomeItems,
+          doneMinor: autoDoneMinor,
+          dueMinor: committedLeftMinor,
+          totalMinor: autoDoneMinor + committedLeftMinor,
+          monthlyMinor: regular?.monthlyMinor ?? 0,
+          kinds: regular ? regular.byType.map((t) => ({ tag: t.tag, label: t.label, monthlyMinor: t.monthlyMinor, count: t.count })) : [],
+        }
+
+  const expectedEverydayMinor = projectedMinor === null ? 0 : Math.round(pace * (days - elapsed))
+  const everydayMinor = Math.max(spentMinor - autoDoneMinor, 0)
+  const barTotal = everydayMinor + autoDoneMinor + committedLeftMinor + expectedEverydayMinor
+  const monthBar: AiMonthBar | null =
+    spentMinor > 0
+      ? { everydayMinor, autoDoneMinor, autoDueMinor: committedLeftMinor, expectedEverydayMinor, totalMinor: barTotal, scaleMinor: Math.max(barTotal, hasBudget ? budgetMinor : 0), budgetMinor: hasBudget ? budgetMinor : null }
+      : null
 
   // ---- What could be saved, and what to do about what is coming. ----
   const tips: AiTip[] = []
@@ -409,6 +556,53 @@ export function buildAiSummary(input: AiInput): AiSummary {
   // What needs doing first, then what would keep the most.
   tips.sort((a, b) => Number(b.urgent ?? false) - Number(a.urgent ?? false) || (b.savingMinor ?? -1) - (a.savingMinor ?? -1))
   const shownTips = tips.slice(0, MAX_TIPS)
+
+  // Leaks: what would keep money, found from the everyday spending (not what leaves on its own), each with a month and a year.
+  const everydayTxs = monthTxs.filter((t) => !isFixed(t))
+  const everydayTotal = sum(everydayTxs)
+  const found: AiLeak[] = tips
+    .filter((t) => !t.urgent && t.savingMinor !== null && t.key !== 'rate')
+    .map((t) => ({ key: t.key, title: t.title, evidence: t.detail, monthlyMinor: t.savingMinor!, yearlyMinor: t.savingMinor! * 12 }))
+
+  // Weekend days that cost clearly more than weekdays: close half the gap, over the weekend days of a month.
+  const everydayView = dayView(everydayTxs, month, isCurrent ? elapsed : null, budgetMinor)
+  if (everydayView.weekendRatio !== null && everydayView.weekendRatio >= 1.3) {
+    const past = everydayView.days.filter((d) => !d.future)
+    const we = past.filter((d) => d.weekend)
+    const wd = past.filter((d) => !d.weekend)
+    const gap = sum(we.map((d) => ({ amountMinor: d.minor }) as Transaction)) / we.length - sum(wd.map((d) => ({ amountMinor: d.minor }) as Transaction)) / wd.length
+    const saving = whole(gap * 0.5 * 8.7)
+    if (saving >= MIN_SAVING_MINOR) {
+      found.push({
+        key: 'weekend',
+        title: 'Weekends cost you more',
+        evidence: `Weekend days run ${Math.round((everydayView.weekendRatio - 1) * 100)}% above weekdays. Closing half that gap would keep about ${money(saving)} a month.`,
+        monthlyMinor: saving,
+        yearlyMinor: saving * 12,
+      })
+    }
+  }
+
+  // Many small purchases, each too small to notice: bought often enough to be a real share of what goes.
+  if (everydayTxs.length >= 12 && everydayTotal > 0) {
+    const limit = (everydayTotal / everydayTxs.length) * 0.4
+    const small = everydayTxs.filter((t) => t.amountMinor <= limit)
+    const smallTotal = sum(small)
+    const share = Math.round((smallTotal / everydayTotal) * 100)
+    const saving = whole(toMonthEnd(smallTotal) * 0.25)
+    if (small.length >= 8 && share >= 8 && saving >= MIN_SAVING_MINOR) {
+      found.push({
+        key: 'small',
+        title: `${small.length} small purchases add up`,
+        evidence: `Each under ${money(whole(limit))}, together ${money(smallTotal)}: ${share}% of your everyday spending. Cutting a quarter would keep about ${money(saving)} a month.`,
+        monthlyMinor: saving,
+        yearlyMinor: saving * 12,
+      })
+    }
+  }
+  const leaks = found.sort((a, b) => b.monthlyMinor - a.monthlyMinor).slice(0, 6)
+  const alerts = tips.filter((t) => t.urgent)
+  const goal = tips.find((t) => t.key === 'rate') ?? null
   const potentialSavingMinor = Math.min(shownTips.reduce((a, t) => a + (t.savingMinor ?? 0), 0), projectedMinor ?? spentMinor)
 
   // ---- Habits. ----
@@ -439,6 +633,12 @@ export function buildAiSummary(input: AiInput): AiSummary {
     months,
     trend,
     commitments,
+    monthBar,
+    deductions,
+    leaks,
+    alerts,
+    goal,
+    outlook,
     tips: shownTips,
     potentialSavingMinor,
     habits,

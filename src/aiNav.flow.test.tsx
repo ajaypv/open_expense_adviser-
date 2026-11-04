@@ -55,7 +55,9 @@ describe('AI insights: the ways in', () => {
     const user = await open()
     await user.click(await screen.findByRole('button', { name: 'AI summary' }))
     const sheet = await screen.findByRole('dialog', { name: 'AI insights' })
-    expect(within(sheet).getByText(/You have spent ₹450 in/)).toBeInTheDocument()
+    // The sentence it opens on: where the month is heading, or, in its first days, what has been spent so far.
+    expect(within(sheet).getByRole('heading', { level: 3, name: /is heading for about ₹[\d,]+\.|You have spent ₹450 in .* so far\./ })).toBeInTheDocument()
+    expect(sheet).toHaveClass('page')
   })
 
   it('is closed by the phone back button, and leaves you where you were', async () => {

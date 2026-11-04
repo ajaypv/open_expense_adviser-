@@ -309,6 +309,54 @@ textarea {
   font-size: 1rem;
 }
 
+/* ---------- Full-screen page (native <dialog>) ---------- */
+
+/* Something to be read at length, over the whole screen. It wears the page's own background, art and all, so a glass theme
+   looks the same here as everywhere else, and comes up from just below, a short way, as a page does. */
+dialog.page {
+  margin: 0;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  padding: 0;
+  border: 0;
+  background: var(--bg-art, linear-gradient(transparent, transparent)), var(--bg);
+  background-attachment: fixed;
+  color: var(--ink);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+
+  translate: 0 1.5rem;
+  opacity: 0;
+  transition:
+    translate 0.34s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.24s ease-out,
+    overlay 0.34s allow-discrete,
+    display 0.34s allow-discrete;
+}
+dialog.page[open] {
+  translate: 0 0;
+  opacity: 1;
+}
+@starting-style {
+  dialog.page[open] {
+    translate: 0 1.5rem;
+    opacity: 0;
+  }
+}
+dialog.page::backdrop {
+  background: transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog.page {
+    translate: 0 0;
+    transition: opacity 0.15s ease-out;
+  }
+}
+
 /* ---------- Bottom sheet (native <dialog>) ---------- */
 
 dialog.sheet {
@@ -959,19 +1007,17 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 
 /* ---------- The AI insights page ---------- */
 
-/* Each part of the page rises into place as it is scrolled to, not before. .when-seen pauses what is inside; a part
-   that animates itself (this one) is paused here, so it too begins at the moment it comes into view. */
-@keyframes reveal-in {
+/* The page holds still as it is scrolled; what moves is the data. .when-seen pauses everything inside a part until the
+   part is on screen, so each line, bar, dot and number begins at the moment the person gets to it. */
+/* A dot pops into place. */
+@keyframes ai-pop {
   from {
+    transform: scale(0);
     opacity: 0;
-    transform: translateY(18px);
   }
 }
-.reveal {
-  animation: reveal-in 0.6s cubic-bezier(0.2, 0.9, 0.25, 1) var(--d, 0ms) backwards;
-}
-.reveal[data-seen='false'] {
-  animation-play-state: paused;
+.ai-pop {
+  animation: ai-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) var(--d, 0ms) backwards;
 }
 /* A line is drawn along its length; the path is given pathLength="1" so one dash is the whole of it. */
 @keyframes ai-draw {
@@ -1030,7 +1076,7 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   animation: ai-pulse 2.4s ease-out 1.4s infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .reveal,
+  .ai-pop,
   .ai-draw,
   .ai-fade,
   .ai-bar-up,

@@ -449,3 +449,235 @@ describe('buildAiSummary: warnings about what is committed', () => {
     expect(run({ recurring: [swiggy] }).tips.some((t) => t.key === 'repeat-swiggy')).toBe(false)
   })
 })
+
+// ---- What leaves on its own, the month as one bar, the leaks and the outlook ----
+
+const loggedByRule = (date: string, rupees: number, merchant: string): Transaction => ({ ...tx(date, rupees, 1, merchant), source: 'recurring' })
+
+describe('buildAiSummary: what leaves on its own', () => {
+  // The EMI has left (added by the recurring feature on the 5th); the rent is still due on the 25th.
+  const withBoth = () =>
+    run({ expenses: [...expenses, loggedByRule('2026-10-05', 12500, 'Home loan')], recurring: [{ ...emiRule, nextDue: '2026-11-05' }, rentRule] }).deductions!
+
+  it('lists what has left and what is still to leave, in the order of the month', () => {
+    const items = withBoth().items
+    expect(items.map((i) => [i.name, i.state, i.day])).toEqual([
+      ['Home loan', 'done', 5],
+      ['Rent', 'due', 25],
+    ])
+  })
+
+  it('gives each its kind and amount', () => {
+    const [emi, rent] = withBoth().items
+    expect(emi).toMatchObject({ tag: 'loan', amountMinor: 1_250_000, date: '2026-10-05' })
+    expect(rent).toMatchObject({ tag: 'bill', amountMinor: 600_000, date: '2026-10-25' })
+  })
+
+  it('adds up what has left, what is to leave, and both', () => {
+    expect(withBoth()).toMatchObject({ doneMinor: 1_250_000, dueMinor: 600_000, totalMinor: 1_850_000 })
+  })
+
+  it('counts something typed by hand under the name of a regular payment as having left', () => {
+    const d = run({ expenses: [...expenses, tx('2026-10-05', 12500, 1, 'Home loan')], recurring: [{ ...emiRule, nextDue: '2026-11-05' }] }).deductions!
+    expect(d.items[0]).toMatchObject({ name: 'Home loan', state: 'done', tag: 'loan' })
+  })
+
+  it('marks a payment that should have left and has not as late, on the day it was due', () => {
+    const late = rule({ merchant: 'Electricity', amountMinor: 300_000, tag: 'bill', nextDue: '2026-10-18' })
+    expect(run({ recurring: [late] }).deductions!.items[0]).toMatchObject({ state: 'late', day: 18 })
+  })
+
+  it('puts a payment that was due last month at the first of this one', () => {
+    const old = rule({ merchant: 'Insurance', amountMinor: 300_000, nextDue: '2026-09-28' })
+    expect(run({ recurring: [old] }).deductions!.items[0]).toMatchObject({ state: 'late', day: 1 })
+  })
+
+  it('knows when regular money comes in, as well as when it has', () => {
+    const received = { ...tx('2026-10-01', 80000, 1, 'Salary', 'income'), source: 'recurring' as const }
+    const paycheque = rule({ merchant: 'Bonus', kind: 'income', amountMinor: 500_000, tag: 'income', nextDue: '2026-10-28' })
+    const d = run({ income: [received], recurring: [rentRule, paycheque] }).deductions!
+    expect(d.income).toEqual([
+      { name: 'Salary', date: '2026-10-01', day: 1, amountMinor: 8_000_000, done: true },
+      { name: 'Bonus', date: '2026-10-28', day: 28, amountMinor: 500_000, done: false },
+    ])
+  })
+
+  it('does not count money coming in, or a switched-off payment, as leaving', () => {
+    const d = run({ recurring: [{ ...rentRule, active: false }, salaryRule] })
+    expect(d.deductions).toBeNull()
+  })
+
+  it('says what regular payments cost in a month, by kind, biggest first', () => {
+    const d = run({ recurring: [emiRule, rentRule] }).deductions!
+    expect(d.monthlyMinor).toBe(1_850_000)
+    expect(d.kinds.map((k) => [k.label, k.monthlyMinor])).toEqual([['Loan EMI', 1_250_000], ['Bill', 600_000]])
+  })
+
+  it('has nothing for a month with none set up and none left', () => {
+    expect(run().deductions).toBeNull()
+  })
+
+  it('shows only what left, for a month that is over', () => {
+    const d = run({ month: '2026-09', expenses: [...expenses, loggedByRule('2026-09-05', 12500, 'Home loan')], recurring: [rentRule] }).deductions!
+    expect(d.items.map((i) => i.state)).toEqual(['done'])
+    expect(d.dueMinor).toBe(0)
+  })
+})
+
+describe('buildAiSummary: the month as one bar', () => {
+  it('splits the month into what is spent, what is to be spent, and what is to leave on its own', () => {
+    const b = run({ recurring: [rentRule] }).monthBar!
+    expect(b).toMatchObject({ everydayMinor: 900_000, autoDoneMinor: 0, autoDueMinor: 600_000 })
+    expect(b.expectedEverydayMinor).toBeGreaterThan(450_000)
+    expect(b.expectedEverydayMinor).toBeLessThan(500_000)
+  })
+
+  it('adds up to where the month is heading', () => {
+    for (const recurring of [[], [rentRule], [emiRule, rentRule]]) {
+      const s = run({ recurring })
+      expect(Math.abs(s.monthBar!.totalMinor - s.trajectory.projectedMinor!)).toBeLessThanOrEqual(100)
+    }
+  })
+
+  it('takes what left on its own out of the everyday part', () => {
+    const b = run({ expenses: [...expenses, loggedByRule('2026-10-05', 10000, 'Home loan')] }).monthBar!
+    expect(b.autoDoneMinor).toBe(1_000_000)
+    expect(b.everydayMinor).toBe(900_000)
+  })
+
+  it('is as wide as the month, or the budget when that is more', () => {
+    expect(run().monthBar!.scaleMinor).toBe(run().monthBar!.totalMinor)
+    expect(run({ budgetMinor: 5_000_000 }).monthBar!).toMatchObject({ scaleMinor: 5_000_000, budgetMinor: 5_000_000 })
+    // A budget under where the month ends leaves the month as the width.
+    const tight = run({ budgetMinor: 1_000_000 }).monthBar!
+    expect(tight.scaleMinor).toBe(tight.totalMinor)
+  })
+
+  it('has no budget marker without a budget', () => {
+    expect(run().monthBar!.budgetMinor).toBeNull()
+  })
+
+  it('has nothing still to come for a month that is over', () => {
+    expect(run({ month: '2026-09' }).monthBar).toMatchObject({ expectedEverydayMinor: 0, autoDueMinor: 0, everydayMinor: 900_000 })
+  })
+
+  it('is nothing when nothing has been spent', () => {
+    expect(run({ expenses: [], income: [] }).monthBar).toBeNull()
+  })
+})
+
+describe('buildAiSummary: where it is leaking', () => {
+  it('lists what would keep money, biggest first, each with a month and a year', () => {
+    const { leaks } = run()
+    expect(leaks.map((l) => l.key)).toEqual(['usual-1', 'repeat-swiggy', 'usual-2'])
+    expect(leaks.map((l) => l.monthlyMinor)).toEqual([175_000, 50_000, 32_500])
+    for (const l of leaks) expect(l.yearlyMinor).toBe(l.monthlyMinor * 12)
+  })
+
+  it('says what each is, with the evidence', () => {
+    const food = run().leaks.find((l) => l.key === 'usual-1')!
+    expect(food.title).toBe('Food is running above your usual')
+    expect(food.evidence).toContain('₹7750')
+  })
+
+  it('leaves out what is urgent, and the aim to keep a share of income', () => {
+    const s = run({ budgetMinor: 800_000, income: [tx('2026-10-01', 14000, 1, 'Employer', 'income')] })
+    expect(s.leaks.some((l) => l.key === 'over' || l.key === 'rate')).toBe(false)
+  })
+
+  it('finds weekends that cost clearly more than weekdays, and what closing half the gap would keep', () => {
+    // 300 rupees on each weekend day, 100 on each weekday, up to the 20th.
+    const weekend = [3, 4, 10, 11, 17, 18]
+    const days = Array.from({ length: 20 }, (_, i) => i + 1)
+    const spendDays = days.map((d) => tx(`2026-10-${String(d).padStart(2, '0')}`, weekend.includes(d) ? 300 : 100, 2, `Shop ${d}`))
+    const leak = run({ expenses: spendDays, income: [] }).leaks.find((l) => l.key === 'weekend')!
+    // A gap of 200 rupees a day, half of it, over about 8.7 weekend days.
+    expect(leak.monthlyMinor).toBe(87_000)
+    expect(leak.evidence).toContain('200% above weekdays')
+  })
+
+  it('does not blame weekends for a payment that leaves on one', () => {
+    const weekday = Array.from({ length: 20 }, (_, i) => tx(`2026-10-${String(i + 1).padStart(2, '0')}`, 100, 2, `Shop ${i + 1}`))
+    const withEmi = [...weekday, loggedByRule('2026-10-03', 12500, 'Home loan')]
+    expect(run({ expenses: withEmi, income: [] }).leaks.some((l) => l.key === 'weekend')).toBe(false)
+  })
+
+  it('finds many small purchases that together are a real share', () => {
+    // Twelve of 50 rupees and four of 800: the small ones are 16% of the everyday.
+    const small = Array.from({ length: 12 }, (_, i) => tx(`2026-10-${String(i + 1).padStart(2, '0')}`, 50, 1, `Kiosk ${i}`))
+    const big = [13, 14, 15, 16].map((d) => tx(`2026-10-${d}`, 800, 2, `Store ${d}`))
+    const leak = run({ expenses: [...small, ...big], income: [] }).leaks.find((l) => l.key === 'small')!
+    expect(leak.title).toBe('12 small purchases add up')
+    expect(leak.evidence).toContain('16%')
+    expect(leak.monthlyMinor).toBe(23_300)
+  })
+
+  it('has no small-purchases finding when there are only a few', () => {
+    const few = Array.from({ length: 5 }, (_, i) => tx(`2026-10-0${i + 1}`, 50, 1, `Kiosk ${i}`))
+    expect(run({ expenses: few, income: [] }).leaks.some((l) => l.key === 'small')).toBe(false)
+  })
+
+  it('gives at most six', () => {
+    expect(run().leaks.length).toBeLessThanOrEqual(6)
+  })
+
+  it('has none when nothing was spent', () => {
+    expect(run({ expenses: [], income: [] }).leaks).toEqual([])
+  })
+})
+
+describe('buildAiSummary: alerts and the aim', () => {
+  it('keeps what is urgent apart: a budget passed, a balance that will not cover, payments that take too much', () => {
+    const s = run({ budgetMinor: 800_000, recurring: [emiRule], balance: { set: true, minor: 500_000 } })
+    expect(s.alerts.map((a) => a.key).sort()).toEqual(['emi', 'over', 'shortfall'])
+    expect(s.alerts.every((a) => a.urgent)).toBe(true)
+  })
+
+  it('has no alerts when nothing is wrong', () => {
+    expect(run().alerts).toEqual([])
+  })
+
+  it('keeps the aim to keep a fifth of what comes in, when spending is heading above it', () => {
+    expect(run({ income: [tx('2026-10-01', 14000, 1, 'Employer', 'income')] }).goal?.key).toBe('rate')
+    expect(run().goal).toBeNull()
+  })
+})
+
+describe('buildAiSummary: the next month', () => {
+  it('splits it into what leaves on its own and everything else, from the recent months', () => {
+    // 7,000, 8,000 and 9,000 of everyday, none of it regular: next near 8,833.
+    expect(run().outlook).toMatchObject({ fixedMinor: 0, everydayMinor: 883_300, totalMinor: 883_300 })
+  })
+
+  it('says the range it will probably land in', () => {
+    const o = run().outlook!
+    expect(o.lowMinor).toBeLessThan(o.totalMinor)
+    expect(o.highMinor).toBeGreaterThan(o.totalMinor)
+    // A spread of about 817 rupees either side, from the months own ups and downs.
+    expect(o.totalMinor - o.lowMinor).toBeGreaterThan(70_000)
+    expect(o.totalMinor - o.lowMinor).toBeLessThan(95_000)
+  })
+
+  it('adds what is set up to leave each month on top of the everyday', () => {
+    const o = run({ recurring: [emiRule] }).outlook!
+    expect(o.fixedMinor).toBe(1_250_000)
+    expect(o.totalMinor).toBe(2_133_300)
+  })
+
+  it('takes what left on its own out of the months before working out the everyday', () => {
+    // 6,000 rupees of rent added by the recurring feature in each of July, August and September.
+    const rent = ['2026-07-01', '2026-08-01', '2026-09-01'].map((d) => loggedByRule(d, 6000, 'Rent'))
+    const o = run({ expenses: [...expenses, ...rent] }).outlook!
+    // The everyday part is as before; the regular part is what has left in the last months.
+    expect(o.everydayMinor).toBe(883_300)
+    expect(o.fixedMinor).toBe(600_000)
+  })
+
+  it('says a year of it', () => {
+    expect(run().outlook!.yearMinor).toBe(10_600_000)
+  })
+
+  it('is nothing with fewer than two months to go on', () => {
+    expect(run({ expenses: expenses.filter((t) => t.date >= '2026-09') }).outlook).toBeNull()
+  })
+})
