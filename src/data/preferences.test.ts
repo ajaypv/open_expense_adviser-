@@ -14,14 +14,14 @@ async function load() {
 }
 
 describe('suggestion placement', () => {
-  it('defaults to above the input bar when nothing is saved', async () => {
+  it('defaults to the Home screen when nothing is saved', async () => {
     const { getSuggestionPlacement } = await load()
-    expect(await getSuggestionPlacement()).toBe('input')
+    expect(await getSuggestionPlacement()).toBe('home')
   })
 
   it('remembers each choice', async () => {
     const { getSuggestionPlacement, setSuggestionPlacement } = await load()
-    for (const choice of ['home', 'off', 'input'] as const) {
+    for (const choice of ['input', 'off', 'home'] as const) {
       await setSuggestionPlacement(choice)
       expect(await getSuggestionPlacement()).toBe(choice)
     }
@@ -30,8 +30,8 @@ describe('suggestion placement', () => {
   it('falls back to the default if the stored value is not a known choice', async () => {
     const { db, getSuggestionPlacement } = await load()
     await db.settings.put({ key: 'suggestionPlacement', value: 'sideways' })
-    expect(await getSuggestionPlacement()).toBe('input')
+    expect(await getSuggestionPlacement()).toBe('home')
     await db.settings.put({ key: 'suggestionPlacement', value: 42 })
-    expect(await getSuggestionPlacement()).toBe('input')
+    expect(await getSuggestionPlacement()).toBe('home')
   })
 })

@@ -385,13 +385,13 @@ describe('Appearance', () => {
 })
 
 describe('Suggestions placement', () => {
-  it('starts above the input bar, and moves to Home or off', async () => {
+  it('starts on the Home screen, and moves to above the input bar or off', async () => {
     const user = userEvent.setup()
     render(<SuggestionsSection />)
     // The saved choice loads a moment after the section appears; until then nothing is shown as chosen.
-    await waitFor(() => expect(screen.getByRole('radio', { name: /Above the input bar/ })).toBeChecked())
-    await user.click(screen.getByRole('radio', { name: /On the Home screen/ }))
     await waitFor(() => expect(screen.getByRole('radio', { name: /On the Home screen/ })).toBeChecked())
+    await user.click(screen.getByRole('radio', { name: /Above the input bar/ }))
+    await waitFor(() => expect(screen.getByRole('radio', { name: /Above the input bar/ })).toBeChecked())
     await user.click(screen.getByRole('radio', { name: /^Off/ }))
     await waitFor(() => expect(screen.getByRole('radio', { name: /^Off/ })).toBeChecked())
   })

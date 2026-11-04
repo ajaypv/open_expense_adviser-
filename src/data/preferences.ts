@@ -7,7 +7,8 @@ export type SuggestionPlacement = 'input' | 'home' | 'off'
 export const SUGGESTION_PLACEMENTS: SuggestionPlacement[] = ['input', 'home', 'off']
 
 const KEY = 'suggestionPlacement'
-const DEFAULT: SuggestionPlacement = 'input'
+/** Home is where the suggestions have room to show the reason and a plus to add, so it is where they start. */
+const DEFAULT: SuggestionPlacement = 'home'
 
 const isPlacement = (v: unknown): v is SuggestionPlacement => SUGGESTION_PLACEMENTS.includes(v as SuggestionPlacement)
 

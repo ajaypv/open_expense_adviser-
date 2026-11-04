@@ -2,8 +2,8 @@ import { setSuggestionPlacement, useSuggestionPlacement, type SuggestionPlacemen
 import { Group, RadioList } from './parts'
 
 const PLACEMENTS: { id: SuggestionPlacement; label: string; detail: string }[] = [
+  { id: 'home', label: 'On the Home screen', detail: 'Tiles on Home, under your summary, each with a plus to add it at once.' },
   { id: 'input', label: 'Above the input bar', detail: 'A swipeable row of your regulars, right where you type.' },
-  { id: 'home', label: 'On the Home screen', detail: 'A section on Home, under your summary.' },
   { id: 'off', label: 'Off', detail: 'No suggestions anywhere, including the add form.' },
 ]
 
