@@ -17,6 +17,7 @@ import { RecurringSection } from './settings/RecurringSection'
 import { RemindersSection } from './settings/RemindersSection'
 import { SecuritySection } from './settings/SecuritySection'
 import { SuggestionsSection } from './settings/SuggestionsSection'
+import { WidgetSection } from './settings/WidgetSection'
 
 /** The pages Settings leads to. */
 export type SettingsPage = 'money' | 'auto' | 'look' | 'privacy'
@@ -41,7 +42,7 @@ interface Props {
 
 const PAGES: { id: SettingsPage; title: string; summary: string; icon: IconName }[] = [
   { id: 'money', title: 'Money', summary: 'Currency, accounts and balance, monthly budget', icon: 'bag' },
-  { id: 'auto', title: 'Automatic', summary: 'Regular payments, reminders, suggestions', icon: 'repeat' },
+  { id: 'auto', title: 'Automatic', summary: 'Regular payments, reminders, suggestions, widget', icon: 'repeat' },
   { id: 'look', title: 'Appearance', summary: 'Colour theme, light or dark, text size, hide amounts', icon: 'sun' },
   { id: 'privacy', title: 'Privacy and data', summary: 'App lock, location, export, restore, recently deleted', icon: 'lock' },
 ]
@@ -82,6 +83,7 @@ export const Settings = memo(function Settings({ ledger, theme, onTheme, palette
             <RecurringSection ledger={ledger} onOpenUpcoming={onOpenUpcoming} />
             <RemindersSection />
             <SuggestionsSection />
+            <WidgetSection ledger={ledger} />
           </>
         )}
         {open.id === 'look' && <DisplaySection theme={theme} onTheme={onTheme} palette={palette} onPalette={onPalette} />}

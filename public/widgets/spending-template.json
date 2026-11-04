@@ -1,0 +1,16 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    { "type": "TextBlock", "text": "${title}", "size": "Small", "isSubtle": true, "wrap": true },
+    { "type": "TextBlock", "text": "${spent}", "size": "ExtraLarge", "weight": "Bolder", "spacing": "None" },
+    { "type": "TextBlock", "text": "${spentLabel}", "size": "Small", "isSubtle": true, "spacing": "None" },
+    { "type": "TextBlock", "text": "${headline}", "weight": "Bolder", "color": "${tone}", "wrap": true, "spacing": "Medium" },
+    { "type": "TextBlock", "text": "${detail}", "wrap": true, "spacing": "None", "$when": "${detail != ''}" },
+    { "type": "TextBlock", "text": "${perDay}", "wrap": true, "size": "Small", "isSubtle": true, "spacing": "Small", "$when": "${perDay != ''}" },
+    { "type": "TextBlock", "text": "${next}", "wrap": true, "size": "Small", "spacing": "Medium", "$when": "${next != ''}" },
+    { "type": "TextBlock", "text": "${updated}", "wrap": true, "size": "Small", "isSubtle": true, "spacing": "Medium" }
+  ],
+  "actions": [{ "type": "Action.Execute", "title": "Open Expense Tracker", "verb": "open" }]
+}

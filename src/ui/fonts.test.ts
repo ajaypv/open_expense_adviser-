@@ -10,10 +10,10 @@ describe('fonts', () => {
 
   it('ships the font files with the app, so the type is the same offline', () => {
     const files = [...css.matchAll(/url\('\.\/(assets\/fonts\/[^']+\.woff2)'\)/g)].map((m) => `src/${m[1]}`)
-    // Manrope, and the four of the glass themes (Exo 2, Space Grotesk, Plus Jakarta Sans, Geist): each in a Latin piece and a Latin extended one.
-    expect(files).toHaveLength(10)
+    // Manrope, the four of the glass themes (Exo 2, Space Grotesk, Plus Jakarta Sans, Geist) and the AI page's Newsreader: each in a Latin piece and a Latin extended one.
+    expect(files).toHaveLength(12)
     for (const file of files) expect(existsSync(file), file).toBe(true)
-    for (const licence of ['Manrope-OFL.txt', 'Exo2-OFL.txt', 'SpaceGrotesk-OFL.txt', 'PlusJakartaSans-OFL.txt', 'Geist-OFL.txt']) expect(existsSync(`src/assets/fonts/${licence}`), licence).toBe(true) // the licence goes with the font
+    for (const licence of ['Manrope-OFL.txt', 'Exo2-OFL.txt', 'SpaceGrotesk-OFL.txt', 'PlusJakartaSans-OFL.txt', 'Geist-OFL.txt', 'Newsreader-OFL.txt']) expect(existsSync(`src/assets/fonts/${licence}`), licence).toBe(true) // the licence goes with the font
   })
 
   it('covers the rupee sign, the euro sign and plain digits', () => {

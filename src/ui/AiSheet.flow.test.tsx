@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import '../test/dom'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Category, Recurring, Transaction } from '../db/schema'
 import { makeLedger } from '../test/ledger'
@@ -488,5 +489,53 @@ describe('AiSheet: the page holds still and the data draws', () => {
   it('marks today on the line with a ring that breathes', () => {
     mount()
     expect(dialog().querySelector('.ai-pulse')).toBeInTheDocument()
+  })
+})
+
+describe('AiSheet: its typography', () => {
+  const css = readFileSync('src/index.css', 'utf8').replace(/\r/g, '')
+
+  it('sets the sentence it opens on in its serif, balanced across the lines', () => {
+    mount()
+    const heading = within(lead()).getByRole('heading', { level: 3 })
+    expect(heading).toHaveClass('font-ai-display', 'text-balance')
+  })
+
+  it('sets each section heading in the serif too', () => {
+    mount({ recurring: [emiNow] })
+    for (const id of ['ai-auto', 'ai-leaks', 'ai-pace', 'ai-where', 'ai-ahead', 'ai-habits']) {
+      expect(dialog().querySelector(`#${id}`), id).toHaveClass('font-ai-display')
+    }
+  })
+
+  it('sets the big figures in it, level and in step: lining, tabular', () => {
+    mount()
+    expect(screen.getByTestId('leak-total').querySelector('p.font-ai-display')).toBeInTheDocument()
+    expect(screen.getByTestId('outlook').querySelector('p.font-ai-display')).toBeInTheDocument()
+    expect(css).toMatch(/\.font-ai-display \{[^}]*font-variant-numeric: lining-nums tabular-nums/)
+  })
+
+  it('keeps the small type, the lists and the labels in the theme’s own typeface', () => {
+    mount({ recurring: [emiNow] })
+    expect(dialog().querySelector('[data-deduction]')).not.toHaveClass('font-ai-display')
+    expect(dialog().querySelector('[data-leak]')).not.toHaveClass('font-ai-display')
+    // The unit beside a big figure goes back to the theme’s face rather than turning serif.
+    expect(screen.getByTestId('leak-total').querySelector('.font-theme')).toHaveTextContent('a month')
+    expect(css).toMatch(/\.font-theme \{[^}]*font-family: var\(--font-ui, var\(--font-sans\)\)/)
+  })
+
+  it('names Newsreader first, with a serif to fall back on while it loads', () => {
+    expect(css).toMatch(/\.font-ai-display \{[^}]*font-family: 'Newsreader Variable', Georgia, 'Times New Roman', serif/)
+  })
+
+  it('ships Newsreader with the app, with the rupee sign covered, so it is the same offline', () => {
+    expect(css).toContain("font-family: 'Newsreader Variable';")
+    expect(css).toContain('newsreader-latin-wght-normal.woff2')
+    expect(css).toContain('newsreader-latin-ext-wght-normal.woff2')
+  })
+
+  it('is set in a larger size than the type around it, since a serif reads smaller than a sans at the same size', () => {
+    mount()
+    expect(within(lead()).getByRole('heading', { level: 3 }).className).toMatch(/text-\[clamp\(2\.125rem,9vw,2\.875rem\)\]/)
   })
 })

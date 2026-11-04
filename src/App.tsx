@@ -24,6 +24,7 @@ import { learnedCategoryId, learnedPaymentMethod } from './ingest/learn'
 import { describeDay, parseMany } from './ingest/localParser'
 import { suggest, type Suggestion } from './insights/suggestions'
 import type { SettingsPage } from './screens/Settings'
+import { useWidgetSnapshot } from './widget/useWidgetSnapshot'
 import { usePwa } from './pwa/usePwa'
 import { APP_VERSION } from './pwa/version'
 import { useReminders } from './reminders/useReminders'
@@ -83,6 +84,8 @@ type GoalSheetState = { open: boolean; goal: Goal | null; n: number }
 function Shell() {
   const pwa = usePwa()
   const ledger = useLedger()
+  // Where the Windows Widgets Board can show the app's widget, keep its figures current. Nothing on a phone.
+  useWidgetSnapshot(ledger)
   const theme = useTheme()
   const toast = useToast()
   useDisplay() // the suggestion row shows amounts, so redraw when display settings change

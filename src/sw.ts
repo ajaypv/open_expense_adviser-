@@ -5,6 +5,8 @@ import { NavigationRoute, registerRoute } from 'workbox-routing'
 import { localDateString } from './db/money'
 import { db } from './db/schema'
 import { readPrefs, readState, REMINDER_STATE_KEY, REMINDERS_KEY, shouldNotifyLog } from './reminders/logic'
+import { WIDGET_CACHE, WIDGET_SNAPSHOT } from './widget/snapshot'
+import { refreshWidgets, renderWidget, type WidgetDeps, type WidgetHost, type WidgetLike } from './widget/worker'
 
 declare const self: ServiceWorkerGlobalScope
 
@@ -15,6 +17,8 @@ registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html')))
 // registerType is 'prompt': the page tells a waiting worker when to take over.
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') void self.skipWaiting()
+  // The page has just left new figures for the widget.
+  if (event.data?.type === 'WIDGET_REFRESH') event.waitUntil(refreshWidgets(widgetDeps()))
 })
 clientsClaim()
 
@@ -47,13 +51,43 @@ self.addEventListener('periodicsync', (event) => {
   if (e.tag === 'daily-reminder') e.waitUntil(dailyReminder())
 })
 
+/** Brings the app forward if it is open, or opens it. */
+const focusOrOpen = () =>
+  self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+    const open = windows[0]
+    return open ? open.focus() : self.clients.openWindow(self.registration.scope)
+  })
+
 // Tapping a notification focuses the app or opens it.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
-      const open = windows[0]
-      return open ? open.focus() : self.clients.openWindow(self.registration.scope)
-    }),
-  )
+  event.waitUntil(focusOrOpen())
 })
+
+/**
+ * The widget, in the Windows 11 Widgets Board (the only place a web app can have one; a phone cannot). The page leaves its
+ * figures in a cache whenever the ledger changes; the worker hands Windows the template and those figures when the widget is
+ * added, comes back into view, the worker is updated, or the page says there is something new. In a browser with no widgets
+ * none of these events ever arrive.
+ */
+const widgetDeps = (): WidgetDeps => ({
+  widgets: (self as unknown as { widgets?: WidgetHost }).widgets,
+  fetchText: async (url) => (await fetch(url)).text(),
+  readSnapshot: async () => {
+    const hit = await (await caches.open(WIDGET_CACHE)).match(new URL(WIDGET_SNAPSHOT, self.registration.scope).href)
+    return hit ? hit.text() : null
+  },
+})
+
+type WidgetEvent = ExtendableEvent & { widget: WidgetLike; action?: string }
+for (const name of ['widgetinstall', 'widgetresume']) {
+  self.addEventListener(name, (event) => {
+    const e = event as WidgetEvent
+    e.waitUntil(renderWidget(e.widget, widgetDeps()))
+  })
+}
+self.addEventListener('widgetclick', (event) => {
+  // The one button on the widget: open the app.
+  if ((event as WidgetEvent).action === 'open') (event as WidgetEvent).waitUntil(focusOrOpen())
+})
+self.addEventListener('activate', (event) => event.waitUntil(refreshWidgets(widgetDeps())))

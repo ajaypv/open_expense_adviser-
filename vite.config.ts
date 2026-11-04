@@ -14,6 +14,28 @@ const version: string = JSON.parse(readFileSync('./package.json', 'utf8')).versi
 const build = process.env.GITHUB_SHA?.slice(0, 7) ?? 'local'
 const buildDate = new Date().toISOString().slice(0, 10)
 
+// The widget for the Windows 11 Widgets Board (no phone lets a web app add one). It is drawn by Windows from an Adaptive Cards
+// template and the figures the app leaves for it; see src/widget. Held apart from the manifest object below because the
+// plugin's manifest type does not know this member yet.
+const widgets = {
+  widgets: [
+    {
+      name: 'Spending',
+      short_name: 'Spending',
+      description: 'This month’s spending, where it is heading, and the next payment that leaves on its own.',
+      tag: 'spending',
+      template: 'spending',
+      ms_ac_template: 'widgets/spending-template.json',
+      data: 'widgets/spending-data.json',
+      type: 'application/json',
+      screenshots: [{ src: 'widgets/spending-screenshot.png', sizes: '300x304', label: 'The Spending widget, showing this month so far' }],
+      icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }],
+      auth: false,
+      multiple: false,
+    },
+  ],
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   base,
@@ -57,6 +79,7 @@ export default defineConfig({
         background_color: '#121314',
         theme_color: '#121314',
         categories: ['finance', 'productivity'],
+        ...widgets,
         // Long-press the icon to jump straight to the add form (handled by ?add= in App).
         shortcuts: [
           {
@@ -86,7 +109,8 @@ export default defineConfig({
         ],
       },
       injectManifest: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // json: the widget's template and placeholder data, which the worker fetches, so they must work offline.
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,json}'],
       },
       devOptions: { enabled: false },
     }),
@@ -94,5 +118,10 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}'],
+    // The first test in a file that opens a screen pays for loading it (the screens are fetched on first use), and with a
+    // hundred and thirty files running at once that can pass five seconds on a busy machine or a slow runner. A real hang
+    // still fails, only later.
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
   },
 })

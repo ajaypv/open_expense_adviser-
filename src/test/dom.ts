@@ -16,8 +16,8 @@ import { resetMotion } from '../ui/motion'
 
 // How long findBy… and waitFor wait before giving up. The default is one second, which is plenty alone but not when
 // the whole suite runs at once, a hundred files at a time, on a busy machine or a slow CI runner: an App test that
-// takes 300 ms alone can take over a second then, and fails for no reason. A real failure still fails, only later.
-configure({ asyncUtilTimeout: 5000 })
+// takes 300 ms alone can take over a second then, and fails for no reason (more so the first time a screen that is loaded on first use is opened). A real failure still fails, only later.
+configure({ asyncUtilTimeout: 10_000 })
 
 // <dialog>: opening sets the attribute, closing removes it and fires "close", as a browser does.
 const dialog = HTMLDialogElement.prototype

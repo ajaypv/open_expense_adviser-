@@ -31,7 +31,7 @@ const delay = (ms: number): CSSProperties => ({ '--d': `${ms}ms` }) as CSSProper
 function Heading({ id, children, lead }: { id: string; children: string; lead?: string }) {
   return (
     <>
-      <h3 id={id} className="text-xl font-semibold leading-tight tracking-tight">
+      <h3 id={id} className="font-ai-display text-balance text-[1.75rem] font-semibold leading-[1.1] tracking-tight">
         {children}
       </h3>
       {lead && <p className="mt-1 text-[0.9375rem] leading-snug text-ink-2">{lead}</p>}
@@ -53,7 +53,7 @@ export function AiSheet({ open, onClose, ledger, month, today }: Props) {
       <div className="mx-auto w-full max-w-xl px-5 pb-[max(3rem,env(safe-area-inset-bottom))]">
         <header className="sticky top-0 z-10 -mx-5 flex items-center justify-between gap-3 bg-bg/80 px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md">
           <div className="min-w-0">
-            <h2 id="ai-title" className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+            <h2 id="ai-title" className="font-ai-display flex items-center gap-2 text-xl font-semibold tracking-tight">
               <span aria-hidden="true" style={{ color: 'var(--accent)' }}>
                 <Icon name="spark" size={20} />
               </span>
@@ -165,13 +165,13 @@ function Briefing({ s, money, currency }: { s: AiSummary; money: Fmt; currency: 
   return (
     <Scene>
       <section aria-labelledby="ai-lead" data-tone={s.verdict.tone}>
-        <h3 id="ai-lead" className="text-[clamp(1.75rem,7.6vw,2.4rem)] font-semibold leading-[1.1] tracking-tight">
+        <h3 id="ai-lead" className="font-ai-display text-balance text-[clamp(2.125rem,9vw,2.875rem)] font-medium leading-[1.05] tracking-[-0.02em]">
           {lead}
         </h3>
         {sub.length > 0 && (
           <ul className="mt-3 space-y-1">
             {sub.map((line) => (
-              <li key={line} className="text-[1.0625rem] leading-snug text-ink-2">
+              <li key={line} className="text-pretty text-[1.0625rem] leading-snug text-ink-2">
                 {line}
               </li>
             ))}
@@ -301,9 +301,9 @@ function Leaking({ s, money, currency }: { s: AiSummary; money: Fmt; currency: s
           <>
             <div data-testid="leak-total" className="mt-4">
               <p className="text-sm text-ink-2">{chosen.length === 0 ? 'Nothing switched on' : chosen.length === s.leaks.length ? 'Stopping all of these keeps you' : `Stopping these ${chosen.length} keeps you`}</p>
-              <p className="text-4xl font-semibold leading-tight tracking-tight tabular-nums">
+              <p className="font-ai-display text-5xl font-medium leading-none tracking-tight">
                 <CountUp minor={monthly} currency={currency} delay={150} />
-                <span className="ml-2 text-base font-medium text-ink-2">a month</span>
+                <span className="font-theme ml-2 text-base font-medium text-ink-2">a month</span>
               </p>
               <p className="text-[0.9375rem] leading-snug text-ink-2">
                 {'That is '}
@@ -462,18 +462,18 @@ function Ahead({ s, money, currency }: { s: AiSummary; money: Fmt; currency: str
         {o ? (
           <div data-testid="outlook" className="mt-3">
             <p className="text-sm text-ink-2">Next month will probably cost</p>
-            <p className="text-4xl font-semibold leading-tight tracking-tight tabular-nums">
+            <p className="font-ai-display text-5xl font-medium leading-none tracking-tight">
               <CountUp minor={o.totalMinor} currency={currency} delay={150} />
             </p>
             <p data-line="range" className="text-[0.9375rem] leading-snug text-ink-2">{`Most likely between ${money(o.lowMinor)} and ${money(o.highMinor)}.`}</p>
             <dl className="mt-4 grid grid-cols-2 divide-x divide-line border-y border-line py-3">
               <div className="pr-4">
                 <dt className="text-sm text-ink-2">Leaves on its own</dt>
-                <dd data-part="fixed" className="text-xl font-semibold tabular-nums">{money(o.fixedMinor)}</dd>
+                <dd data-part="fixed" className="font-ai-display text-2xl font-medium">{money(o.fixedMinor)}</dd>
               </div>
               <div className="pl-4">
                 <dt className="text-sm text-ink-2">Everything else</dt>
-                <dd data-part="everyday" className="text-xl font-semibold tabular-nums">{money(o.everydayMinor)}</dd>
+                <dd data-part="everyday" className="font-ai-display text-2xl font-medium">{money(o.everydayMinor)}</dd>
               </div>
             </dl>
             <p data-line="year" className="mt-3 text-[0.9375rem] leading-snug">{`At this rate a year comes to about ${money(o.yearMinor)}.`}</p>

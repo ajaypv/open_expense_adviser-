@@ -146,8 +146,8 @@ describe('the glass themes', () => {
 
   it('ships each typeface with its licence, the files in step with the rules', () => {
     const files = [...raw.matchAll(/url\('\.\/(assets\/fonts\/[^']+\.woff2)'\)/g)].map((m) => m[1])
-    expect(files).toHaveLength(10) // five typefaces, each in two pieces: Latin, and Latin extended for the rupee sign
-    expect(new Set(files).size).toBe(10)
+    expect(files).toHaveLength(12) // six typefaces (five for themes, one for the AI page), each in two pieces: Latin, and Latin extended for the rupee sign
+    expect(new Set(files).size).toBe(12)
   })
 
   describe.each(GLASS_PALETTES.flatMap((p) => (p.darkOnly ? [[p, 'dark'] as const] : [[p, 'light'] as const, [p, 'dark'] as const])))('over the art of $0.id, %s', (p, mode) => {

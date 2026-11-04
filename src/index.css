@@ -101,6 +101,29 @@
 }
 
 /*
+ * Newsreader (SIL Open Font License, the licence beside the file): the face of the AI insights page's headline, headings and big
+ * figures, a serif drawn for reading on screens, with the rupee sign and tabular figures. Everything else on that page, as everywhere,
+ * is set in the theme's own typeface.
+ */
+@font-face {
+  font-family: 'Newsreader Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('./assets/fonts/newsreader-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Newsreader Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('./assets/fonts/newsreader-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/*
  * Design tokens. Surfaces, ink and the eight categorical hues come from the validated
  * data-viz palette (both modes pass the adjacent-pair CVD and normal-vision checks).
  * In the classic theme, color is reserved for data and buttons and chrome are monochrome ink; the colour themes
@@ -1006,6 +1029,18 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 }
 
 /* ---------- The AI insights page ---------- */
+
+/* The page's own voice: a serif for the sentence it opens on, its headings and its big figures, over the theme's typeface for
+   everything that is read in small type. Lining, tabular figures, so amounts stand level and do not jump as they count. */
+/* And back to the theme's own typeface, for a small word set beside a big figure. */
+.font-theme {
+  font-family: var(--font-ui, var(--font-sans));
+}
+.font-ai-display {
+  font-family: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-optical-sizing: auto;
+}
 
 /* The page holds still as it is scrolled; what moves is the data. .when-seen pauses everything inside a part until the
    part is on screen, so each line, bar, dot and number begins at the moment the person gets to it. */

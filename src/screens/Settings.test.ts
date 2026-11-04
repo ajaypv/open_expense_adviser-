@@ -25,7 +25,7 @@ describe('Settings: the list', () => {
 
   it('says in a line what is on each page', () => {
     const html = render()
-    for (const line of ['Currency, accounts and balance, monthly budget', 'Regular payments, reminders, suggestions', 'Colour theme, light or dark, text size, hide amounts', 'App lock, location, export, restore, recently deleted']) {
+    for (const line of ['Currency, accounts and balance, monthly budget', 'Regular payments, reminders, suggestions, widget', 'Colour theme, light or dark, text size, hide amounts', 'App lock, location, export, restore, recently deleted']) {
       expect(html).toContain(line)
     }
   })
@@ -96,7 +96,7 @@ describe('Settings: a page', () => {
 
   it('Automatic: regular payments, reminders and suggestions, including where suggestions appear', () => {
     const html = page('auto')
-    for (const h of ['Recurring', 'Reminders', 'Suggestions']) expect(html, h).toMatch(new RegExp(`<h3[^>]*>${h}</h3>`))
+    for (const h of ['Recurring', 'Reminders', 'Suggestions', 'Widget']) expect(html, h).toMatch(new RegExp(`<h3[^>]*>${h}</h3>`))
     for (const text of ['Above the input bar', 'On the Home screen', 'Off', 'including the add form']) expect(html).toContain(text)
     expect((html.match(/name="suggestion-placement"/g) ?? []).length).toBe(3)
   })
