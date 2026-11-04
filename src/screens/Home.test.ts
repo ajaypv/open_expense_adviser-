@@ -191,7 +191,7 @@ describe('Home recent spending', () => {
 })
 
 describe('Home: the budget invitation', () => {
-  const renderBudget = (budgetMinor: number | null, month = '2026-10') =>
+  const renderBudget = (budgetMinor: number | null, month = '2026-10', withSuggestions = false) =>
     renderToStaticMarkup(
       createElement(Home, {
         ledger: makeLedger({
@@ -200,10 +200,25 @@ describe('Home: the budget invitation', () => {
           recurring: [{ id: 1, kind: 'expense', amountMinor: 1_250_000, currency: 'INR', categoryId: 1, merchant: 'Home loan', note: '', paymentMethod: '', frequency: 'monthly', nextDue: '2026-11-05', active: true }],
         }),
         month, onMonth: () => {}, today, onPickCategory: () => {}, onEdit: () => {}, onExample: () => {}, onOpenSettings: () => {},
-        onSeeAll: () => {}, balanceShown: false, onToggleBalance: () => {}, suggestions: [], onSuggestion: () => {}, logNudge: false, onAdd: () => {},
+        onSeeAll: () => {}, balanceShown: false, onToggleBalance: () => {}, suggestions: withSuggestions ? [regular] : [], onSuggestion: () => {}, logNudge: false, onAdd: () => {},
         onOpenGoals: () => {}, onOpenUpcoming: () => {}, onPickPeriod: () => {}, onOpenInsights: () => {},
       }),
     )
+
+  it('sits below the suggestions, and above the day-by-day chart', () => {
+    const html = renderBudget(null, '2026-10', true)
+    const at = (s: string) => html.indexOf(s)
+    expect(at('Suggested for now')).toBeGreaterThan(-1)
+    expect(at('Set a monthly budget')).toBeGreaterThan(at('Suggested for now'))
+    expect(at('Set a monthly budget')).toBeLessThan(at('Day by day'))
+  })
+
+  it('shows the suggestions as tiles with a line saying what to do', () => {
+    const html = renderBudget(3_000_000, '2026-10', true)
+    expect(html).toContain('Your usual ones around this time. Tap + to add one now, or tap the tile to check it first.')
+    expect(html).toContain('w-[9.5rem]') // a tile, not a slim chip
+    expect(html).toContain('Usually on Wednesdays')
+  })
 
   it('sits below the cash flow and the payments that are coming up, not inside the spending card', () => {
     const html = renderBudget(null)
@@ -211,7 +226,7 @@ describe('Home: the budget invitation', () => {
     const at = (s: string) => html.indexOf(s)
     expect(at('Set a monthly budget')).toBeGreaterThan(at('aria-label="Money received and your balance"'))
     expect(at('Set a monthly budget')).toBeGreaterThan(at('aria-label="Coming up"'))
-    expect(at('Set a monthly budget')).toBeLessThan(at('Day by day'))
+    expect(at('Set a monthly budget')).toBeLessThan(at('Recent transactions'))
     // and not part of the overview card above
     const overview = html.slice(at('aria-label="Summary"'), at('aria-label="Money received and your balance"'))
     expect(overview).not.toContain('Set a monthly budget')
@@ -249,7 +264,7 @@ describe('Home: what comes first', () => {
     )
   }
 
-  it('answers "where do I stand" first, then cash, what is coming, the trend, recent activity, where it went, advice and goals', () => {
+  it('answers "where do I stand" first, then cash, what is coming, the day-by-day chart, recent activity, where it went, advice and goals', () => {
     const html = renderFull()
     const order = [
       'aria-label="Summary"',
@@ -274,5 +289,43 @@ describe('Home: what comes first', () => {
 
   it('offers the insights as the next step, in words and a button', () => {
     expect(renderFull()).toContain('>See insights<')
+  })
+})
+
+describe('Home: plan ahead', () => {
+  const rule = (over: Record<string, unknown>) => ({
+    id: 1, kind: 'expense', amountMinor: 600_000, currency: 'INR', categoryId: 1, merchant: 'Rent', note: '', paymentMethod: '',
+    frequency: 'monthly', nextDue: '2026-10-31', active: true, ...over,
+  })
+  const renderAhead = (month = '2026-10') =>
+    renderToStaticMarkup(
+      createElement(Home, {
+        ledger: makeLedger({
+          txs, expenses: txs.filter((t) => t.kind === 'expense'), income: txs.filter((t) => t.kind === 'income'), categories,
+          expenseCategories: categories.slice(0, 1), categoryById: new Map(categories.map((c) => [c.id, c])), budgetMinor: 3_000_000,
+          recurring: [rule({}), rule({ id: 2, merchant: 'Home loan', amountMinor: 1_250_000, tag: 'loan', nextDue: '2026-11-05' })],
+        } as never),
+        month, onMonth: () => {}, today, onPickCategory: () => {}, onEdit: () => {}, onExample: () => {}, onOpenSettings: () => {},
+        onSeeAll: () => {}, balanceShown: false, onToggleBalance: () => {}, suggestions: [], onSuggestion: () => {}, logNudge: false, onAdd: () => {},
+        onOpenGoals: () => {}, onOpenUpcoming: () => {}, onPickPeriod: () => {}, onOpenInsights: () => {},
+      }),
+    )
+
+  it('sits in the spending card, under the Today, Yesterday and Last 7 days figures', () => {
+    const html = renderAhead()
+    const card = html.slice(html.indexOf('aria-label="Summary"'), html.indexOf('aria-label="Money received and your balance"'))
+    expect(card).toContain('aria-label="Plan ahead"')
+    expect(card.indexOf('aria-label="Recent spending"')).toBeLessThan(card.indexOf('aria-label="Plan ahead"'))
+  })
+
+  it('names the next EMI and what to keep aside', () => {
+    const html = renderAhead()
+    expect(html).toContain('Next EMI')
+    expect(html).toContain('Home loan')
+    expect(html).toContain('to pay in the next 30 days')
+  })
+
+  it('is left out of a month that is over, since it looks ahead from today', () => {
+    expect(renderAhead('2026-09')).not.toContain('aria-label="Plan ahead"')
   })
 })

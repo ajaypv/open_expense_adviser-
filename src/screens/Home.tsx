@@ -7,7 +7,6 @@ import type { useLedger } from '../data/useLedger'
 import { localDateString } from '../db/money'
 import {
   byCategory,
-  byDay,
   daysInMonth,
   compareToPrevious,
   inMonth,
@@ -27,6 +26,7 @@ import { InsightCard } from '../ui/InsightCard'
 import { SpendingOverview } from '../ui/SpendingOverview'
 import { HomeHeader } from '../ui/HomeHeader'
 import { MonthSwitcher } from '../ui/MonthSwitcher'
+import { PlanAhead } from '../ui/PlanAhead'
 import { SuggestionList } from '../ui/SuggestionList'
 import { TxList } from '../ui/TxList'
 import { UpcomingCard } from '../ui/UpcomingCard'
@@ -50,6 +50,8 @@ interface Props {
   /** Regulars for the "On the Home screen" choice; empty when suggestions live elsewhere or are off. */
   suggestions: Suggestion[]
   onSuggestion: (s: Suggestion) => void
+  /** The plus on a suggestion: adds it straight away, where tapping the suggestion itself opens the form first. */
+  onQuickAddSuggestion?: (s: Suggestion) => void | Promise<void>
   /** Past the reminder time with nothing logged today. */
   logNudge: boolean
   /** Opens the add form. */
@@ -82,6 +84,7 @@ export const Home = memo(function Home({
   onToggleBalance,
   suggestions,
   onSuggestion,
+  onQuickAddSuggestion,
   logNudge,
   onAdd,
   onOpenGoals,
@@ -108,13 +111,13 @@ export const Home = memo(function Home({
       received: sum(inMonth(income, month)),
       comparison: compareToPrevious(expenses, month, today),
       recentlySpent: recentSpending(expenses, today),
-      daily: byDay(monthTxs, month),
+      monthTxs,
       categoryTotals: byCategory(monthTxs),
       recent: inMonth(txs, month).sort(newestFirst).slice(0, 5),
       expenseCount: monthTxs.length,
     }
   }, [txs, expenses, income, month, today])
-  const { total, received, comparison, daily, categoryTotals, recent, recentlySpent, expenseCount } = view
+  const { total, received, comparison, monthTxs, categoryTotals, recent, recentlySpent, expenseCount } = view
   // Months with something in them get a dot in the month picker.
   const activeMonths = useMemo(() => new Set(txs.map((t) => t.date.slice(0, 7))), [txs])
 
@@ -188,6 +191,7 @@ export const Home = memo(function Home({
         monthKey={month}
         onPrevMonth={() => onMonth(shiftMonth(month, -1))}
         onNextMonth={isCurrent ? undefined : () => onMonth(shiftMonth(month, 1))}
+        ahead={isCurrent ? <PlanAhead ledger={ledger} today={today} /> : null}
       />
 
       <WalletPanel
@@ -204,16 +208,26 @@ export const Home = memo(function Home({
 
       {isCurrent && <UpcomingCard ledger={ledger} today={today} onOpen={onOpenUpcoming} />}
 
-      {budgetMinor === null && <BudgetPrompt onSetBudget={onOpenSettings} />}
-
       {isCurrent && suggestions.length > 0 && (
         <section aria-labelledby="suggest-h" className="mt-8">
-          <h2 id="suggest-h" className="mb-3 px-1 text-xl font-bold tracking-tight">
+          <h2 id="suggest-h" className="px-1 text-xl font-bold tracking-tight">
             Suggested for now
           </h2>
-          <SuggestionList items={suggestions} categoryById={categoryById} currency={currency} onPick={onSuggestion} tone="page" />
+          <p className="mb-3 mt-0.5 px-1 text-[0.9375rem] text-ink-2">Your usual ones around this time. Tap + to add one now, or tap the tile to check it first.</p>
+          <SuggestionList
+            items={suggestions}
+            categoryById={categoryById}
+            currency={currency}
+            onPick={onSuggestion}
+            onQuickAdd={onQuickAddSuggestion}
+            tone="page"
+            variant="tile"
+          />
         </section>
       )}
+
+      {/* Below the suggestions, so the first things after the numbers are the ones you can act on. */}
+      {budgetMinor === null && <BudgetPrompt onSetBudget={onOpenSettings} />}
 
       {total > 0 && (
         <>
@@ -222,7 +236,17 @@ export const Home = memo(function Home({
               Day by day
             </h2>
             <div className={`${card} p-4`}>
-              <DayChart values={daily} monthKey={month} lastDay={isCurrent ? today.getDate() : null} currency={currency} />
+              {/* Keyed by the month, so each month's columns rise afresh and a day chosen in one does not carry to the next. */}
+              <DayChart
+                key={month}
+                txs={monthTxs}
+                categoryById={categoryById}
+                monthKey={month}
+                lastDay={isCurrent ? today.getDate() : null}
+                currency={currency}
+                budgetMinor={budgetMinor}
+                onPickDay={(date) => onPickPeriod({ from: date, to: date })}
+              />
             </div>
           </section>
 

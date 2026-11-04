@@ -309,6 +309,43 @@ function Shell() {
   const openAddDefault = useCallback(() => openAdd('expense'), [openAdd])
   const openEdit = useCallback((tx: LedgerTx) => setSheet({ open: true, editing: tx, prefill: null, startKind: 'expense' }), [])
   const openSuggestion = useCallback((s: Suggestion) => setSheet({ open: true, editing: null, prefill: s, startKind: s.kind }), [])
+
+  // The plus on a suggestion: today's date, the usual amount, category and way of paying, saved at once. The toast says
+  // what was added and offers Undo, which removes it rather than leaving a copy in the trash.
+  const addSuggestion = useCallback(
+    async (s: Suggestion) => {
+      const { categoryById } = dataRef.current
+      const date = localDateString()
+      try {
+        const id = await addTransaction({
+          kind: s.kind,
+          amountMinor: s.amountMinor,
+          currency,
+          categoryId: s.categoryId,
+          merchant: s.merchant,
+          note: '',
+          date,
+          paymentMethod: s.paymentMethod,
+          source: 'manual',
+        })
+        void attachLocation(id) // no-op unless the user turned location recording on
+        const cat = categoryById.get(s.categoryId)
+        const received = s.kind === 'income'
+        const money = formatMoney(s.amountMinor, currency)
+        toast({
+          message: received ? `Received ${money} from ${s.merchant}` : `Added ${s.merchant}, ${money}`,
+          actionLabel: 'Undo',
+          onAction: () => void purgeTransaction(id),
+          icon: received ? 'arrowDown' : categoryIcon(cat?.name),
+          color: received ? 'var(--good-text)' : cat?.color,
+        })
+      } catch (err) {
+        toast({ message: err instanceof Error ? err.message : 'Couldn’t add that. Try again.' })
+        throw err
+      }
+    },
+    [currency, toast],
+  )
   const closeSheet = useCallback(() => setSheet((s) => ({ ...s, open: false })), [])
 
   const newGoal = useCallback(() => setGoalSheet((s) => ({ open: true, goal: null, n: s.n + 1 })), [])
@@ -383,6 +420,7 @@ function Shell() {
             onToggleBalance={toggleBalance}
             suggestions={placement === 'home' ? suggestions : NO_SUGGESTIONS}
             onSuggestion={openSuggestion}
+            onQuickAddSuggestion={addSuggestion}
             logNudge={logNudge}
             onAdd={openAddDefault}
             onOpenGoals={openGoals}

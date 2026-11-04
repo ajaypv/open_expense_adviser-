@@ -1,6 +1,6 @@
 import { Meter } from '../charts/Meter'
 import { formatMoney } from '../db/money'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { AnimatedMoney } from './AnimatedMoney'
 import { Icon } from './Icon'
 import { useSwipe } from './useSwipe'
@@ -36,6 +36,8 @@ interface Props {
   /** Swiping to the right goes to the previous month; swiping to the left to the next, when there is one. */
   onPrevMonth?: () => void
   onNextMonth?: () => void
+  /** Shown at the foot of the card, under the recent figures: what to plan for in the weeks ahead. */
+  ahead?: ReactNode
 }
 
 /**
@@ -61,6 +63,7 @@ export function SpendingOverview({
   monthKey,
   onPrevMonth,
   onNextMonth,
+  ahead,
 }: Props) {
   const against = `${partial ? 'the same days in ' : ''}${prevName}`
   const swipe = useSwipe({ onRight: onPrevMonth, onLeft: onNextMonth })
@@ -166,6 +169,8 @@ export function SpendingOverview({
           })}
         </section>
       )}
+
+      {ahead}
       </div>
     </section>
   )

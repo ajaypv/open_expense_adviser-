@@ -113,9 +113,21 @@ I checked that the tests can fail by planting ten bugs one at a time. All ten we
 |---|---|---|---|---|
 | SUG-1 | One-tap fill | Open the Add form with history, tap a suggestion | Amount, merchant, category and payment method fill in | Auto: `AddSheet.flow` |
 | SUG-2 | From Home | Tap a suggestion on Home or above the bar | The form opens already filled | Auto: `AddSheet.flow` |
-| SUG-3 | Received tab | Open Received after logging income before | Received suggestions show, even if expenses dominate | Auto: `suggestions.test` (per kind) |
+| SUG-3 | Tap the tile | Tap a tile, anywhere except the plus | The add form opens filled in with that merchant, amount, category and way of paying, for you to check; nothing is saved until you save it | Auto: `app.suggestions.flow`, `SuggestionList.flow` |
 | SUG-4 | Ranking | Log a merchant on Mondays; check on a Monday | It ranks high with "Usually on Mondays" | Auto: `suggestions.test` |
 | SUG-5 | Near here | With location on, revisit a place | Places you paid near here rank higher | Auto: `suggestions.test`. Also on device |
+| SUG-6 | The plus adds at once | Tap the plus on a tile | No form: it is saved straight away for today at the usual amount, category and way of paying; a message says "Added Cafe, ₹450" (or "Received ₹80,000 from Employer") with the category icon, and the plus turns to a tick for a moment | Auto: `app.suggestions.flow`, `SuggestionList.flow`; look by eye |
+| SUG-7 | Undo | Tap Undo in the message after adding with the plus | It is removed completely, not left in the trash | Auto: `app.suggestions.flow` |
+| SUG-8 | Never twice | Tap the plus twice quickly, or again just after the tick appears | Only one is added, however fast; if saving fails the tile stays a plus and can be tried again | Auto: `app.suggestions.flow`, `SuggestionList.flow` |
+| SUG-9 | Which tiles have a plus | Look at tiles on Home, above the chat box and in the add form | Only the Home tiles have the plus button; the slim chips elsewhere still open the form, and a transfer is never offered for one-tap adding | Auto: `SuggestionList.flow` |
+| AHD-1 | Next EMI | Set up a regular payment of type Loan EMI, then open Home | Under the Today, Yesterday and Last 7 days figures, Plan ahead shows Next EMI with its name, date, how soon (in 8 days, tomorrow, today, overdue by 3 days) and amount | Auto: `ahead`, `PlanAhead.flow`, `Home` |
+| AHD-2 | Biggest payment | Have two or more payments going out in the next 30 days | The biggest one is shown with its date and amount; if it is the EMI, the EMI row says "and your biggest payment" instead of listing it twice; one payment alone is not called the biggest | Auto: `ahead`, `PlanAhead.flow` |
+| AHD-3 | Money coming in | Set up a salary or other regular income | A row shows when it next arrives and how much, with a + | Auto: `ahead`, `PlanAhead.flow` |
+| AHD-4 | Save this much | Set a balance too low for what is due | A box says "Save ₹X more by <date>" with about how much a day gets you there, in a warning colour and with a warning icon | Auto: `ahead`, `PlanAhead.flow` |
+| AHD-5 | No balance set | Have payments set up but no balance | A box says how much goes out in the next 30 days and about how much a day to keep aside, and to add the balance to check it | Auto: `ahead`, `PlanAhead.flow` |
+| AHD-6 | Covered | Set a balance that covers everything due | No save box (Coming up already says it is covered) | Auto: `ahead`, `PlanAhead.flow` |
+| AHD-7 | When it is not shown | Open a past month, or have no regular payments set up or all switched off | Plan ahead is not there | Auto: `Home`, `PlanAhead.flow` |
+| AHD-8 | One list button | Look at Home with payments set up | Only the Coming up card has See all upcoming payments; Plan ahead has no button of its own, so a screen reader hears it once | Auto: `PlanAhead.flow`, `app.flow` |
 | SUG-6 | Today's entries last | Log a merchant, reopen the form | It shows "Added earlier today" and sits last | Auto: `suggestions.test` |
 | SUG-7 | Placement | Settings → Suggestions → Home / Off | Moves to Home or disappears everywhere, including the form | Auto: `settings.flow`, `AddSheet.test` |
 | SUG-8 | Swipe row | Swipe the row above the bar | It scrolls smoothly, snapping to each chip | Device |
@@ -490,7 +502,7 @@ Home answers four questions in order: where do I stand, am I doing okay, where d
 
 | ID | Case | Do | Expect | Covered by |
 |---|---|---|---|---|
-| HR-1 | The order | Open Home with a budget, a goal and a regular payment | Greeting, month, then one spending overview, then cash flow, what is coming up, the day-by-day chart, recent transactions, where it went, one insight, and goals | Auto: `Home` |
+| HR-1 | The order | Open Home with a budget, a goal and a regular payment | Greeting, month, then one spending overview, then cash flow, what is coming up, suggestions, the day-by-day chart, recent transactions, where it went, one insight, and goals | Auto: `Home` |
 | HR-2 | Greeting | Open Home in the morning, afternoon and evening | "Good morning" until noon, "Good afternoon" until five, "Good evening" after, with the full date beneath; a screen reader hears "Home" first | Auto: `HomeHeader`, `app.flow` |
 | HR-3 | One headline number | Look at the overview | "Spent so far in October" and one number, 36 to 40 px, not larger; the comparison with last month in words and an arrow; the daily average and expenses logged side by side | Auto: `SpendingOverview` |
 | HR-4 | The budget | With and without a budget | Without: "Your budget. Set a monthly budget to see how much you have left." and a Set budget button, as its own block lower down, after the cash flow and the payments coming up, not inside the spending card. With: the progress and how much is left, kept right under the daily average | Auto: `SpendingOverview` |
@@ -610,6 +622,21 @@ The Insights look taken from the dark dashboard reference: hatched pill bars, a 
 | ANI-5 | List grows | Choose List, or open Places you spend most | Rows fade up one after another and each bar grows from the left; after ten rows the rest arrive together; a bar changes length smoothly when the figures change; pressing a row shrinks it a little | Auto: `categoryMotion.flow`; look by eye |
 | ANI-6 | Less motion | Turn on reduce motion in the phone settings, then open all three views | Everything is already in place with nothing moving | Auto: style sheet check in `categoryMotion.flow`; Device |
 | ANI-7 | Starts when seen | Open Insights and leave Where it went below the fold, then scroll down to it (try Bubbles, Donut and List) | Nothing plays while it is off screen; the animation starts from its first frame as it scrolls into view, and does not play again on scrolling away and back | Auto: `categoryMotion.flow` (observer faked); Device |
+| DAY-1 | Columns | Open Home in a month with spending | Below cash flow and what is coming up, Day by day shows a column for each day of the month, as tall as the day was big; days that have not happened are thin ticks; weekend days sit on a light band; a dashed line marks the average day; the first of each week is labelled | Auto: `DayChart.flow`; look by eye |
+| DAY-2 | Arrives when seen | Scroll Home down to the chart from the top | Nothing moves while it is off screen; as it comes into view the columns rise one after another, left to right, then the average line is drawn across | Auto: `DayChart.flow` (observer faked); Device |
+| DAY-3 | Reading a day | Tap, drag a finger across, hover with a mouse, or use the arrow keys, Home and End | The chosen column lifts and the rest dim; its amount floats above it; below, the date, the amount and how it compares with the average (40% above, 2.3×, About your average, Nothing spent); a tap keeps it and a second tap puts it away; a mouse only looks; days that have not happened cannot be chosen | Auto: `DayChart.flow` |
+| DAY-4 | What the day was | Choose a day with several expenses | The three biggest are listed with their category colour and amount, then "and N more"; Previous and Next day step through; See these opens Activity on that one day; Close puts it away | Auto: `DayChart.flow` |
+| DAY-5 | What the days say | Look at the chart with no day chosen | Up to four short sentences: the biggest day (tap it to show that day), days above the daily budget, whether weekends or weekdays cost more, and quiet days or how long nothing has been spent | Auto: `days`, `DayChart.flow` |
+| DAY-6 | Budget line | Set a monthly budget, then look | A red dashed line marks the daily share of the budget and any day above it wears a red cap; with no budget there is neither; the line is left out if every day is far below it | Auto: `DayChart.flow` |
+| DAY-7 | By category | Choose By category | Each column becomes a stack in category colours, the same order every day, with a legend; the colours change smoothly, and the chosen day stays chosen | Auto: `DayChart.flow`; look by eye |
+| DAY-8 | Another month | Change month on Home | The chart is drawn afresh for that month with no day chosen; a finished month counts every day and has no marker for today | Auto: `DayChart.flow`; look by eye |
+| DAY-9 | Less motion | Turn on reduce motion, then open Home | The columns and lines are already in place; nothing rises or draws | Auto: style sheet; Device |
+| DAY-10 | Same figures as a table | Choose Show as table under the chart | Every day with spending and its amount | Auto: `DayChart.flow` |
+| SUG-1 | Tiles | Open Home in the current month with some regular spending | Suggested for now has a line saying what to do, then tiles: the category icon, a plus, the merchant, the amount large, and the reason in full; money received has a + and green; they come in one after another when scrolled into view | Auto: `SuggestionList`, `Home`; look by eye |
+| SUG-2 | First tile in full | Look at the first tile at rest, then swipe along and back | The first tile sits clear of the left edge with its whole outline visible, lined up with the cards above, and returns there after a swipe | Auto: `SuggestionList` (scroll padding); Device |
+| SUG-3 | Tap | Tap a tile | The add form opens filled in with that merchant, amount and category | Auto: `app.flow` |
+| SUG-4 | Slim chips elsewhere | Look above the chat box and in the add form | They are still the slim one-line chips, with the same side clearance | Auto: `SuggestionList`; look by eye |
+| SUG-5 | Budget below | Have no monthly budget set | The "Set a monthly budget" card sits below the suggestions (and with no suggestions, below what is coming up), above the day-by-day chart | Auto: `Home` |
 
 ## What changed your balance
 
