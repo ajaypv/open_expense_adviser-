@@ -64,6 +64,8 @@ interface Props {
   onPickPeriod: (range: { from: string; to: string }) => void
   /** Opens the Insights screen, from the card that points to it. */
   onOpenInsights?: () => void
+  /** Opens the AI insights page, from the card that points to Insights. */
+  onOpenAi?: () => void
 }
 
 const EXAMPLES = ['450 lunch at Cafe', 'Uber 230 yesterday', 'Salary 80,000']
@@ -91,6 +93,7 @@ export const Home = memo(function Home({
   onOpenUpcoming,
   onPickPeriod,
   onOpenInsights,
+  onOpenAi,
 }: Props) {
   const { txs, expenses, income, categoryById, currency, budgetMinor, loading } = ledger
   const todayKey = localDateString(today)
@@ -271,7 +274,7 @@ export const Home = memo(function Home({
             </div>
           </section>
 
-          {onOpenInsights && <InsightCard totals={categoryTotals} totalMinor={total} categoryById={categoryById} monthName={name} onOpen={onOpenInsights} />}
+          {onOpenInsights && <InsightCard totals={categoryTotals} totalMinor={total} categoryById={categoryById} monthName={name} onOpen={onOpenInsights} onOpenAi={onOpenAi} />}
         </>
       )}
 

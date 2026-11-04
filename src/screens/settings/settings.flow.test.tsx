@@ -18,7 +18,7 @@ import type { Ledger } from './parts'
 import { RecurringSection } from './RecurringSection'
 import { RemindersSection } from './RemindersSection'
 import { SuggestionsSection } from './SuggestionsSection'
-import { UpdatesSection } from './UpdatesSection'
+import { UpdateCard } from './EssentialCards'
 
 beforeEach(() => reloadDisplay())
 
@@ -493,9 +493,9 @@ describe('Location', () => {
 })
 
 describe('App updates', () => {
-  const setup = (over: Partial<Parameters<typeof UpdatesSection>[0]> = {}) => {
+  const setup = (over: Partial<Parameters<typeof UpdateCard>[0]> = {}) => {
     const props = { updateReady: false, onApplyUpdate: vi.fn(), onCheckUpdate: vi.fn().mockResolvedValue('latest'), onShowWhatsNew: vi.fn(), ...over }
-    render(<UpdatesSection {...props} />)
+    render(<UpdateCard {...props} />)
     return { ...props, user: userEvent.setup() }
   }
 

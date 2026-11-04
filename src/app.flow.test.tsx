@@ -186,7 +186,7 @@ describe('Moving around', () => {
     await tx()
     const user = await open()
     await screen.findByText('Recent transactions')
-    for (const [name, heading] of [['Activity', /Filters/], ['Insights', /./], ['Settings', 'Appearance']] as const) {
+    for (const [name, heading] of [['Activity', /Filters/], ['Insights', /./], ['Settings', 'Settings']] as const) {
       await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name }))
       expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name })).toHaveAttribute('aria-current', 'page')
       if (typeof heading === 'string') expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument()
@@ -229,12 +229,10 @@ describe('Hide amounts', () => {
     const user = await open()
     await screen.findByText('Recent transactions')
     await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Settings' }))
-    await screen.findByRole('heading', { name: 'Appearance' })
+    await user.click(await screen.findByRole('button', { name: /^Appearance/ }))
+    const page = await screen.findByRole('heading', { name: 'Appearance' })
 
-    // Something half-way down the page that a rebuild would lose: an opened section and the scroll position.
-    await user.click(screen.getByText('Limits by category'))
-    const details = screen.getByText('Limits by category').closest('details')!
-    expect(details.open).toBe(true)
+    // Something a rebuild would lose: the page itself and the scroll position.
     const main = document.querySelector('main')!
     main.scrollTop = 420
 
@@ -243,8 +241,7 @@ describe('Hide amounts', () => {
     expect(document.querySelector('main')).toBe(main) // the same element: not remounted
     expect(main.isConnected).toBe(true)
     expect(main.scrollTop).toBe(420)
-    expect(details.isConnected).toBe(true)
-    expect(details.open).toBe(true)
+    expect(page.isConnected).toBe(true) // the same page, not drawn again
     expect(screen.getByRole('switch', { name: /Hide amounts/ })).toBeChecked()
 
     // Amounts on the other screens are masked straight away.
@@ -307,7 +304,7 @@ describe('Goals from Home', () => {
     const user = await open()
     expect(await goalsButton()).toHaveClass('goal-glow')
     await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Settings' }))
-    await screen.findByRole('heading', { name: 'Appearance' })
+    await screen.findByRole('heading', { name: 'Settings' })
     await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Home' }))
     expect(await goalsButton()).not.toHaveClass('goal-glow')
   })

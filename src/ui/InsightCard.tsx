@@ -1,4 +1,5 @@
 import type { Category } from '../db/schema'
+import { Icon } from './Icon'
 
 interface Props {
   /** This month's spending by category, biggest first. */
@@ -7,13 +8,15 @@ interface Props {
   categoryById: Map<number, Category>
   monthName: string
   onOpen: () => void
+  /** With this, the card also offers the AI summary of the month. */
+  onOpenAi?: () => void
 }
 
 /**
  * One true thing about this month, taken from the transactions themselves, and the way to the rest. It states a
  * fact and offers more; it does not pretend to advice it cannot give. Blue is the colour of information.
  */
-export function InsightCard({ totals, totalMinor, categoryById, monthName, onOpen }: Props) {
+export function InsightCard({ totals, totalMinor, categoryById, monthName, onOpen, onOpenAi }: Props) {
   const top = totals[0]
   if (!top || top.totalMinor <= 0 || totalMinor <= 0) return null
   const name = categoryById.get(top.categoryId)?.name ?? 'One category'
@@ -29,9 +32,19 @@ export function InsightCard({ totals, totalMinor, categoryById, monthName, onOpe
           <span aria-hidden="true" className="mt-2 size-2 shrink-0 rounded-full" style={{ background: 'var(--s1)' }} />
           {`${name} is ${percent}% of what you have spent in ${monthName}.`}
         </p>
-        <button type="button" onClick={onOpen} className="mt-3 min-h-11 rounded-full bg-btn px-5 font-semibold text-btn-ink">
-          See insights
-        </button>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button type="button" onClick={onOpen} className="min-h-11 rounded-full bg-btn px-5 font-semibold text-btn-ink">
+            See insights
+          </button>
+          {onOpenAi && (
+            <button type="button" onClick={onOpenAi} aria-haspopup="dialog" className="flex min-h-11 items-center gap-2 rounded-full bg-surface px-4 font-semibold shadow-[0_0_0_1px_var(--ring)]">
+              <span aria-hidden="true" style={{ color: 'var(--s1)' }}>
+                <Icon name="spark" size={18} />
+              </span>
+              AI summary
+            </button>
+          )}
+        </div>
       </div>
     </section>
   )

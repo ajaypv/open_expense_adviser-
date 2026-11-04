@@ -39,6 +39,7 @@ const PATHS = {
   ticket: 'M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2.5 2.5 0 0 0 0 5v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.5 2.5 0 0 0 0-5zM14 5v14',
   bag: 'M5.5 8h13L19.5 20h-15L5.5 8zM9 8V6.5a3 3 0 0 1 6 0V8',
   tag: 'M3 12.5V4h8.5l9.5 9.5-8.5 8.5L3 12.5zM7.5 8.5h.01',
+  spark: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3zM19 16l.8 2.2 2.2.8-2.2.8L19 22l-.8-2.2-2.2-.8 2.2-.8L19 16z',
 } as const
 
 export type IconName = keyof typeof PATHS

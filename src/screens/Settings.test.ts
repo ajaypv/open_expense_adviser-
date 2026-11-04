@@ -2,9 +2,9 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { makeLedger } from '../test/ledger'
-import { Settings } from './Settings'
+import { Settings, type SettingsPage } from './Settings'
 
-const render = (props: { updateReady?: boolean } = {}) =>
+const render = (props: { updateReady?: boolean; initialPage?: SettingsPage | null; onOpenUpcoming?: () => void } = {}) =>
   renderToStaticMarkup(
     createElement(Settings, {
       ledger: makeLedger(), theme: 'system', onTheme: () => {}, updateReady: false, onApplyUpdate: () => {}, onCheckUpdate: async () => 'latest', onShowWhatsNew: () => {},
@@ -12,18 +12,54 @@ const render = (props: { updateReady?: boolean } = {}) =>
     }),
   )
 
-describe('Settings', () => {
-  it('lets the user choose where suggestions appear, including off', () => {
+describe('Settings: the list', () => {
+  it('is a short list: a backup, the app update, and four pages to go to', () => {
     const html = render()
-    for (const text of ['Suggestions', 'Above the input bar', 'On the Home screen', 'Off', 'including the add form']) {
-      expect(html).toContain(text)
-    }
-    expect((html.match(/name="suggestion-placement"/g) ?? []).length).toBe(3)
+    expect(html).toMatch(/<h1[^>]*>Settings<\/h1>/)
+    expect(html).toContain('aria-label="Backup"')
+    expect(html).toContain('aria-label="App update"')
+    const nav = html.slice(html.indexOf('aria-label="Settings pages"'))
+    for (const page of ['Money', 'Automatic', 'Appearance', 'Privacy and data']) expect(nav).toContain(`>${page}</span>`)
+    expect((nav.match(/<li>/g) ?? []).length).toBe(4)
   })
 
+  it('says in a line what is on each page', () => {
+    const html = render()
+    for (const line of ['Currency, accounts and balance, monthly budget', 'Regular payments, reminders, suggestions', 'Theme, text size, hide amounts, number format', 'App lock, location, export, restore, recently deleted']) {
+      expect(html).toContain(line)
+    }
+  })
+
+  it('keeps the settings themselves off the list, so it stays short', () => {
+    const html = render()
+    for (const text of ['Main currency', 'Monthly budget</h3>', 'Remind me at', 'Hide amounts', 'App lock</h3>', 'Recently deleted']) {
+      expect(html, text).not.toContain(text)
+    }
+  })
+
+  it('puts the backup first, then the update, then the pages', () => {
+    const html = render()
+    const at = (s: string) => html.indexOf(s)
+    expect(at('aria-label="Backup"')).toBeLessThan(at('aria-label="App update"'))
+    expect(at('aria-label="App update"')).toBeLessThan(at('aria-label="Settings pages"'))
+  })
+
+  it('has a button to back up, and says when nothing is there to back up yet', () => {
+    const html = render()
+    expect(html).toContain('Back up now')
+    expect(html).toContain('Nothing to back up yet')
+  })
+
+  it('does not advertise something that does not exist yet', () => {
+    const html = render()
+    expect(html).not.toContain('AI assistant')
+    expect(html).not.toContain('Coming soon')
+  })
+})
+
+describe('Settings: the app update', () => {
   it('shows the running version and a way to check for updates', () => {
     const html = render()
-    expect(html).toContain('App updates')
     expect(html).toMatch(/Version [\w.]+/)
     expect(html).toContain('Check for updates')
     expect(html).not.toContain('Update now')
@@ -36,71 +72,64 @@ describe('Settings', () => {
     expect(html).toContain('A new version is ready')
     expect(html).not.toContain('Check for updates')
   })
+
+  it('says nothing about updates until there is something to say', () => {
+    expect(render()).not.toContain('New versions download in the background')
+  })
 })
 
-describe('Settings: how it is laid out', () => {
-  const at = (html: string, s: string) => html.indexOf(s)
+describe('Settings: a page', () => {
+  const page = (id: SettingsPage, extra: { onOpenUpcoming?: () => void } = {}) => render({ initialPage: id, ...extra })
 
-  it('groups the settings under a few headings, safest and most important first', () => {
-    const html = render()
-    const headings = ['Your data and privacy', 'Money', 'Automatic', 'Appearance', 'More']
-    for (const h of headings) expect(html, h).toMatch(new RegExp(`<h2[^>]*>${h}</h2>`))
-    const order = headings.map((h) => at(html, `>${h}</h2>`))
-    expect(order).toEqual([...order].sort((a, b) => a - b))
+  it('has the page title, a way back, and not the list', () => {
+    const html = page('money')
+    expect(html).toMatch(/<h1[^>]*>Money<\/h1>/)
+    expect(html).toContain('aria-label="Back to Settings"')
+    expect(html).not.toContain('aria-label="Settings pages"')
+    expect(html).not.toContain('aria-label="Backup"')
   })
 
-  it('puts each setting under the heading it belongs to', () => {
-    const html = render()
-    const between = (from: string, to: string, what: string) => {
-      const a = at(html, `>${from}</h2>`)
-      const b = at(html, `>${to}</h2>`)
-      const w = at(html, `>${what}</h3>`)
-      return w > a && w < b
-    }
-    expect(between('Your data and privacy', 'Money', 'Your data')).toBe(true)
-    expect(between('Your data and privacy', 'Money', 'App lock')).toBe(true)
-    expect(between('Money', 'Automatic', 'Currency')).toBe(true)
-    expect(between('Money', 'Automatic', 'Accounts and balance')).toBe(true)
-    expect(between('Money', 'Automatic', 'Monthly budget')).toBe(true)
-    expect(between('Automatic', 'Appearance', 'Recurring')).toBe(true)
-    expect(between('Automatic', 'Appearance', 'Reminders')).toBe(true)
-    expect(between('Automatic', 'Appearance', 'Suggestions')).toBe(true)
+  it('Money: the currency, accounts and balance, and monthly budget', () => {
+    const html = page('money')
+    for (const h of ['Currency', 'Accounts and balance', 'Monthly budget']) expect(html, h).toMatch(new RegExp(`<h3[^>]*>${h}</h3>`))
   })
 
-  it('has a bar to jump to each part, so nobody scrolls through everything', () => {
-    const html = render()
-    expect(html).toContain('aria-label="Jump to a part of Settings"')
-    for (const part of ['Your data and privacy', 'Money', 'Automatic', 'Appearance', 'More']) {
-      expect(html).toContain(`>${part}</button>`)
-    }
+  it('Automatic: regular payments, reminders and suggestions, including where suggestions appear', () => {
+    const html = page('auto')
+    for (const h of ['Recurring', 'Reminders', 'Suggestions']) expect(html, h).toMatch(new RegExp(`<h3[^>]*>${h}</h3>`))
+    for (const text of ['Above the input bar', 'On the Home screen', 'Off', 'including the add form']) expect(html).toContain(text)
+    expect((html.match(/name="suggestion-placement"/g) ?? []).length).toBe(3)
   })
 
-  it('folds away what is rarely touched, but keeps it a tap away', () => {
-    const html = render()
-    expect(html).toMatch(/<details(?![^>]*\sopen)[^>]*id="more-details"/)
-    expect(html).toContain('Location')
-    expect(html).toContain('App updates')
-  })
-
-  it('opens the folded part when an update is waiting, so it is not missed', () => {
-    expect(render({ updateReady: true })).toMatch(/<details[^>]*\sopen[^>]*id="more-details"|<details[^>]*id="more-details"[^>]*\sopen/)
-  })
-
-  it('does not advertise something that does not exist yet', () => {
-    const html = render()
-    expect(html).not.toContain('AI assistant')
-    expect(html).not.toContain('Coming soon')
-  })
-});
-
-describe('Settings: regular payments', () => {
-  it('leads to the upcoming payments, where they are added and changed', () => {
-    const html = renderToStaticMarkup(
-      createElement(Settings, {
-        ledger: makeLedger(), theme: 'system', onTheme: () => {}, updateReady: false, onApplyUpdate: () => {}, onCheckUpdate: async () => 'latest', onShowWhatsNew: () => {}, onOpenUpcoming: () => {},
-      }),
-    )
+  it('Automatic: leads to the upcoming payments, where they are added and changed', () => {
+    const html = page('auto', { onOpenUpcoming: () => {} })
     expect(html).toContain('See what is coming up, or add a payment')
     expect(html).toContain('Loans, auto-payments, subscriptions, rent and salary')
   })
-});
+
+  it('Appearance: theme, text size, hiding amounts and number format', () => {
+    const html = page('look')
+    expect(html).toMatch(/<h3[^>]*>Theme, text and numbers<\/h3>/)
+    for (const text of ['Theme', 'Text size', 'Hide amounts', 'Number format']) expect(html, text).toContain(text)
+  })
+
+  it('Privacy and data: your data first, then the app lock, then location', () => {
+    const html = page('privacy')
+    const at = (h: string) => html.indexOf(`>${h}</h3>`)
+    expect(at('Your data')).toBeGreaterThan(-1)
+    expect(at('Your data')).toBeLessThan(at('App lock'))
+    expect(at('App lock')).toBeLessThan(at('Location'))
+  })
+
+  it('Privacy and data: backup, export, restore and the trash', () => {
+    const html = page('privacy')
+    for (const text of ['Back up everything', 'Export transactions', 'Restore from a backup', 'Recently deleted']) expect(html, text).toContain(text)
+  })
+
+  it('shows each page only its own settings', () => {
+    expect(page('look')).not.toContain('Main currency')
+    expect(page('money')).not.toContain('Hide amounts')
+    expect(page('auto')).not.toContain('App lock')
+    expect(page('privacy')).not.toContain('Remind me at')
+  })
+})

@@ -33,6 +33,7 @@ import { detectRecurring } from '../insights/recurring'
 import { describeWhen, forecast, TAG_LABELS, tagOf, upcomingPayments, type UpcomingPayment } from '../insights/upcoming'
 import { repeatingSpend, type RepeatingSpend } from '../insights/repeats'
 import { categoryBudgetStatus, categoryTrends, monthlyTotals, savingsFor, unusualExpenses } from '../insights/trends'
+import { AiEntry } from '../ui/AiEntry'
 import { Icon } from '../ui/Icon'
 import { paymentName, shortDay, shortfallPhrase, signedAmount } from '../ui/upcomingText'
 import { MonthStrip } from '../ui/MonthStrip'
@@ -52,6 +53,8 @@ interface Props {
   onPickCategory?: (categoryId: number) => void
   /** Opens the list of regular payments, to see them all or add one. */
   onOpenUpcoming?: () => void
+  /** Opens the AI insights page. */
+  onOpenAi?: () => void
 }
 
 const firstWord = (key: MonthKey) => monthLabel(key).split(' ')[0]
@@ -95,7 +98,7 @@ function Section({ id, title, intro, children }: { id: string; title: string; in
 }
 
 /** What the logged expenses say, computed on the device. Each block answers one question. */
-export const Insights = memo(function Insights({ ledger, month, onMonth, today, onOpenSettings, onPickCategory, onOpenUpcoming }: Props) {
+export const Insights = memo(function Insights({ ledger, month, onMonth, today, onOpenSettings, onPickCategory, onOpenUpcoming, onOpenAi }: Props) {
   useDisplay() // amounts are masked or regrouped by display settings, so redraw when they change
   const [categoryView, setCategoryView] = useState<'bubbles' | 'donut' | 'list'>('bubbles')
   // Insights describe spending, so they use money sent only; received money feeds the balance.
@@ -426,6 +429,8 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
         </>
       ) : (
         <>
+          {onOpenAi && <AiEntry onOpen={onOpenAi} />}
+
           <section aria-label="Highlights" className="mt-5">
             <p className="text-[clamp(1.5rem,6.8vw,1.875rem)] font-semibold leading-tight tracking-tight [&_b]:font-extrabold">
               You spent <b>{money(total)}</b>

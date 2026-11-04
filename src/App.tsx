@@ -23,6 +23,7 @@ import { monthRange } from './insights/filters'
 import { learnedCategoryId, learnedPaymentMethod } from './ingest/learn'
 import { describeDay, parseMany } from './ingest/localParser'
 import { suggest, type Suggestion } from './insights/suggestions'
+import type { SettingsPage } from './screens/Settings'
 import { usePwa } from './pwa/usePwa'
 import { APP_VERSION } from './pwa/version'
 import { useReminders } from './reminders/useReminders'
@@ -39,6 +40,7 @@ import { ChatBar } from './ui/ChatBar'
 import { GoalMoneySheet, GoalSheet } from './ui/GoalSheets'
 import { GoalsOverview } from './ui/GoalsOverview'
 import { RuleSheet } from './ui/RuleSheet'
+import { AiSheet } from './ui/AiSheet'
 import { UpcomingSheet } from './ui/UpcomingSheet'
 import { PwaBanner } from './ui/PwaBanner'
 import { ScreenSkeleton } from './ui/ScreenSkeleton'
@@ -103,6 +105,7 @@ function Shell() {
   const [goalSheet, setGoalSheet] = useState<GoalSheetState>({ open: false, goal: null, n: 0 })
   // Upcoming payments are a sheet, and adding or changing one is a second sheet on top of it.
   const [upcomingOpen, setUpcomingOpen] = useState(false)
+  const [aiOpen, setAiOpen] = useState(false)
   const [ruleSheet, setRuleSheet] = useState<{ open: boolean; rule: Recurring | null; n: number }>({ open: false, rule: null, n: 0 })
   const [moneySheet, setMoneySheet] = useState<GoalSheetState>({ open: false, goal: null, n: 0 })
 
@@ -207,9 +210,12 @@ function Shell() {
    * receive handlers built on it don't re-render.
    */
   const tabRef = useRef(tab)
+  // A page of Settings to open straight onto, for a button elsewhere that says "set your balance". It lasts only for that visit.
+  const [settingsPage, setSettingsPage] = useState<SettingsPage | null>(null)
   const go = useCallback((next: Tab) => {
     const current = tabRef.current
     if (next === current) return
+    if (current === 'settings') setSettingsPage(null)
     // Whatever was picked on the way into Activity stays behind when it is left, so coming back starts fresh.
     if (current === 'activity') {
       setCategoryFilter(null)
@@ -387,9 +393,15 @@ function Shell() {
     setActivityRange(null)
     go('activity')
   }, [go])
-  const openSettings = useCallback(() => go('settings'), [go])
+  // Every button elsewhere that leads to Settings is about money (a balance, a budget), so it opens that page.
+  const openSettings = useCallback(() => {
+    setSettingsPage('money')
+    go('settings')
+  }, [go])
   const openInsights = useCallback(() => go('insights'), [go])
   const openUpcoming = useCallback(() => setUpcomingOpen(true), [])
+  const openAi = useCallback(() => setAiOpen(true), [])
+  const closeAi = useCallback(() => setAiOpen(false), [])
   const closeUpcoming = useCallback(() => setUpcomingOpen(false), [])
   const newRule = useCallback(() => setRuleSheet((s) => ({ open: true, rule: null, n: s.n + 1 })), [])
   const editRule = useCallback((rule: Recurring) => setRuleSheet((s) => ({ open: true, rule, n: s.n + 1 })), [])
@@ -421,6 +433,7 @@ function Shell() {
             suggestions={placement === 'home' ? suggestions : NO_SUGGESTIONS}
             onSuggestion={openSuggestion}
             onQuickAddSuggestion={addSuggestion}
+            onOpenAi={openAi}
             logNudge={logNudge}
             onAdd={openAddDefault}
             onOpenGoals={openGoals}
@@ -434,7 +447,7 @@ function Shell() {
         )}
         {tab === 'insights' && (
           <Suspense fallback={<ScreenSkeleton label="Insights" />}>
-            <Insights ledger={ledger} month={month} onMonth={setMonth} today={today} onOpenSettings={openSettings} onPickCategory={pickCategory} onOpenUpcoming={openUpcoming} />
+            <Insights ledger={ledger} month={month} onMonth={setMonth} today={today} onOpenSettings={openSettings} onPickCategory={pickCategory} onOpenUpcoming={openUpcoming} onOpenAi={openAi} />
           </Suspense>
         )}
         {tab === 'settings' && (
@@ -448,6 +461,7 @@ function Shell() {
               onCheckUpdate={pwa.checkNow}
               onShowWhatsNew={showWhatsNew}
               onOpenUpcoming={openUpcoming}
+              initialPage={settingsPage}
             />
           </Suspense>
         )}
@@ -498,6 +512,7 @@ function Shell() {
         onEdit={editGoal}
         onAddMoney={goalMoney}
       />
+      <AiSheet open={aiOpen} onClose={closeAi} ledger={ledger} month={month} today={today} />
       <UpcomingSheet open={upcomingOpen} onClose={closeUpcoming} ledger={ledger} today={today} onAdd={newRule} onEdit={editRule} />
       <RuleSheet key={`rule-${ruleSheet.n}`} open={ruleSheet.open} rule={ruleSheet.rule} categories={ledger.categories} accounts={ledger.accounts} currency={ledger.currency} today={today} onClose={closeRule} />
       <GoalSheet key={`goal-${goalSheet.n}`} open={goalSheet.open} goal={goalSheet.goal} today={today} onClose={closeGoalSheet} />
