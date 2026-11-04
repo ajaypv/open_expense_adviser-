@@ -2,7 +2,7 @@
 import './test/dom'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { reloadDisplay } from './data/display'
 import { localDateString } from './db/money'
@@ -66,7 +66,7 @@ describe('Settings: going to a page and back', () => {
   it.each([
     ['Money', 'Currency'],
     ['Automatic', 'Reminders'],
-    ['Appearance', 'Theme, text and numbers'],
+    ['Appearance', 'Colour theme'],
     ['Privacy and data', 'App lock'],
   ])('%s opens its own settings', async (page, heading) => {
     const user = await open()
@@ -145,5 +145,102 @@ describe('Settings: opened from a button elsewhere', () => {
     await user.click(mainNav().getByRole('button', { name: 'Home' }))
     await user.click(mainNav().getByRole('button', { name: 'Settings' }))
     expect(await screen.findByRole('navigation', { name: 'Settings pages' })).toBeInTheDocument()
+  })
+})
+
+describe('Settings: the colour theme', () => {
+  const root = document.documentElement
+  afterEach(() => {
+    delete root.dataset.palette
+    delete root.dataset.theme
+  })
+
+  const toAppearance = async (user: ReturnType<typeof userEvent.setup>) => {
+    await toSettings(user)
+    await user.click(pages().getByRole('button', { name: /^Appearance/ }))
+    return screen.findByRole('radiogroup', { name: 'Colour theme' })
+  }
+
+  it('puts the chosen theme on the whole app, and remembers it', async () => {
+    const user = await open()
+    const group = await toAppearance(user)
+    await user.click(within(group).getByRole('radio', { name: /^Ocean/ }))
+    expect(root.dataset.palette).toBe('ocean')
+    expect(localStorage.getItem('palette')).toBe('ocean')
+    expect(within(group).getByRole('radio', { name: /^Ocean/ })).toBeChecked()
+  })
+
+  it('goes back to the classic colours, and forgets the choice', async () => {
+    const user = await open()
+    const group = await toAppearance(user)
+    await user.click(within(group).getByRole('radio', { name: /^Rose/ }))
+    await user.click(within(group).getByRole('radio', { name: /^Classic/ }))
+    expect(root.dataset.palette).toBeUndefined()
+    expect(localStorage.getItem('palette')).toBeNull()
+  })
+
+  it('keeps the theme when moving between screens', async () => {
+    const user = await open()
+    const group = await toAppearance(user)
+    await user.click(within(group).getByRole('radio', { name: /^Forest/ }))
+    await user.click(mainNav().getByRole('button', { name: 'Home' }))
+    await user.click(mainNav().getByRole('button', { name: 'Settings' }))
+    await user.click(pages().getByRole('button', { name: /^Appearance/ }))
+    expect(await screen.findByRole('radio', { name: /^Forest/ })).toBeChecked()
+    expect(root.dataset.palette).toBe('forest')
+  })
+
+  it('works with light or dark chosen too, each on its own', async () => {
+    const user = await open()
+    const group = await toAppearance(user)
+    await user.click(within(group).getByRole('radio', { name: /^Lavender/ }))
+    await user.click(screen.getByRole('radio', { name: 'Dark' }))
+    expect(root.dataset.palette).toBe('lavender')
+    expect(root.dataset.theme).toBe('dark')
+  })
+})
+
+describe('Settings: the glass themes', () => {
+  const root = document.documentElement
+  afterEach(() => {
+    delete root.dataset.palette
+    delete root.dataset.theme
+  })
+
+  async function toPicker(user: ReturnType<typeof userEvent.setup>) {
+    await toSettings(user)
+    await user.click(pages().getByRole('button', { name: /^Appearance/ }))
+    return screen.findByRole('radiogroup', { name: 'Colour theme' })
+  }
+
+  it('offers them after the colours, and puts one on the whole app', async () => {
+    const user = await open()
+    const group = await toPicker(user)
+    expect(within(group).getByText('Glass and futuristic')).toBeInTheDocument()
+    await user.click(within(group).getByRole('radio', { name: /^Liquid Glass/ }))
+    expect(root.dataset.palette).toBe('liquid')
+    expect(localStorage.getItem('palette')).toBe('liquid')
+  })
+
+  it('says, under Mode, when the theme is always dark, and not when it is not', async () => {
+    const user = await open()
+    const group = await toPicker(user)
+    await user.click(within(group).getByRole('radio', { name: /^Neon/ }))
+    expect(await screen.findByText(/Neon is always dark/)).toBeInTheDocument()
+    await user.click(within(group).getByRole('radio', { name: /^Liquid Glass/ }))
+    expect(screen.queryByText(/is always dark, so light and dark/)).toBeNull()
+  })
+
+  it('keeps a glass theme chosen across screens and goes back to classic cleanly', async () => {
+    const user = await open()
+    const group = await toPicker(user)
+    await user.click(within(group).getByRole('radio', { name: /^Aurora/ }))
+    await user.click(mainNav().getByRole('button', { name: 'Home' }))
+    expect(root.dataset.palette).toBe('aurora')
+    await user.click(mainNav().getByRole('button', { name: 'Settings' }))
+    await user.click(pages().getByRole('button', { name: /^Appearance/ }))
+    await user.click(await screen.findByRole('radio', { name: /^Classic/ }))
+    expect(root.dataset.palette).toBeUndefined()
+    expect(localStorage.getItem('palette')).toBeNull()
   })
 })

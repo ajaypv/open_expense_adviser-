@@ -18,10 +18,12 @@
     <meta name="apple-mobile-web-app-title" content="Expenses" />
     <title>Expense Tracker</title>
     <script>
-      // Apply a saved theme before first paint to avoid a light/dark flash.
+      // Apply a saved theme and colours before first paint to avoid a flash of the wrong ones.
       try {
         var t = localStorage.getItem('theme')
         if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
+        var p = localStorage.getItem('palette')
+        if (/^(ocean|forest|sunset|lavender|rose|liquid|pearl|aurora|neon|obsidian)$/.test(p)) document.documentElement.dataset.palette = p
       } catch (e) {}
     </script>
   </head>

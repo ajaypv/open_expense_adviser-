@@ -36,7 +36,7 @@ describe('InsightCard', () => {
     expect(text(render([{ categoryId: 99, totalMinor: 100 }], 100))).toContain('One category is 100% of what you have spent in October.')
   })
 
-  it('uses blue, which means information in this app', () => {
-    expect(render([{ categoryId: 1, totalMinor: 100 }], 100)).toContain('var(--s1)')
+  it('uses the accent colour, which is blue in the classic theme and means information in this app', () => {
+    expect(render([{ categoryId: 1, totalMinor: 100 }], 100)).toContain('var(--accent)')
   })
 })

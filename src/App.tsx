@@ -456,6 +456,8 @@ function Shell() {
               ledger={ledger}
               theme={theme.pref}
               onTheme={theme.setPref}
+              palette={theme.palette}
+              onPalette={theme.setPalette}
               updateReady={pwa.updateReady}
               onApplyUpdate={pwa.applyUpdate}
               onCheckUpdate={pwa.checkNow}

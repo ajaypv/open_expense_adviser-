@@ -186,7 +186,7 @@ export function DayChart({ txs, categoryById, monthKey, lastDay, currency, budge
                           className="block w-full flex-none transition-[background-color,box-shadow] duration-500 motion-reduce:transition-none"
                           style={{
                             height: `${(s.minor / total) * 100}%`,
-                            background: mode === 'category' ? colorOf(s) : above ? 'var(--s1)' : 'color-mix(in oklab, var(--s1) 55%, var(--surface))',
+                            background: mode === 'category' ? colorOf(s) : above ? 'var(--accent)' : 'color-mix(in oklab, var(--accent) 55%, var(--surface))',
                             boxShadow: mode === 'category' ? '0 -1px 0 var(--surface)' : '0 0 0 transparent',
                           }}
                         />

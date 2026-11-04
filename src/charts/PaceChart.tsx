@@ -141,7 +141,7 @@ export function PaceChart({ current, previous: previousMonth, older = [], monthK
   const comparison = many ? againstAverage : whole ? againstWhole : sameDay
 
   const lines = [
-    { key: 'current', label: whole && hasPrevious ? `${currentLabel} (so far)` : currentLabel, value: currentNow, color: 'var(--s1)', dash: undefined as string | undefined },
+    { key: 'current', label: whole && hasPrevious ? `${currentLabel} (so far)` : currentLabel, value: currentNow, color: 'var(--accent)', dash: undefined as string | undefined },
     ...compared.map((c, i) => ({
       key: i === 0 ? 'previous' : `older-${i}`,
       label: whole ? `${c.label} (whole month)` : c.label,
@@ -227,7 +227,7 @@ export function PaceChart({ current, previous: previousMonth, older = [], monthK
           )}
 
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="pace-reveal absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
-            <path d={areaPath} fill="var(--s1)" opacity="0.1" />
+            <path d={areaPath} fill="var(--accent)" opacity="0.1" />
             {/* Oldest first, so the nearer months and the one in view are drawn on top. */}
             {compared
               .map((c, i) => ({ c, i }))
@@ -235,7 +235,7 @@ export function PaceChart({ current, previous: previousMonth, older = [], monthK
               .map(({ c, i }) => (
                 <path key={i} d={path(c.series)} fill="none" stroke="var(--other)" strokeWidth="2" strokeDasharray={DASHES[i]} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
               ))}
-            <path d={currentPath} fill="none" stroke="var(--s1)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+            <path d={currentPath} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
           </svg>
 
           {selected !== null && (
@@ -245,7 +245,7 @@ export function PaceChart({ current, previous: previousMonth, older = [], monthK
           {/* Markers are HTML so they stay round while the SVG stretches. 2px surface ring. */}
           {[
             ...compared.map((c) => ({ v: at(c.series, day), color: 'var(--other)', show: selected !== null })),
-            { v: currentNow, color: 'var(--s1)', show: true },
+            { v: currentNow, color: 'var(--accent)', show: true },
           ].map(
             (m, k) =>
               m.show && (

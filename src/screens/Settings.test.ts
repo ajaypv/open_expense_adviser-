@@ -25,7 +25,7 @@ describe('Settings: the list', () => {
 
   it('says in a line what is on each page', () => {
     const html = render()
-    for (const line of ['Currency, accounts and balance, monthly budget', 'Regular payments, reminders, suggestions', 'Theme, text size, hide amounts, number format', 'App lock, location, export, restore, recently deleted']) {
+    for (const line of ['Currency, accounts and balance, monthly budget', 'Regular payments, reminders, suggestions', 'Colour theme, light or dark, text size, hide amounts', 'App lock, location, export, restore, recently deleted']) {
       expect(html).toContain(line)
     }
   })
@@ -107,10 +107,25 @@ describe('Settings: a page', () => {
     expect(html).toContain('Loans, auto-payments, subscriptions, rent and salary')
   })
 
-  it('Appearance: theme, text size, hiding amounts and number format', () => {
+  it('Appearance: the colour theme first, then light or dark, text size, hiding amounts and number format', () => {
     const html = page('look')
-    expect(html).toMatch(/<h3[^>]*>Theme, text and numbers<\/h3>/)
-    for (const text of ['Theme', 'Text size', 'Hide amounts', 'Number format']) expect(html, text).toContain(text)
+    expect(html).toMatch(/<h3[^>]*>Colour theme<\/h3>/)
+    expect(html).toMatch(/<h3[^>]*>Mode, text and numbers<\/h3>/)
+    expect(html.indexOf('>Colour theme</h3>')).toBeLessThan(html.indexOf('>Mode, text and numbers</h3>'))
+    for (const text of ['Mode', 'Text size', 'Hide amounts', 'Number format']) expect(html, text).toContain(text)
+  })
+
+  it('Appearance: offers every colour theme, each with a line about it, and shows the chosen one', () => {
+    const html = render({ initialPage: 'look' })
+    expect(html).toContain('aria-label="Colour theme"')
+    for (const name of ['Classic', 'Ocean', 'Forest', 'Sunset', 'Lavender', 'Rose', 'Liquid Glass', 'Pearl', 'Aurora', 'Neon', 'Obsidian']) expect(html, name).toContain(`>${name}</span>`)
+    expect((html.match(/name="palette"/g) ?? []).length).toBe(11)
+    // The flat colours first, then the glass and futuristic ones, each with a heading.
+    expect(html.indexOf('>Colours</p>')).toBeLessThan(html.indexOf('>Glass and futuristic</p>'))
+    expect(html.indexOf('>Rose</span>')).toBeLessThan(html.indexOf('>Glass and futuristic</p>'))
+    expect(html.indexOf('>Liquid Glass</span>')).toBeGreaterThan(html.indexOf('>Glass and futuristic</p>'))
+    // The classic one is chosen when nothing has been.
+    expect(html).toMatch(/checked=""[^>]*name="palette"|name="palette"[^>]*checked=""/)
   })
 
   it('Privacy and data: your data first, then the app lock, then location', () => {

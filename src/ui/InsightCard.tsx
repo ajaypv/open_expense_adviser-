@@ -29,7 +29,7 @@ export function InsightCard({ totals, totalMinor, categoryById, monthName, onOpe
           Understand your spending
         </h2>
         <p className="mt-2 flex items-start gap-2.5 text-ink-2">
-          <span aria-hidden="true" className="mt-2 size-2 shrink-0 rounded-full" style={{ background: 'var(--s1)' }} />
+          <span aria-hidden="true" className="mt-2 size-2 shrink-0 rounded-full" style={{ background: 'var(--accent)' }} />
           {`${name} is ${percent}% of what you have spent in ${monthName}.`}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -38,7 +38,7 @@ export function InsightCard({ totals, totalMinor, categoryById, monthName, onOpe
           </button>
           {onOpenAi && (
             <button type="button" onClick={onOpenAi} aria-haspopup="dialog" className="flex min-h-11 items-center gap-2 rounded-full bg-surface px-4 font-semibold shadow-[0_0_0_1px_var(--ring)]">
-              <span aria-hidden="true" style={{ color: 'var(--s1)' }}>
+              <span aria-hidden="true" style={{ color: 'var(--accent)' }}>
                 <Icon name="spark" size={18} />
               </span>
               AI summary

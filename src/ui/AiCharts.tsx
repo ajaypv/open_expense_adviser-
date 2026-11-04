@@ -84,22 +84,22 @@ export function TrajectoryChart({ summary, currency }: { summary: AiSummary; cur
 
       {actual.length > 1 && (
         <>
-          <path d={`${path(actual)} L${last![0].toFixed(1)} ${base.toFixed(1)} L${x(0).toFixed(1)} ${base.toFixed(1)} Z`} fill="var(--s1)" opacity="0.12" className="ai-fade" style={{ '--d': '700ms' } as CSSProperties} />
-          <path d={path(actual)} fill="none" stroke="var(--s1)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" pathLength={1} className="ai-draw" style={{ '--d': '150ms' } as CSSProperties} />
+          <path d={`${path(actual)} L${last![0].toFixed(1)} ${base.toFixed(1)} L${x(0).toFixed(1)} ${base.toFixed(1)} Z`} fill="var(--accent)" opacity="0.12" className="ai-fade" style={{ '--d': '700ms' } as CSSProperties} />
+          <path d={path(actual)} fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" pathLength={1} className="ai-draw" style={{ '--d': '150ms' } as CSSProperties} />
         </>
       )}
 
       {last && end && (
         <g className="ai-fade" style={{ '--d': '1000ms' } as CSSProperties}>
-          <path d={path([last, end])} fill="none" stroke="var(--s1)" strokeWidth="2" strokeDasharray="2 5" strokeLinecap="round" />
-          <circle cx={end[0]} cy={end[1]} r="4" fill="var(--surface)" stroke="var(--s1)" strokeWidth="2" />
+          <path d={path([last, end])} fill="none" stroke="var(--accent)" strokeWidth="2" strokeDasharray="2 5" strokeLinecap="round" />
+          <circle cx={end[0]} cy={end[1]} r="4" fill="var(--surface)" stroke="var(--accent)" strokeWidth="2" />
         </g>
       )}
 
       {last && (
         <g className="ai-fade" style={{ '--d': '900ms' } as CSSProperties}>
-          <circle cx={last[0]} cy={last[1]} r="4" fill="var(--s1)" className="ai-pulse" />
-          <circle cx={last[0]} cy={last[1]} r="4.5" fill="var(--s1)" stroke="var(--surface)" strokeWidth="2" />
+          <circle cx={last[0]} cy={last[1]} r="4" fill="var(--accent)" className="ai-pulse" />
+          <circle cx={last[0]} cy={last[1]} r="4.5" fill="var(--accent)" stroke="var(--surface)" strokeWidth="2" />
         </g>
       )}
 
@@ -124,8 +124,8 @@ export function MonthBars({ months, currency }: { months: AiSummary['months']; c
       {months.map((m, i) => {
         const height = m.totalMinor === 0 ? 0 : Math.max((m.totalMinor / max) * 100, 4)
         const style: CSSProperties = m.projected
-          ? { background: 'repeating-linear-gradient(135deg, var(--s1) 0 3px, transparent 3px 7px)', boxShadow: 'inset 0 0 0 1.5px var(--s1)' }
-          : { background: i === months.length - 1 ? 'var(--s1)' : 'color-mix(in oklab, var(--s1) 45%, var(--surface))' }
+          ? { background: 'repeating-linear-gradient(135deg, var(--accent) 0 3px, transparent 3px 7px)', boxShadow: 'inset 0 0 0 1.5px var(--accent)' }
+          : { background: i === months.length - 1 ? 'var(--accent)' : 'color-mix(in oklab, var(--accent) 45%, var(--surface))' }
         return (
           <li key={m.month} aria-label={`${m.label}: ${formatMoney(m.totalMinor, currency)}${m.projected ? ', where it is heading' : ''}`} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end">
             <span aria-hidden="true" className="ai-fade mb-0.5 text-[0.6875rem] font-medium tabular-nums text-ink-2" style={{ '--d': `${500 + i * 90}ms` } as CSSProperties}>

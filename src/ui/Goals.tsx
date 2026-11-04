@@ -56,11 +56,11 @@ function GoalRow({ goal, currency, today, onEdit, onAddMoney }: RowProps) {
           aria-valuenow={percent}
           aria-valuetext={`${saved} of ${target} saved, ${percent}%`}
           className="mt-3 block h-2.5 overflow-hidden rounded-full"
-          style={{ background: 'color-mix(in oklab, var(--s1) 16%, var(--surface))' }}
+          style={{ background: 'color-mix(in oklab, var(--accent) 16%, var(--surface))' }}
         >
           <span
             className="block h-full rounded-full transition-[width] duration-500"
-            style={{ width: `${p.fraction * 100}%`, background: p.reached ? 'var(--good-text)' : 'var(--s1)' }}
+            style={{ width: `${p.fraction * 100}%`, background: p.reached ? 'var(--good-text)' : 'var(--accent)' }}
           />
         </span>
       </button>

@@ -318,7 +318,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
                 rows={regular.byType.map((t) => ({
                   key: t.tag,
                   label: t.label,
-                  color: 'var(--s1)',
+                  color: 'var(--accent)',
                   valueMinor: t.monthlyMinor,
                   detail: `${t.count} ${t.count === 1 ? 'payment' : 'payments'}`,
                 }))}
@@ -547,7 +547,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
                 rows={merchants.map((m) => ({
                   key: m.name.toLowerCase(),
                   label: m.name,
-                  color: 'var(--s1)',
+                  color: 'var(--accent)',
                   valueMinor: m.totalMinor,
                   detail: `${m.count} ${m.count === 1 ? 'time' : 'times'}`,
                 }))}

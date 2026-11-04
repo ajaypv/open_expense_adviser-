@@ -75,9 +75,9 @@ export function GoalsOverview({ open, onClose, goals, currency, today, onNew, on
               aria-valuenow={percent}
               aria-valuetext={`${formatMoney(totals.savedMinor, currency)} of ${formatMoney(totals.targetMinor, currency)} saved, ${percent}%`}
               className="mt-4 block h-2.5 overflow-hidden rounded-full"
-              style={{ background: 'color-mix(in oklab, var(--s1) 16%, var(--surface))' }}
+              style={{ background: 'color-mix(in oklab, var(--accent) 16%, var(--surface))' }}
             >
-              <span className="block h-full rounded-full transition-[width] duration-500" style={{ width: `${Math.min(100, percent)}%`, background: 'var(--s1)' }} />
+              <span className="block h-full rounded-full transition-[width] duration-500" style={{ width: `${Math.min(100, percent)}%`, background: 'var(--accent)' }} />
             </span>
             <p className="mt-3 flex items-baseline justify-between gap-3 text-[0.9375rem] tabular-nums">
               <span className="text-ink-2">{`${percent}% saved`}</span>

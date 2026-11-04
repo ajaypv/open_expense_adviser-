@@ -39,7 +39,7 @@ export function WeekdayBars({ totals, currency }: Props) {
                 className="w-full max-w-6 rounded-t-[4px]"
                 style={{
                   height: v === 0 ? 0 : `${Math.max((v / max) * 100, 4)}%`,
-                  background: isPeak ? 'var(--s1)' : 'var(--axis)',
+                  background: isPeak ? 'var(--accent)' : 'var(--axis)',
                 }}
               />
             </div>

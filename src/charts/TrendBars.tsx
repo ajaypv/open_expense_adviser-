@@ -54,7 +54,7 @@ export function TrendBars({
                     className="flex-1 rounded-t-[2px]"
                     style={{
                       height: m === 0 ? '2px' : `${Math.max((m / max) * 100, 8)}%`,
-                      background: m === 0 ? 'var(--axis)' : 'var(--s1)',
+                      background: m === 0 ? 'var(--axis)' : 'var(--accent)',
                       opacity: i === t.months.length - 1 ? 1 : 0.45,
                     }}
                   />

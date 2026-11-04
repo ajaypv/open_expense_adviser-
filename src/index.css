@@ -24,9 +24,87 @@
 }
 
 /*
+ * The typefaces of the glass and futuristic themes, each loaded only when a theme that uses it is chosen: Exo 2, Space
+ * Grotesk, Plus Jakarta Sans and Geist (SIL Open Font License; the licences are beside the files). All four have the rupee sign,
+ * the minus sign and tabular figures. Manrope, above, stays the face of every other theme.
+ */
+@font-face {
+  font-family: 'Exo 2 Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('./assets/fonts/exo-2-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Exo 2 Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('./assets/fonts/exo-2-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Space Grotesk Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('./assets/fonts/space-grotesk-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Space Grotesk Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('./assets/fonts/space-grotesk-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('./assets/fonts/plus-jakarta-sans-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('./assets/fonts/plus-jakarta-sans-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Geist Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('./assets/fonts/geist-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Geist Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('./assets/fonts/geist-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/*
  * Design tokens. Surfaces, ink and the eight categorical hues come from the validated
  * data-viz palette (both modes pass the adjacent-pair CVD and normal-vision checks).
- * Color is reserved for data: buttons and chrome are monochrome ink.
+ * In the classic theme, color is reserved for data and buttons and chrome are monochrome ink; the colour themes
+ * further down give the page, the cards and the buttons colour of their own, and leave the data colours alone.
  *
  * Dark values are declared twice on purpose: once for the OS setting (unless the user forced
  * light) and once for a forced dark choice via [data-theme]. light-dark() is avoided so
@@ -50,6 +128,8 @@
   --scrim: rgba(11, 11, 11, 0.45);
   --btn: #0b0b0b;
   --btn-ink: #ffffff;
+  /* The colour of what is drawn to stand out: the lines and bars that are not a category. Blue in the classic theme. */
+  --accent: var(--s1);
   /* The pop-up that confirms what was just done. */
   --island: #0b0b0b;
   --island-ink: #fafafa;
@@ -156,6 +236,7 @@
   --color-axis: var(--axis);
   --color-btn: var(--btn);
   --color-btn-ink: var(--btn-ink);
+  --color-accent: var(--accent);
   --color-good: var(--good-text);
   --color-critical: var(--critical-text);
 }
@@ -195,9 +276,11 @@ label:has(input.sr-only) {
 
 body {
   margin: 0;
-  background: var(--bg);
+  /* The art of a glass theme (soft colour, a grid) sits fixed behind the page, so cards slide over it as you scroll. */
+  background: var(--bg-art, linear-gradient(transparent, transparent)), var(--bg);
+  background-attachment: fixed;
   color: var(--ink);
-  font-family: var(--font-sans);
+  font-family: var(--font-ui, var(--font-sans));
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }
@@ -366,7 +449,7 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   35% {
     box-shadow:
       0 0 0 1px var(--ring),
-      0 0 18px 4px color-mix(in oklab, var(--s1) 55%, transparent);
+      0 0 18px 4px color-mix(in oklab, var(--accent) 55%, transparent);
   }
 }
 
@@ -536,7 +619,7 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   opacity: 0.85;
 }
 .pill-bar-selected {
-  background: var(--s1);
+  background: var(--accent);
   box-shadow: none;
 }
 .pill-bar-selected::before {
@@ -954,5 +1037,754 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   .ai-bar-right,
   .ai-pulse {
     animation: none;
+  }
+}
+
+/* ---------- Colour themes ---------- */
+
+/*
+ * A colour theme restyles the page, the cards, the lines and the buttons; light or dark is chosen separately, so each
+ * has both. What it never touches is the category colours (--s1 to --s8) or the colours that mean something (good,
+ * warning, critical), so a category looks the same in every theme. The tokens are set on any element that carries
+ * data-palette, not only the page, which is how Settings shows each theme in its own colours before it is chosen.
+ * Every block is checked in ui/contrast.test.ts, and the classic one must equal the tokens at the top of this file.
+ */
+
+[data-palette='classic'] {
+  --bg: #f2f1ed;
+  --surface: #ffffff;
+  --surface-2: #e9e8e3;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #66655f;
+  --line: #dcdbd3;
+  --axis: #c3c2b7;
+  --edge: #85847d;
+  --ring: rgba(11, 11, 11, 0.16);
+  --btn: #0b0b0b;
+  --btn-ink: #ffffff;
+  --island: #0b0b0b;
+  --island-ink: #fafafa;
+  --accent: #2a78d6;
+}
+
+[data-palette='ocean'] {
+  --bg: #eaf3f9;
+  --surface: #ffffff;
+  --surface-2: #dceaf3;
+  --ink: #0a1f2c;
+  --ink-2: #40576a;
+  --muted: #4e6678;
+  --line: #cfe0eb;
+  --axis: #b1c8d8;
+  --edge: #638197;
+  --ring: rgba(10, 31, 44, 0.14);
+  --btn: #0a63b8;
+  --btn-ink: #ffffff;
+  --island: #0a2a40;
+  --island-ink: #f2f9ff;
+  --accent: #0a63b8;
+}
+
+[data-palette='forest'] {
+  --bg: #ebf3ec;
+  --surface: #ffffff;
+  --surface-2: #dde9de;
+  --ink: #0d1f14;
+  --ink-2: #435a49;
+  --muted: #506758;
+  --line: #cfddd1;
+  --axis: #b1c5b4;
+  --edge: #628168;
+  --ring: rgba(13, 31, 20, 0.14);
+  --btn: #1c6b40;
+  --btn-ink: #ffffff;
+  --island: #123524;
+  --island-ink: #f0faf3;
+  --accent: #1c6b40;
+}
+
+[data-palette='sunset'] {
+  --bg: #fbefe6;
+  --surface: #fffdfb;
+  --surface-2: #f4e2d5;
+  --ink: #2a130b;
+  --ink-2: #664538;
+  --muted: #765647;
+  --line: #ecd6c7;
+  --axis: #d8bba8;
+  --edge: #9c7a67;
+  --ring: rgba(42, 19, 11, 0.14);
+  --btn: #b93b08;
+  --btn-ink: #ffffff;
+  --island: #3a1a0d;
+  --island-ink: #fff4ec;
+  --accent: #b93b08;
+}
+
+[data-palette='lavender'] {
+  --bg: #f1eef9;
+  --surface: #ffffff;
+  --surface-2: #e6e0f4;
+  --ink: #1a1230;
+  --ink-2: #51457a;
+  --muted: #62568a;
+  --line: #dad2ee;
+  --axis: #c0b4e0;
+  --edge: #8579ad;
+  --ring: rgba(26, 18, 48, 0.14);
+  --btn: #5b3fc4;
+  --btn-ink: #ffffff;
+  --island: #231a45;
+  --island-ink: #f5f1ff;
+  --accent: #5b3fc4;
+}
+
+[data-palette='rose'] {
+  --bg: #faedf1;
+  --surface: #fffcfd;
+  --surface-2: #f4dfe7;
+  --ink: #2b0f1a;
+  --ink-2: #68435a;
+  --muted: #785364;
+  --line: #ecd1db;
+  --axis: #d8b6c4;
+  --edge: #957083;
+  --ring: rgba(43, 15, 26, 0.14);
+  --btn: #b8135a;
+  --btn-ink: #ffffff;
+  --island: #3b1325;
+  --island-ink: #fff0f5;
+  --accent: #b8135a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-palette='classic'],
+  :root:not([data-theme='light']) [data-palette='classic'] {
+    --bg: #121314;
+    --surface: #1c1d1f;
+    --surface-2: #242527;
+    --ink: #eeeeee;
+    --ink-2: #a5a6a8;
+    --muted: #909295;
+    --line: #303133;
+    --axis: #3b3c3e;
+    --edge: #787a7d;
+    --ring: rgba(255, 255, 255, 0.1);
+    --btn: #eeeeee;
+    --btn-ink: #121314;
+    --island: #2a2b2e;
+    --island-ink: #eeeeee;
+    --accent: #3987e5;
+  }
+}
+
+:root[data-theme='dark'][data-palette='classic'],
+:root[data-theme='dark'] [data-palette='classic'] {
+  --bg: #121314;
+  --surface: #1c1d1f;
+  --surface-2: #242527;
+  --ink: #eeeeee;
+  --ink-2: #a5a6a8;
+  --muted: #909295;
+  --line: #303133;
+  --axis: #3b3c3e;
+  --edge: #787a7d;
+  --ring: rgba(255, 255, 255, 0.1);
+  --btn: #eeeeee;
+  --btn-ink: #121314;
+  --island: #2a2b2e;
+  --island-ink: #eeeeee;
+  --accent: #3987e5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-palette='ocean'],
+  :root:not([data-theme='light']) [data-palette='ocean'] {
+    --bg: #0a1620;
+    --surface: #112230;
+    --surface-2: #193043;
+    --ink: #e8f3fa;
+    --ink-2: #9eb7c9;
+    --muted: #8aa5b9;
+    --line: #244055;
+    --axis: #2f5068;
+    --edge: #6e8ea6;
+    --ring: rgba(255, 255, 255, 0.1);
+    --btn: #6bb7ff;
+    --btn-ink: #06202f;
+    --island: #1d3a52;
+    --island-ink: #e8f3fa;
+    --accent: #5aa9f0;
+  }
+}
+
+:root[data-theme='dark'][data-palette='ocean'],
+:root[data-theme='dark'] [data-palette='ocean'] {
+  --bg: #0a1620;
+  --surface: #112230;
+  --surface-2: #193043;
+  --ink: #e8f3fa;
+  --ink-2: #9eb7c9;
+  --muted: #8aa5b9;
+  --line: #244055;
+  --axis: #2f5068;
+  --edge: #6e8ea6;
+  --ring: rgba(255, 255, 255, 0.1);
+  --btn: #6bb7ff;
+  --btn-ink: #06202f;
+  --island: #1d3a52;
+  --island-ink: #e8f3fa;
+  --accent: #5aa9f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-palette='forest'],
+  :root:not([data-theme='light']) [data-palette='forest'] {
+    --bg: #0c1510;
+    --surface: #13211a;
+    --surface-2: #1b2e24;
+    --ink: #e7f3ea;
+    --ink-2: #9eb7a6;
+    --muted: #8ba495;
+    --line: #25392d;
+    --axis: #324b3c;
+    --edge: #6e8b79;
+    --ring: rgba(255, 255, 255, 0.1);
+    --btn: #6fd39a;
+    --btn-ink: #08210f;
+    --island: #1f3a2c;
+    --island-ink: #e7f3ea;
+    --accent: #4cc283;
+  }
+}
+
+:root[data-theme='dark'][data-palette='forest'],
+:root[data-theme='dark'] [data-palette='forest'] {
+  --bg: #0c1510;
+  --surface: #13211a;
+  --surface-2: #1b2e24;
+  --ink: #e7f3ea;
+  --ink-2: #9eb7a6;
+  --muted: #8ba495;
+  --line: #25392d;
+  --axis: #324b3c;
+  --edge: #6e8b79;
+  --ring: rgba(255, 255, 255, 0.1);
+  --btn: #6fd39a;
+  --btn-ink: #08210f;
+  --island: #1f3a2c;
+  --island-ink: #e7f3ea;
+  --accent: #4cc283;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-palette='sunset'],
+  :root:not([data-theme='light']) [data-palette='sunset'] {
+    --bg: #1a1210;
+    --surface: #251a16;
+    --surface-2: #31241d;
+    --ink: #f6e9e1;
+    --ink-2: #c4ada0;
+    --muted: #ad9585;
+    --line: #3e2e26;
+    --axis: #4b392f;
+    --edge: #8f7767;
+    --ring: rgba(255, 255, 255, 0.1);
+    --btn: #ff9a62;
+    --btn-ink: #2a0f03;
+    --island: #3b2921;
+    --island-ink: #f6e9e1;
+    --accent: #ff8a50;
+  }
+}
+
+:root[data-theme='dark'][data-palette='sunset'],
+:root[data-theme='dark'] [data-palette='sunset'] {
+  --bg: #1a1210;
+  --surface: #251a16;
+  --surface-2: #31241d;
+  --ink: #f6e9e1;
+  --ink-2: #c4ada0;
+  --muted: #ad9585;
+  --line: #3e2e26;
+  --axis: #4b392f;
+  --edge: #8f7767;
+  --ring: rgba(255, 255, 255, 0.1);
+  --btn: #ff9a62;
+  --btn-ink: #2a0f03;
+  --island: #3b2921;
+  --island-ink: #f6e9e1;
+  --accent: #ff8a50;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-palette='lavender'],
+  :root:not([data-theme='light']) [data-palette='lavender'] {
+    --bg: #130f1f;
+    --surface: #1c1730;
+    --surface-2: #271f40;
+    --ink: #eeeaf8;
+    --ink-2: #b1a7d1;
+    --muted: #9b91bc;
+    --line: #342c50;
+    --axis: #41375f;
+    --edge: #8076a6;
+    --ring: rgba(255, 255, 255, 0.1);
+    --btn: #b7a4ff;
+    --btn-ink: #1a1033;
+    --island: #2e2650;
+    --island-ink: #eeeaf8;
+    --accent: #a58bff;
+  }
+}
+
+:root[data-theme='dark'][data-palette='lavender'],
+:root[data-theme='dark'] [data-palette='lavender'] {
+  --bg: #130f1f;
+  --surface: #1c1730;
+  --surface-2: #271f40;
+  --ink: #eeeaf8;
+  --ink-2: #b1a7d1;
+  --muted: #9b91bc;
+  --line: #342c50;
+  --axis: #41375f;
+  --edge: #8076a6;
+  --ring: rgba(255, 255, 255, 0.1);
+  --btn: #b7a4ff;
+  --btn-ink: #1a1033;
+  --island: #2e2650;
+  --island-ink: #eeeaf8;
+  --accent: #a58bff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-palette='rose'],
+  :root:not([data-theme='light']) [data-palette='rose'] {
+    --bg: #1a0f15;
+    --surface: #25161e;
+    --surface-2: #311f28;
+    --ink: #f8e9ef;
+    --ink-2: #c9a9b8;
+    --muted: #b28f9f;
+    --line: #402a35;
+    --axis: #4e3441;
+    --edge: #94727f;
+    --ring: rgba(255, 255, 255, 0.1);
+    --btn: #ff8fb7;
+    --btn-ink: #2b0a17;
+    --island: #3b2330;
+    --island-ink: #f8e9ef;
+    --accent: #ff7aa8;
+  }
+}
+
+:root[data-theme='dark'][data-palette='rose'],
+:root[data-theme='dark'] [data-palette='rose'] {
+  --bg: #1a0f15;
+  --surface: #25161e;
+  --surface-2: #311f28;
+  --ink: #f8e9ef;
+  --ink-2: #c9a9b8;
+  --muted: #b28f9f;
+  --line: #402a35;
+  --axis: #4e3441;
+  --edge: #94727f;
+  --ring: rgba(255, 255, 255, 0.1);
+  --btn: #ff8fb7;
+  --btn-ink: #2b0a17;
+  --island: #3b2330;
+  --island-ink: #f8e9ef;
+  --accent: #ff7aa8;
+}
+
+/* ---------- Glass and futuristic themes ---------- */
+
+/*
+ * These add to the colour themes: the cards become translucent glass with a bright edge over a backdrop of soft colour,
+ * and each has a typeface of its own. The opaque tokens (--surface and the rest) stay as the readable floor: they are what
+ * a card is when glass is off (no backdrop-filter, or reduced transparency asked for), and what the contrast test holds to
+ * 4.5:1. The translucent ones (--glass-*) are checked against --backdrop-worst, the strongest colour in the art behind them.
+ * Aurora, Neon and Obsidian are dark only: their light and dark are one.
+ */
+
+[data-palette='liquid'] {
+  --bg: #e8eef9;
+  --surface: #f6f8fd;
+  --surface-2: #e2e9f6;
+  --ink: #0b1226;
+  --ink-2: #3f4c6b;
+  --muted: #51607f;
+  --line: #c9d4ea;
+  --axis: #b0bdd8;
+  --edge: #6a7ba0;
+  --ring: rgba(40, 60, 110, 0.14);
+  --btn: #0b5fd6;
+  --btn-ink: #ffffff;
+  --island: #12203f;
+  --island-ink: #eef3ff;
+  --accent: #0b5fd6;
+  --glass-surface: rgba(255, 255, 255, 0.62);
+  --glass-surface-2: rgba(255, 255, 255, 0.52);
+  --glass-chrome: rgba(240, 245, 255, 0.74);
+  --glass-sheet: rgba(244, 247, 255, 0.82);
+  --glass-edge: rgba(255, 255, 255, 0.85);
+  --glass-hi: rgba(255, 255, 255, 0.95);
+  --glass-shadow: rgba(40, 70, 140, 0.28);
+  --backdrop-worst: #a4c2fc;
+  --font-ui: 'Plus Jakarta Sans Variable', 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --bg-art: radial-gradient(70% 45% at 12% -4%, rgba(96, 150, 255, 0.5), transparent 72%),
+    radial-gradient(60% 40% at 100% 16%, rgba(255, 150, 205, 0.4), transparent 72%),
+    radial-gradient(60% 40% at -6% 82%, rgba(120, 235, 205, 0.38), transparent 72%),
+    radial-gradient(70% 45% at 94% 104%, rgba(176, 150, 255, 0.42), transparent 72%);
+}
+
+[data-palette='aurora'],
+:root[data-palette='aurora'] {
+  color-scheme: dark;
+  --bg: #070b16;
+  --surface: #111829;
+  --surface-2: #192238;
+  --ink: #ecf1ff;
+  --ink-2: #a9b6da;
+  --muted: #94a2c9;
+  --line: #232d4a;
+  --axis: #303c61;
+  --edge: #6f81b3;
+  --ring: rgba(255, 255, 255, 0.1);
+  --btn: #3df2c9;
+  --btn-ink: #04201b;
+  --island: #1b2540;
+  --island-ink: #ecf1ff;
+  --accent: #3df2c9;
+  --glass-surface: rgba(14, 22, 42, 0.64);
+  --glass-surface-2: rgba(22, 32, 58, 0.52);
+  --glass-chrome: rgba(8, 12, 24, 0.78);
+  --glass-sheet: rgba(10, 16, 32, 0.9);
+  --glass-edge: rgba(255, 255, 255, 0.15);
+  --glass-hi: rgba(255, 255, 255, 0.26);
+  --glass-shadow: rgba(0, 0, 0, 0.6);
+  --backdrop-worst: #0c4d47;
+  --font-ui: 'Space Grotesk Variable', 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --bg-art: linear-gradient(115deg, transparent 18%, rgba(0, 255, 200, 0.08) 42%, rgba(120, 80, 255, 0.1) 62%, transparent 82%),
+    radial-gradient(75% 45% at 8% -6%, rgba(25, 230, 184, 0.3), transparent 72%),
+    radial-gradient(65% 42% at 100% 12%, rgba(122, 92, 255, 0.4), transparent 72%),
+    radial-gradient(70% 45% at 88% 104%, rgba(255, 79, 184, 0.24), transparent 72%),
+    radial-gradient(60% 40% at -8% 78%, rgba(44, 140, 255, 0.26), transparent 72%);
+}
+
+[data-palette='neon'],
+:root[data-palette='neon'] {
+  color-scheme: dark;
+  --bg: #05060a;
+  --surface: #0e1118;
+  --surface-2: #161a28;
+  --ink: #f2f6ff;
+  --ink-2: #a7b0c8;
+  --muted: #929cb8;
+  --line: #202638;
+  --axis: #2c3450;
+  --edge: #6c7899;
+  --ring: rgba(255, 255, 255, 0.1);
+  --btn: #00e5ff;
+  --btn-ink: #00131a;
+  --island: #161b2a;
+  --island-ink: #f2f6ff;
+  --accent: #00e5ff;
+  --glass-surface: rgba(10, 14, 24, 0.62);
+  --glass-surface-2: rgba(18, 24, 40, 0.5);
+  --glass-chrome: rgba(5, 7, 12, 0.78);
+  --glass-sheet: rgba(8, 11, 20, 0.9);
+  --glass-edge: rgba(0, 229, 255, 0.3);
+  --glass-hi: rgba(120, 245, 255, 0.28);
+  --glass-shadow: rgba(0, 229, 255, 0.2);
+  --backdrop-worst: #043740;
+  --font-ui: 'Exo 2 Variable', 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --bg-art: linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px) 0 0 / 28px 28px,
+    radial-gradient(65% 40% at 0% 0%, rgba(0, 229, 255, 0.22), transparent 72%),
+    radial-gradient(60% 42% at 100% 30%, rgba(255, 43, 214, 0.24), transparent 72%),
+    radial-gradient(70% 40% at 50% 112%, rgba(182, 255, 60, 0.1), transparent 72%);
+}
+
+[data-palette='obsidian'],
+:root[data-palette='obsidian'] {
+  color-scheme: dark;
+  --bg: #060607;
+  --surface: #111113;
+  --surface-2: #19191c;
+  --ink: #f4f4f5;
+  --ink-2: #a1a1aa;
+  --muted: #8d8d96;
+  --line: #232327;
+  --axis: #2f2f35;
+  --edge: #71717a;
+  --ring: rgba(255, 255, 255, 0.1);
+  --btn: #f4f4f5;
+  --btn-ink: #09090b;
+  --island: #1c1c20;
+  --island-ink: #f4f4f5;
+  --accent: #a5b4fc;
+  --glass-surface: rgba(18, 18, 20, 0.66);
+  --glass-surface-2: rgba(26, 26, 30, 0.54);
+  --glass-chrome: rgba(8, 8, 10, 0.78);
+  --glass-sheet: rgba(12, 12, 14, 0.9);
+  --glass-edge: rgba(255, 255, 255, 0.11);
+  --glass-hi: rgba(255, 255, 255, 0.2);
+  --glass-shadow: rgba(0, 0, 0, 0.7);
+  --backdrop-worst: #1a1a1b;
+  --font-ui: 'Manrope Variable', 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --bg-art: radial-gradient(70% 42% at 50% -12%, rgba(255, 255, 255, 0.08), transparent 72%),
+    radial-gradient(65% 40% at 100% 100%, rgba(120, 140, 255, 0.09), transparent 72%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-palette='liquid'],
+  :root:not([data-theme='light']) [data-palette='liquid'] {
+    --bg: #0a1020;
+    --surface: #151e36;
+    --surface-2: #1c2746;
+    --ink: #eaf0ff;
+    --ink-2: #a3b1d6;
+    --muted: #8d9cc4;
+    --line: #26324f;
+    --axis: #34426a;
+    --edge: #7184b3;
+    --ring: rgba(255, 255, 255, 0.1);
+    --btn: #7db2ff;
+    --btn-ink: #06142e;
+    --island: #1d2a4b;
+    --island-ink: #eaf0ff;
+    --accent: #6aa8ff;
+    --glass-surface: rgba(18, 28, 56, 0.64);
+    --glass-surface-2: rgba(26, 38, 72, 0.52);
+    --glass-chrome: rgba(12, 18, 38, 0.76);
+    --glass-sheet: rgba(14, 22, 44, 0.9);
+    --glass-edge: rgba(255, 255, 255, 0.16);
+    --glass-hi: rgba(255, 255, 255, 0.28);
+    --glass-shadow: rgba(0, 0, 0, 0.55);
+    --backdrop-worst: #113c46;
+    --font-ui: 'Plus Jakarta Sans Variable', 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --bg-art: radial-gradient(70% 45% at 12% -4%, rgba(60, 110, 255, 0.36), transparent 72%),
+    radial-gradient(60% 40% at 100% 16%, rgba(190, 80, 255, 0.3), transparent 72%),
+    radial-gradient(60% 40% at -6% 82%, rgba(40, 200, 190, 0.24), transparent 72%),
+    radial-gradient(70% 45% at 94% 104%, rgba(255, 90, 190, 0.26), transparent 72%);
+  }
+}
+
+:root[data-theme='dark'][data-palette='liquid'],
+:root[data-theme='dark'] [data-palette='liquid'] {
+  --bg: #0a1020;
+  --surface: #151e36;
+  --surface-2: #1c2746;
+  --ink: #eaf0ff;
+  --ink-2: #a3b1d6;
+  --muted: #8d9cc4;
+  --line: #26324f;
+  --axis: #34426a;
+  --edge: #7184b3;
+  --ring: rgba(255, 255, 255, 0.1);
+  --btn: #7db2ff;
+  --btn-ink: #06142e;
+  --island: #1d2a4b;
+  --island-ink: #eaf0ff;
+  --accent: #6aa8ff;
+  --glass-surface: rgba(18, 28, 56, 0.64);
+  --glass-surface-2: rgba(26, 38, 72, 0.52);
+  --glass-chrome: rgba(12, 18, 38, 0.76);
+  --glass-sheet: rgba(14, 22, 44, 0.9);
+  --glass-edge: rgba(255, 255, 255, 0.16);
+  --glass-hi: rgba(255, 255, 255, 0.28);
+  --glass-shadow: rgba(0, 0, 0, 0.55);
+  --backdrop-worst: #113c46;
+  --font-ui: 'Plus Jakarta Sans Variable', 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --bg-art: radial-gradient(70% 45% at 12% -4%, rgba(60, 110, 255, 0.36), transparent 72%),
+    radial-gradient(60% 40% at 100% 16%, rgba(190, 80, 255, 0.3), transparent 72%),
+    radial-gradient(60% 40% at -6% 82%, rgba(40, 200, 190, 0.24), transparent 72%),
+    radial-gradient(70% 45% at 94% 104%, rgba(255, 90, 190, 0.26), transparent 72%);
+}
+
+[data-palette='pearl'] {
+  --bg: #e5e3ee;
+  --surface: #f4f3f8;
+  --surface-2: #eae8f1;
+  --ink: #1a1923;
+  --ink-2: #474657;
+  --muted: #585767;
+  --line: #d5d3e1;
+  --axis: #bcbace;
+  --edge: #76749a;
+  --ring: rgba(70, 60, 120, 0.14);
+  --btn: #26233a;
+  --btn-ink: #ffffff;
+  --island: #221f33;
+  --island-ink: #f4f3fa;
+  --accent: #6246e8;
+  --glass-surface: rgba(255, 255, 255, 0.68);
+  --glass-surface-2: rgba(255, 255, 255, 0.5);
+  --glass-chrome: rgba(244, 243, 250, 0.76);
+  --glass-sheet: rgba(246, 245, 251, 0.86);
+  --glass-edge: rgba(255, 255, 255, 0.9);
+  --glass-hi: rgba(255, 255, 255, 0.95);
+  --glass-shadow: rgba(80, 70, 140, 0.22);
+  --backdrop-worst: #c5c0e5;
+  --font-ui: 'Geist Variable', 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --bg-art: radial-gradient(85% 48% at 62% -10%, rgba(150, 140, 215, 0.4), transparent 72%),
+    radial-gradient(90% 56% at 8% 102%, rgba(236, 230, 180, 0.85), transparent 72%),
+    radial-gradient(50% 50% at 106% 46%, rgba(238, 206, 200, 0.7), transparent 72%),
+    radial-gradient(55% 40% at 0% 30%, rgba(226, 226, 240, 0.6), transparent 72%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-palette='pearl'],
+  :root:not([data-theme='light']) [data-palette='pearl'] {
+    --bg: #12111c;
+    --surface: #1b192a;
+    --surface-2: #232035;
+    --ink: #eceaf6;
+    --ink-2: #aeabc6;
+    --muted: #9a97b4;
+    --line: #2e2b44;
+    --axis: #3b3856;
+    --edge: #7c79a2;
+    --ring: rgba(255, 255, 255, 0.1);
+    --btn: #ece9ff;
+    --btn-ink: #1a1730;
+    --island: #2a2740;
+    --island-ink: #eceaf6;
+    --accent: #a18cff;
+    --glass-surface: rgba(28, 26, 46, 0.62);
+    --glass-surface-2: rgba(36, 33, 58, 0.5);
+    --glass-chrome: rgba(16, 15, 28, 0.76);
+    --glass-sheet: rgba(20, 18, 34, 0.9);
+    --glass-edge: rgba(255, 255, 255, 0.14);
+    --glass-hi: rgba(255, 255, 255, 0.24);
+    --glass-shadow: rgba(0, 0, 0, 0.55);
+    --backdrop-worst: #352c61;
+    --font-ui: 'Geist Variable', 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --bg-art: radial-gradient(80% 45% at 50% -12%, rgba(120, 95, 230, 0.34), transparent 72%),
+    radial-gradient(75% 45% at 14% 106%, rgba(210, 170, 120, 0.14), transparent 72%),
+    radial-gradient(55% 45% at 104% 52%, rgba(220, 120, 170, 0.2), transparent 72%);
+  }
+}
+
+:root[data-theme='dark'][data-palette='pearl'],
+:root[data-theme='dark'] [data-palette='pearl'] {
+  --bg: #12111c;
+  --surface: #1b192a;
+  --surface-2: #232035;
+  --ink: #eceaf6;
+  --ink-2: #aeabc6;
+  --muted: #9a97b4;
+  --line: #2e2b44;
+  --axis: #3b3856;
+  --edge: #7c79a2;
+  --ring: rgba(255, 255, 255, 0.1);
+  --btn: #ece9ff;
+  --btn-ink: #1a1730;
+  --island: #2a2740;
+  --island-ink: #eceaf6;
+  --accent: #a18cff;
+  --glass-surface: rgba(28, 26, 46, 0.62);
+  --glass-surface-2: rgba(36, 33, 58, 0.5);
+  --glass-chrome: rgba(16, 15, 28, 0.76);
+  --glass-sheet: rgba(20, 18, 34, 0.9);
+  --glass-edge: rgba(255, 255, 255, 0.14);
+  --glass-hi: rgba(255, 255, 255, 0.24);
+  --glass-shadow: rgba(0, 0, 0, 0.55);
+  --backdrop-worst: #352c61;
+  --font-ui: 'Geist Variable', 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --bg-art: radial-gradient(80% 45% at 50% -12%, rgba(120, 95, 230, 0.34), transparent 72%),
+    radial-gradient(75% 45% at 14% 106%, rgba(210, 170, 120, 0.14), transparent 72%),
+    radial-gradient(55% 45% at 104% 52%, rgba(220, 120, 170, 0.2), transparent 72%);
+}
+
+/* ---------- How the glass themes draw ---------- */
+
+/*
+ * Glass is an addition to a card, never what holds its words up: where the browser cannot blur (no backdrop-filter) or
+ * transparency is switched off (prefers-reduced-transparency), every card goes back to its opaque token, which is the
+ * colour the contrast tests hold to 4.5:1. The blur values are written out, not read from a variable, because Safari
+ * does not resolve variables inside -webkit-backdrop-filter. At most the bar, the sheet and the pop-up blur; the cards
+ * are translucent only, which over soft colour costs nothing to draw.
+ */
+:is([data-palette='liquid'], [data-palette='pearl'], [data-palette='aurora'], [data-palette='neon'], [data-palette='obsidian']) {
+  font-family: var(--font-ui);
+}
+
+/* The small page that shows a glass theme in the picker draws its art too. */
+:is([data-palette='liquid'], [data-palette='pearl'], [data-palette='aurora'], [data-palette='neon'], [data-palette='obsidian'])[data-preview] {
+  background: var(--bg-art), var(--bg);
+}
+
+:is([data-palette='liquid'], [data-palette='pearl'], [data-palette='aurora'], [data-palette='neon'], [data-palette='obsidian']) .bg-surface {
+  background-color: var(--glass-surface);
+  box-shadow:
+    inset 0 1px 0 var(--glass-hi),
+    0 0 0 1px var(--glass-edge),
+    0 14px 32px -20px var(--glass-shadow);
+}
+:is([data-palette='liquid'], [data-palette='pearl'], [data-palette='aurora'], [data-palette='neon'], [data-palette='obsidian']) :is(.bg-surface-2\/50, .bg-surface-2\/60, .bg-surface-2\/70) {
+  background-color: var(--glass-surface-2);
+  box-shadow:
+    inset 0 1px 0 var(--glass-hi),
+    0 0 0 1px var(--glass-edge);
+}
+/* A chosen card in the picker keeps its outline in the theme's button colour. */
+:is([data-palette='liquid'], [data-palette='pearl'], [data-palette='aurora'], [data-palette='neon'], [data-palette='obsidian']) label.bg-surface:has(> input:checked) {
+  box-shadow:
+    0 0 0 2.5px var(--btn),
+    inset 0 1px 0 var(--glass-hi);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  :is([data-palette='liquid'], [data-palette='pearl'], [data-palette='aurora'], [data-palette='neon'], [data-palette='obsidian']) nav[aria-label='Main'] {
+    background: var(--glass-chrome);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+    backdrop-filter: blur(22px) saturate(170%);
+    border-top-color: var(--glass-edge);
+    box-shadow: inset 0 1px 0 var(--glass-hi);
+  }
+  :is([data-palette='liquid'], [data-palette='pearl'], [data-palette='aurora'], [data-palette='neon'], [data-palette='obsidian']) dialog.sheet {
+    background: var(--glass-sheet);
+    -webkit-backdrop-filter: blur(26px) saturate(170%);
+    backdrop-filter: blur(26px) saturate(170%);
+    box-shadow:
+      inset 0 1px 0 var(--glass-hi),
+      0 -1px 0 var(--glass-edge);
+  }
+  :is([data-palette='liquid'], [data-palette='pearl'], [data-palette='aurora'], [data-palette='neon'], [data-palette='obsidian']) .island {
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+    box-shadow:
+      inset 0 1px 0 var(--glass-hi),
+      0 0 0 1px var(--glass-edge),
+      0 14px 32px -10px var(--glass-shadow);
+  }
+}
+
+/* Pearl: light, airy type. Titles in a light weight, a little tighter, as the thin headings of a calm interface. */
+:is([data-palette='pearl']) :is(h1, h2, h3) {
+  font-weight: 300;
+  letter-spacing: -0.02em;
+}
+
+/* Neon: the buttons glow, as if lit from inside. */
+:is([data-palette='neon']) .bg-btn {
+  box-shadow: 0 0 18px -3px var(--accent);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :is([data-palette='liquid'], [data-palette='pearl'], [data-palette='aurora'], [data-palette='neon'], [data-palette='obsidian']) .bg-surface {
+    background-color: var(--surface);
+  }
+  :is([data-palette='liquid'], [data-palette='pearl'], [data-palette='aurora'], [data-palette='neon'], [data-palette='obsidian']) :is(.bg-surface-2\/50, .bg-surface-2\/60, .bg-surface-2\/70) {
+    background-color: var(--surface-2);
+  }
+  :is([data-palette='liquid'], [data-palette='pearl'], [data-palette='aurora'], [data-palette='neon'], [data-palette='obsidian']) nav[aria-label='Main'],
+  :is([data-palette='liquid'], [data-palette='pearl'], [data-palette='aurora'], [data-palette='neon'], [data-palette='obsidian']) dialog.sheet {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }

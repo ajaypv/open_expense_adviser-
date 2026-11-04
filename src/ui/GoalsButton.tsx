@@ -44,7 +44,7 @@ export function GoalsButton({ goals, onClick }: { goals: Goal[]; onClick: () => 
       <span aria-hidden="true" className="relative flex size-8 items-center justify-center">
         {totals.count > 0 && (
           <svg width="32" height="32" viewBox="0 0 32 32" className="absolute inset-0 -rotate-90" focusable="false">
-            <circle cx="16" cy="16" r={RADIUS} fill="none" strokeWidth="2.5" stroke="color-mix(in oklab, var(--s1) 22%, transparent)" />
+            <circle cx="16" cy="16" r={RADIUS} fill="none" strokeWidth="2.5" stroke="color-mix(in oklab, var(--accent) 22%, transparent)" />
             <circle
               cx="16"
               cy="16"
@@ -52,7 +52,7 @@ export function GoalsButton({ goals, onClick }: { goals: Goal[]; onClick: () => 
               fill="none"
               strokeWidth="2.5"
               strokeLinecap="round"
-              stroke={totals.reachedCount === totals.count ? 'var(--good-text)' : 'var(--s1)'}
+              stroke={totals.reachedCount === totals.count ? 'var(--good-text)' : 'var(--accent)'}
               strokeDasharray={CIRCUMFERENCE}
               strokeDashoffset={CIRCUMFERENCE * (1 - Math.min(1, percent / 100))}
               className="transition-[stroke-dashoffset] duration-500"

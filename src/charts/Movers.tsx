@@ -43,7 +43,7 @@ export function Movers({ changes, categoryById, currency, previousLabel }: Props
               <div className="absolute inset-y-[-2px] left-1/2 w-px bg-axis" />
               <div
                 className={`absolute inset-y-0 ${up ? 'left-1/2 rounded-r-[4px]' : 'right-1/2 rounded-l-[4px]'}`}
-                style={{ width, background: up ? 'var(--s8)' : 'var(--s1)' }}
+                style={{ width, background: up ? 'var(--s8)' : 'var(--accent)' }}
               />
             </div>
           </li>

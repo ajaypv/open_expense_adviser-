@@ -49,7 +49,7 @@ export function AiSheet({ open, onClose, ledger, month, today }: Props) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 id="ai-title" className="flex items-center gap-2 text-xl font-semibold tracking-tight">
-            <span aria-hidden="true" style={{ color: 'var(--s1)' }}>
+            <span aria-hidden="true" style={{ color: 'var(--accent)' }}>
               <Icon name="spark" size={20} />
             </span>
             AI insights
@@ -151,7 +151,7 @@ function Summary({ s, money, currency, nameOf }: { s: AiSummary; money: Fmt; cur
         <ul className="mt-2 space-y-1">
           {s.headline.slice(0, 2).map((line, i) => (
             <li key={line} className="row-in flex items-start gap-2 text-sm" style={{ '--d': `${200 + i * 140}ms` } as CSSProperties}>
-              <span aria-hidden="true" className="mt-1.5 size-1.5 shrink-0 rounded-full" style={{ background: 'var(--s1)' }} />
+              <span aria-hidden="true" className="mt-1.5 size-1.5 shrink-0 rounded-full" style={{ background: 'var(--accent)' }} />
               {line}
             </li>
           ))}
@@ -203,12 +203,12 @@ function Trajectory({ s, money, currency }: { s: AiSummary; money: Fmt; currency
         <TrajectoryChart summary={s} currency={currency} />
         <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-ink-2">
           <li className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="h-0.5 w-3 rounded" style={{ background: 'var(--s1)' }} />
+            <span aria-hidden="true" className="h-0.5 w-3 rounded" style={{ background: 'var(--accent)' }} />
             {s.monthName}
           </li>
           {t.projectedMinor !== null && (
             <li className="flex items-center gap-1.5">
-              <span aria-hidden="true" className="w-3 border-t-2 border-dotted" style={{ borderColor: 'var(--s1)' }} />
+              <span aria-hidden="true" className="w-3 border-t-2 border-dotted" style={{ borderColor: 'var(--accent)' }} />
               Heading
             </li>
           )}

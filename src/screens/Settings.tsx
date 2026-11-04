@@ -1,6 +1,7 @@
 import { memo, useState } from 'react'
 import { useDisplay } from '../data/display'
 import type { UpdateCheck } from '../pwa/checkForUpdate'
+import type { PaletteId } from '../theme/palettes'
 import type { ThemePref } from '../theme/useTheme'
 import { Icon, type IconName } from '../ui/Icon'
 import { useBackClose } from '../ui/backStack'
@@ -24,6 +25,9 @@ interface Props {
   ledger: Ledger
   theme: ThemePref
   onTheme: (theme: ThemePref) => void
+  /** The colour theme, and the way to change it. */
+  palette?: PaletteId
+  onPalette?: (palette: PaletteId) => void
   /** A newer version has already downloaded and is waiting to take over. */
   updateReady: boolean
   onApplyUpdate: (() => void) | null
@@ -38,7 +42,7 @@ interface Props {
 const PAGES: { id: SettingsPage; title: string; summary: string; icon: IconName }[] = [
   { id: 'money', title: 'Money', summary: 'Currency, accounts and balance, monthly budget', icon: 'bag' },
   { id: 'auto', title: 'Automatic', summary: 'Regular payments, reminders, suggestions', icon: 'repeat' },
-  { id: 'look', title: 'Appearance', summary: 'Theme, text size, hide amounts, number format', icon: 'sun' },
+  { id: 'look', title: 'Appearance', summary: 'Colour theme, light or dark, text size, hide amounts', icon: 'sun' },
   { id: 'privacy', title: 'Privacy and data', summary: 'App lock, location, export, restore, recently deleted', icon: 'lock' },
 ]
 
@@ -48,7 +52,7 @@ const PAGES: { id: SettingsPage; title: string; summary: string; icon: IconName 
  * that group of settings, with a back button (and the phone's back) to return to the list. Each group's settings are
  * unchanged; they have only moved onto their own page.
  */
-export const Settings = memo(function Settings({ ledger, theme, onTheme, updateReady, onApplyUpdate, onCheckUpdate, onShowWhatsNew, onOpenUpcoming, initialPage = null }: Props) {
+export const Settings = memo(function Settings({ ledger, theme, onTheme, palette, onPalette, updateReady, onApplyUpdate, onCheckUpdate, onShowWhatsNew, onOpenUpcoming, initialPage = null }: Props) {
   useDisplay() // amounts are masked or regrouped by display settings, so redraw when they change
   const [page, setPage] = useState<SettingsPage | null>(initialPage)
   // The phone's back button returns to the list, as the button at the top of a page does.
@@ -80,7 +84,7 @@ export const Settings = memo(function Settings({ ledger, theme, onTheme, updateR
             <SuggestionsSection />
           </>
         )}
-        {open.id === 'look' && <DisplaySection theme={theme} onTheme={onTheme} />}
+        {open.id === 'look' && <DisplaySection theme={theme} onTheme={onTheme} palette={palette} onPalette={onPalette} />}
         {open.id === 'privacy' && (
           <>
             <DataSection ledger={ledger} />

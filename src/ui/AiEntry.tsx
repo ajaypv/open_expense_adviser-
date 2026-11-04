@@ -7,7 +7,7 @@ import { Icon } from './Icon'
 export function AiEntry({ onOpen }: { onOpen: () => void }) {
   return (
     <button type="button" onClick={onOpen} aria-haspopup="dialog" className="mt-3 flex min-h-12 w-full items-center gap-2.5 rounded-2xl bg-surface px-3 py-2 text-left shadow-[0_0_0_1px_var(--ring)] active:bg-surface-2">
-      <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full" style={{ background: 'color-mix(in oklab, var(--s1) 16%, var(--surface))', color: 'var(--s1)' }}>
+      <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full" style={{ background: 'color-mix(in oklab, var(--accent) 16%, var(--surface))', color: 'var(--accent)' }}>
         <Icon name="spark" size={18} />
       </span>
       <span className="min-w-0 flex-1">

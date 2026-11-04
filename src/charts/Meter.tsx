@@ -14,7 +14,7 @@ export function Meter({ spentMinor, limitMinor, currency }: Props) {
   const ratio = spentMinor / limitMinor
   const over = ratio >= 1
   const close = ratio >= 0.8 && !over
-  const fill = over ? 'var(--critical)' : close ? 'var(--warn-ui)' : 'var(--s1)'
+  const fill = over ? 'var(--critical)' : close ? 'var(--warn-ui)' : 'var(--accent)'
 
   const status = over
     ? `Over budget by ${formatMoney(spentMinor - limitMinor, currency)}`
@@ -39,7 +39,7 @@ export function Meter({ spentMinor, limitMinor, currency }: Props) {
         aria-valuenow={Math.min(spentMinor, limitMinor) / 100}
         aria-valuetext={status}
         className="mt-2 h-2.5 overflow-hidden rounded-full"
-        style={{ background: 'color-mix(in oklab, var(--s1) 16%, var(--surface))' }}
+        style={{ background: 'color-mix(in oklab, var(--accent) 16%, var(--surface))' }}
       >
         <div
           className={`${intro ? 'bar-reveal ' : ''}h-full rounded-full transition-[width] duration-300`}
