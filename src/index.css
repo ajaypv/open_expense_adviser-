@@ -1028,6 +1028,31 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   }
 }
 
+/* ---------- Settings ---------- */
+
+/* Settings is set in a rounded geometric face (Plus Jakarta Sans, already shipped for the glass themes), whatever the theme. */
+.font-cred {
+  font-family: 'Plus Jakarta Sans Variable', 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* The panel at the top of the list: the backup and the update sit in one softly rounded card, divided by a hairline, rather
+   than each in its own outlined card. */
+.cred-panel {
+  border-radius: 2rem;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--ring);
+  overflow: hidden;
+}
+.cred-panel > section {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 1.25rem 1.25rem;
+}
+.cred-panel > section + section {
+  border-top: 1px solid var(--line);
+}
+
 /* ---------- The AI insights page ---------- */
 
 /* The page's own voice: a serif for the sentence it opens on, its headings and its big figures, over the theme's typeface for

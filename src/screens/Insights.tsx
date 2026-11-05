@@ -1,5 +1,6 @@
 import { memo, useMemo, useState } from 'react'
 import { BarList } from '../charts/BarList'
+import { BillSplit } from '../charts/BillSplit'
 import { CategoryBars } from '../charts/CategoryBars'
 import { CategoryBubbles } from '../charts/CategoryBubbles'
 import { CategoryDonut } from '../charts/CategoryDonut'
@@ -27,6 +28,7 @@ import {
   topMerchants,
   type MonthKey,
 } from '../insights/aggregates'
+import { splitBills } from '../insights/billSplit'
 import { placesIn } from '../insights/places'
 import { regularPayments } from '../insights/regular'
 import { detectRecurring } from '../insights/recurring'
@@ -119,7 +121,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
   const {
     monthTxs, total, prevTxs, hasPrevious, cats, elapsed, cmp, projected, merchants, weekdays, peakDay, changes, biggest,
     savings, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats, spots, hasAnyPlace,
-    regular, looksRegular, balanceCheck,
+    regular, looksRegular, balanceCheck, billSplit,
   } = useMemo(() => {
     const prevKey = shiftMonth(month, -1)
     const monthTxs = inMonth(txs, month)
@@ -171,10 +173,12 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
     const balanceCheck =
       regular && balanceSet ? forecast(estimatedBalanceMinor, upcomingPayments(recurring, todayKey, 30, moneyIn), todayKey) : null
 
+    const billSplit = splitBills(monthTxs, categoryById, recurring)
+
     return {
       monthTxs, total, prevTxs, hasPrevious, cats, elapsed, cmp, projected, merchants, weekdays, peakDay, changes, biggest,
       savings, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats, spots, hasAnyPlace,
-      regular, looksRegular, balanceCheck,
+      regular, looksRegular, balanceCheck, billSplit,
     }
   }, [txs, income, month, today, isCurrent, categoryBudgets, categoryById, recurring, rates, currency, balanceSet, estimatedBalanceMinor])
 
@@ -508,6 +512,12 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
               )}
             </div>
           </Section>
+
+          {billSplit && (
+            <Section id="bills-h" title="Bills, recharges and EMIs" intro="How the money that went on bills divides, wherever it was filed.">
+              <BillSplit split={billSplit} currency={currency} monthName={name} />
+            </Section>
+          )}
 
           {changes.length > 0 && (
             <Section

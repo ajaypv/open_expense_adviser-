@@ -1,5 +1,6 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { makeLedger } from '../test/ledger'
 import { Settings, type SettingsPage } from './Settings'
@@ -13,19 +14,19 @@ const render = (props: { updateReady?: boolean; initialPage?: SettingsPage | nul
   )
 
 describe('Settings: the list', () => {
-  it('is a short list: a backup, the app update, and four pages to go to', () => {
+  it('is a short list: a backup, the app update, and five pages to go to', () => {
     const html = render()
     expect(html).toMatch(/<h1[^>]*>Settings<\/h1>/)
     expect(html).toContain('aria-label="Backup"')
     expect(html).toContain('aria-label="App update"')
     const nav = html.slice(html.indexOf('aria-label="Settings pages"'))
-    for (const page of ['Money', 'Automatic', 'Appearance', 'Privacy and data']) expect(nav).toContain(`>${page}</span>`)
-    expect((nav.match(/<li>/g) ?? []).length).toBe(4)
+    for (const page of ['Money', 'Automatic', 'Suggestions', 'Appearance', 'Privacy and data']) expect(nav).toContain(`>${page}</span>`)
+    expect((nav.match(/<li>/g) ?? []).length).toBe(5)
   })
 
   it('says in a line what is on each page', () => {
     const html = render()
-    for (const line of ['Currency, accounts and balance, monthly budget', 'Regular payments, reminders, suggestions, widget', 'Colour theme, light or dark, text size, hide amounts', 'App lock, location, export, restore, recently deleted']) {
+    for (const line of ['Currency, accounts and balance, monthly budget', 'Regular payments, reminders, widget', 'Your regulars, on Home or above the input bar', 'Colour theme, light or dark, text size, hide amounts', 'App lock, location, export, restore, recently deleted']) {
       expect(html).toContain(line)
     }
   })
@@ -94,11 +95,22 @@ describe('Settings: a page', () => {
     for (const h of ['Currency', 'Accounts and balance', 'Monthly budget']) expect(html, h).toMatch(new RegExp(`<h3[^>]*>${h}</h3>`))
   })
 
-  it('Automatic: regular payments, reminders and suggestions, including where suggestions appear', () => {
+  it('Automatic: regular payments, reminders and the widget, and no longer the suggestions', () => {
     const html = page('auto')
-    for (const h of ['Recurring', 'Reminders', 'Suggestions', 'Widget']) expect(html, h).toMatch(new RegExp(`<h3[^>]*>${h}</h3>`))
+    for (const h of ['Recurring', 'Reminders', 'Widget']) expect(html, h).toMatch(new RegExp(`<h3[^>]*>${h}</h3>`))
+    expect(html).not.toContain('name="suggestion-placement"')
+  })
+
+  it('Suggestions: a page of its own, with where they appear', () => {
+    const html = page('suggestions')
+    expect(html).toMatch(/<h1[^>]*>Suggestions<\/h1>/)
     for (const text of ['Above the input bar', 'On the Home screen', 'Off', 'including the add form']) expect(html).toContain(text)
     expect((html.match(/name="suggestion-placement"/g) ?? []).length).toBe(3)
+  })
+
+  it('Suggestions: says nothing on the list until the choice has been read, so it never shows a wrong one', () => {
+    const nav = render().slice(render().indexOf('aria-label="Settings pages"'))
+    expect(nav).not.toMatch(/(On Home|By the input|Off)<\/span>/)
   })
 
   it('Automatic: leads to the upcoming payments, where they are added and changed', () => {
@@ -146,5 +158,37 @@ describe('Settings: a page', () => {
     expect(page('money')).not.toContain('Hide amounts')
     expect(page('auto')).not.toContain('App lock')
     expect(page('privacy')).not.toContain('Remind me at')
+  })
+})
+
+describe('Settings: the list, set in the reference style', () => {
+  const css = readFileSync('src/index.css', 'utf8').replace(/\r/g, '')
+
+  it('puts the pages in groups, each under a quiet title', () => {
+    const html = render()
+    for (const title of ['Your money', 'Make it work for you', 'Safe and private']) expect(html, title).toMatch(new RegExp('<h2[^>]*>' + title + '</h2>'))
+    expect(html.indexOf('Your money')).toBeLessThan(html.indexOf('Make it work for you'))
+    expect(html.indexOf('Make it work for you')).toBeLessThan(html.indexOf('Safe and private'))
+  })
+
+  it('gives each row a thin line icon of its own: bank, circling A, palette, shield', () => {
+    const html = render()
+    for (const icon of ['bank', 'autopay', 'palette', 'shield']) expect(html, icon).toContain('data-icon="' + icon + '"')
+    expect(html).toContain('stroke-width="1.4"')
+  })
+
+  it('says at a glance, on the right, the currency', () => {
+    expect(render()).toMatch(/INR<\/span><span aria-hidden/)
+  })
+
+  it('is set in a rounded geometric typeface, on the list and on each page', () => {
+    expect(render()).toContain('class="font-cred')
+    expect(render({ initialPage: 'money' })).toContain('class="font-cred')
+    expect(css).toMatch(/\.font-cred \{[^}]*font-family: 'Plus Jakarta Sans Variable'/)
+  })
+
+  it('holds the backup and the update in one softly rounded panel', () => {
+    expect(render()).toContain('class="cred-panel')
+    expect(css).toMatch(/\.cred-panel \{[^}]*border-radius: 2rem/)
   })
 })
