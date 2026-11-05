@@ -35,7 +35,7 @@ import { useLockState, watchVisibility } from './security/lock'
 import { useTheme } from './theme/useTheme'
 import { AddSheet } from './ui/AddSheet'
 import { useBackClose } from './ui/backStack'
-import { categoryIcon } from './ui/categoryIcon'
+import { spendIcon } from './ui/categoryIcon'
 import { BottomNav, TABS, type Tab } from './ui/BottomNav'
 import { ChatBar } from './ui/ChatBar'
 import { GoalMoneySheet, GoalSheet } from './ui/GoalSheets'
@@ -301,7 +301,7 @@ function Shell() {
               }
             : {}),
           // Where the money went: the category's own icon and colour, or an arrow in for money received.
-          icon: only.kind === 'income' ? 'arrowDown' : categoryIcon(lastName),
+          icon: only.kind === 'income' ? 'arrowDown' : spendIcon(only.merchant, lastName),
           color: only.kind === 'income' ? 'var(--good-text)' : categoryById.get(lastCategoryId)?.color,
         })
       }
@@ -345,7 +345,7 @@ function Shell() {
           message: received ? `Received ${money} from ${s.merchant}` : `Added ${s.merchant}, ${money}`,
           actionLabel: 'Undo',
           onAction: () => void purgeTransaction(id),
-          icon: received ? 'arrowDown' : categoryIcon(cat?.name),
+          icon: received ? 'arrowDown' : spendIcon(s.merchant, cat?.name),
           color: received ? 'var(--good-text)' : cat?.color,
         })
       } catch (err) {

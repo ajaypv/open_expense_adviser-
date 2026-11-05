@@ -7,6 +7,7 @@ import { TAG_LABELS } from '../insights/upcoming'
 import { CountUp, DeductionTimeline, MonthBar, MonthBars, Scene, ShareBar, TrajectoryChart } from './AiCharts'
 import { Dialog } from './Dialog'
 import { Icon } from './Icon'
+import { PaymentBadge } from './PaymentBadge'
 
 type Ledger = ReturnType<typeof useLedger>
 type Fmt = (m: number) => string
@@ -235,6 +236,7 @@ function Deductions({ s, money, today }: { s: AiSummary; money: Fmt; today: Date
               <ul aria-label="Payments that leave on their own" className="mt-3 divide-y divide-line">
                 {d.items.map((i) => (
                   <li key={i.key} data-deduction={i.state} className="flex items-center gap-3 py-2.5">
+                    <PaymentBadge tag={i.tag} name={i.name} size={36} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{i.name}</p>
                       <p className={`text-sm ${i.state === 'late' ? 'font-medium text-critical' : 'text-ink-2'}`}>{`${TAG_LABELS[i.tag]}. ${statusOf(i, today)}`}</p>

@@ -17,6 +17,7 @@ import {
 } from '../insights/upcoming'
 import { Dialog } from './Dialog'
 import { Icon } from './Icon'
+import { PaymentBadge } from './PaymentBadge'
 import { paymentName, shortDay, shortfallPhrase, signedAmount } from './upcomingText'
 
 type Ledger = ReturnType<typeof useLedger>
@@ -76,9 +77,10 @@ export function UpcomingSheet({ open, onClose, ledger, today, onAdd, onEdit }: P
           type="button"
           onClick={() => onEdit(p.rule)}
           aria-label={`Edit ${name}, ${type}, ${when}, ${formatMoney(p.amountMinor, currency)} ${direction}, due ${shortDay(p.date, today)}`}
-          className="flex min-h-16 w-full items-center justify-between gap-3 py-2.5 text-left"
+          className="flex min-h-16 w-full items-center gap-3 py-2.5 text-left"
         >
-          <span className="min-w-0">
+          <PaymentBadge tag={tagOf(p.rule)} name={name} categoryName={categoryById.get(p.rule.categoryId)?.name} />
+          <span className="min-w-0 flex-1">
             <span className="block truncate font-medium">{name}</span>
             <span className="block text-sm text-ink-2">{`${type}, ${shortDay(p.date, today)}`}</span>
           </span>
@@ -231,8 +233,9 @@ export function UpcomingSheet({ open, onClose, ledger, today, onAdd, onEdit }: P
                   const name = r.merchant || categoryById.get(r.categoryId)?.name || 'Payment'
                   return (
                     <li key={r.id}>
-                      <button type="button" onClick={() => onEdit(r)} aria-label={`Edit ${name}, paused`} className="flex min-h-14 w-full items-center justify-between gap-3 py-2.5 text-left">
-                        <span className="min-w-0">
+                      <button type="button" onClick={() => onEdit(r)} aria-label={`Edit ${name}, paused`} className="flex min-h-14 w-full items-center gap-3 py-2.5 text-left">
+                        <PaymentBadge tag={tagOf(r)} name={name} categoryName={categoryById.get(r.categoryId)?.name} />
+                        <span className="min-w-0 flex-1">
                           <span className="block truncate font-medium">{name}</span>
                           <span className="block text-sm text-ink-2">{`${TAG_LABELS[tagOf(r)]}. ${describeRule(r)}.`}</span>
                         </span>

@@ -39,6 +39,12 @@ const PATHS = {
   ticket: 'M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2.5 2.5 0 0 0 0 5v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2.5 2.5 0 0 0 0-5zM14 5v14',
   bag: 'M5.5 8h13L19.5 20h-15L5.5 8zM9 8V6.5a3 3 0 0 1 6 0V8',
   tag: 'M3 12.5V4h8.5l9.5 9.5-8.5 8.5L3 12.5zM7.5 8.5h.01',
+  // Regular payments, each its own: a bill is a receipt, a mobile recharge a phone being topped up, an EMI a calendar of instalments,
+  // an autopay a circling arrow with a tick.
+  receipt: 'M6 3h12v18l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5L6 21zM9.5 8h5M9.5 12h5M9.5 15.5h2.5',
+  recharge: 'M8 2.5h8A1.5 1.5 0 0 1 17.5 4v16a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 20V4A1.5 1.5 0 0 1 8 2.5zM12 8v5M9.5 10.5h5M11 18.5h2',
+  emi: 'M4 6h16v14H4zM4 10.5h16M8 3.5v4M16 3.5v4M8.5 14h.01M12 14h.01M15.5 14h.01M8.5 17h.01M12 17h.01',
+  autopay: 'M20 12a8 8 0 1 1-2.6-5.9M20 4v4h-4M9 12l2.2 2.2L15.5 10',
   spark: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3zM19 16l.8 2.2 2.2.8-2.2.8L19 22l-.8-2.2-2.2-.8 2.2-.8L19 16z',
 } as const
 

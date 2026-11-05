@@ -35,6 +35,7 @@ import { repeatingSpend, type RepeatingSpend } from '../insights/repeats'
 import { categoryBudgetStatus, categoryTrends, monthlyTotals, savingsFor, unusualExpenses } from '../insights/trends'
 import { AiEntry } from '../ui/AiEntry'
 import { Icon } from '../ui/Icon'
+import { PaymentBadge } from '../ui/PaymentBadge'
 import { paymentName, shortDay, shortfallPhrase, signedAmount } from '../ui/upcomingText'
 import { MonthStrip } from '../ui/MonthStrip'
 import { PlacesMap } from '../ui/PlacesMap'
@@ -329,8 +330,9 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
           <p className="mt-5 font-medium">Due next</p>
           <ul aria-label="Due next" className="mt-1 divide-y divide-line rounded-3xl bg-surface px-4 shadow-[0_0_0_1px_var(--ring)]">
             {regular.upcoming.map((p) => (
-              <li key={p.key} className="flex items-center justify-between gap-3 py-3">
-                <span className="min-w-0">
+              <li key={p.key} className="flex items-center gap-3 py-3">
+                <PaymentBadge tag={tagOf(p.rule)} name={lookNames(p)} categoryName={categoryById.get(p.rule.categoryId)?.name} />
+                <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{lookNames(p)}</span>
                   <span className="block text-sm text-ink-2">{`${TAG_LABELS[tagOf(p.rule)]}, ${shortDay(p.date, today)}`}</span>
                 </span>

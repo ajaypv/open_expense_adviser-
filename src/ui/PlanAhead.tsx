@@ -2,15 +2,15 @@ import { useMemo } from 'react'
 import type { useLedger } from '../data/useLedger'
 import { formatMoney, localDateString } from '../db/money'
 import { planAhead, type AheadRow } from '../insights/ahead'
-import { describeWhen, upcomingPayments } from '../insights/upcoming'
-import { Icon, type IconName } from './Icon'
+import { describeWhen, tagOf, upcomingPayments } from '../insights/upcoming'
+import { Icon } from './Icon'
+import { paymentIcon } from './paymentIcon'
 import { paymentName, shortDay, signedAmount } from './upcomingText'
 
 type Ledger = ReturnType<typeof useLedger>
 
 const HORIZON_DAYS = 30
 
-const ICON: Record<AheadRow['kind'], IconName> = { emi: 'repeat', biggest: 'bolt', income: 'arrowDown' }
 
 const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
 
@@ -45,7 +45,7 @@ export function PlanAhead({ ledger, today, plain = false }: { ledger: Ledger; to
             return (
               <li key={r.kind} data-kind={r.kind} className="flex items-center gap-3 py-2.5">
                 <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-2">
-                  <Icon name={ICON[r.kind]} size={18} />
+                  <Icon name={r.kind === 'emi' ? 'emi' : r.kind === 'income' ? 'arrowDown' : paymentIcon(tagOf(p.rule), paymentName(p, categoryById.get(p.rule.categoryId)?.name), categoryById.get(p.rule.categoryId)?.name)} size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-ink-2">{label(r)}</p>

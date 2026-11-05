@@ -3,7 +3,7 @@ import type { LedgerTx } from '../data/buildLedger'
 import { useDisplay } from '../data/display'
 import { formatMoney, localDateString, parseLocalDate } from '../db/money'
 import type { Account, Category } from '../db/schema'
-import { categoryIcon } from './categoryIcon'
+import { spendIcon } from './categoryIcon'
 import { Icon, type IconName } from './Icon'
 
 interface Props {
@@ -51,7 +51,7 @@ export const TxRow = memo(function TxRow({ tx, category, currency, accountById, 
   const color = category?.color ?? 'var(--other)'
   // When the title is already the category (no merchant given), don't say it twice.
   const showCategory = !transfer && title !== categoryName
-  const glyph: IconName = transfer ? 'swap' : received ? 'arrowDown' : categoryIcon(category?.name)
+  const glyph: IconName = transfer ? 'swap' : received ? 'arrowDown' : spendIcon(tx.merchant, category?.name)
   const time = showTime ? timeOf(tx) : null
 
   // What was actually paid, in the currency it was paid in; the converted figure goes beneath it.

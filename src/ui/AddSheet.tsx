@@ -20,7 +20,7 @@ import { defaultAccountId } from '../insights/accounts'
 import { nextDueAfter } from '../insights/recurring'
 import type { Suggestion } from '../insights/suggestions'
 import { useBackClose } from './backStack'
-import { categoryIcon } from './categoryIcon'
+import { spendIcon } from './categoryIcon'
 import { Icon } from './Icon'
 import { PickerField, type PickerOption } from './PickerField'
 import { SuggestionList } from './SuggestionList'
@@ -293,11 +293,11 @@ export const AddSheet = memo(function AddSheet({
               void recategorizeTransactions(others, target).then(() =>
                 toast({
                   message: `Moved ${count} ${count === 1 ? 'entry' : 'entries'} to ${chosen?.name ?? 'this category'}`,
-                  icon: categoryIcon(chosen?.name),
+                  icon: spendIcon(fields.merchant, chosen?.name),
                   color: chosen?.color,
                 }),
               ),
-            icon: categoryIcon(chosen?.name),
+            icon: spendIcon(fields.merchant, chosen?.name),
             color: chosen?.color,
             holdMs: 8000,
           })
@@ -327,7 +327,7 @@ export const AddSheet = memo(function AddSheet({
         toast({
           message,
           // What it was added to: the category's own icon and colour; an arrow in for money received; swapping arrows for a transfer.
-          icon: transfer ? 'swap' : received ? 'arrowDown' : categoryIcon(chosen?.name),
+          icon: transfer ? 'swap' : received ? 'arrowDown' : spendIcon(fields.merchant, chosen?.name),
           color: transfer ? undefined : received ? 'var(--good-text)' : chosen?.color,
         })
       }
