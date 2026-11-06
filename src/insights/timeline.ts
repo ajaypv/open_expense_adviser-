@@ -28,6 +28,8 @@ export interface WeekFlow {
   previousMinor: number | null
   perDayMinor: number
   peak: { date: string; minor: number } | null
+  /** How many of the seven days had nothing spent (counting only days since the first expense). */
+  quietDays: number
   /** By category, biggest first. */
   parts: DayPart[]
 }
@@ -95,8 +97,10 @@ export function buildTimeline(expenses: Transaction[], today: Date, span: number
   const weekTxs = Array.from({ length: 7 }, (_, n) => dayTxs(n)).flat()
   const before = sumOf(Array.from({ length: 7 }, (_, n) => dayTxs(n + 7)).flat())
   let peak: WeekFlow['peak'] = null
+  let quietDays = 0
   for (let n = 0; n < 7; n++) {
     const minor = sumOf(dayTxs(n))
+    if (minor === 0 && n < available) quietDays++
     if (minor > 0 && (peak === null || minor > peak.minor)) peak = { date: keyDaysAgo(today, n), minor }
   }
   const totalMinor = sumOf(weekTxs)
@@ -105,7 +109,7 @@ export function buildTimeline(expenses: Transaction[], today: Date, span: number
     days,
     maxMinor: days.reduce((a, d) => Math.max(a, d.totalMinor), 0),
     earlier: available > count,
-    week: { totalMinor, previousMinor: before > 0 ? before : null, perDayMinor: Math.round(totalMinor / 7), peak, parts: partsOf(weekTxs) },
+    week: { totalMinor, previousMinor: before > 0 ? before : null, perDayMinor: Math.round(totalMinor / 7), peak, quietDays, parts: partsOf(weekTxs) },
   }
 }
 

@@ -79,6 +79,13 @@ describe('buildTimeline', () => {
     expect(t.week.parts.map((p) => p.categoryId)).toEqual([2, 1])
   })
 
+  it('counts the days of the week with nothing spent, but not days before the first expense', () => {
+    const t = buildTimeline([tx('2026-11-06', 100), tx('2026-11-04', 50)], today, 30)
+    expect(t.week.quietDays).toBe(1) // the 5th; the days before the 4th are from before there was anything
+    const all = buildTimeline([tx('2026-10-01', 10), tx('2026-11-06', 100)], today, 30)
+    expect(all.week.quietDays).toBe(6)
+  })
+
   it('compares the week with the seven days before it, when there was spending then', () => {
     const t = buildTimeline([tx('2026-11-06', 100), tx('2026-10-28', 300)], today, 30)
     expect(t.week.totalMinor).toBe(10_000)

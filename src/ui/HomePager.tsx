@@ -71,7 +71,9 @@ export function HomePager({ overview, timeline }: Props) {
     if (next === 'timeline') setVisited(true)
     setMoving(true)
     setView(next)
-    if (window.scrollY > 0) window.scrollTo({ top: 0 })
+    // The screen scrolls inside the main area, not the window: the other page starts at its top.
+    const scroller = box.current?.closest('main')
+    if (scroller && scroller.scrollTop > 0) scroller.scrollTo({ top: 0 })
     window.clearTimeout(timer.current)
     timer.current = window.setTimeout(() => setMoving(false), MOVE_MS + 60)
   }
@@ -152,7 +154,9 @@ export function HomePager({ overview, timeline }: Props) {
         ))}
       </div>
 
-      <div className="overflow-x-clip">
+      {/* The pages are cut off at the sides as they slide, but not at the edge of the content: it is widened by the page's own
+          margin and padded back, so a ring or a shadow reaching past the first column is not cut short on the left. */}
+      <div className="-mx-5 overflow-x-clip px-5">
         <div className="pager-track" data-dragging={dragging} style={{ '--i': index, '--drag': `${drag}px` } as CSSProperties}>
           <div data-page="overview" data-rest={rest && index !== 0} inert={rest && index !== 0} className="pager-panel">
             {overview}

@@ -173,6 +173,12 @@
   --critical: #d03b3b;
   --good-text: #006300;
   --critical-text: #b32d2d;
+
+  /* How much was spent on a day, on the timeline: calm teal, through amber, to warm coral. One set for light and dark, each
+     at least 3 to 1 against both the light and the dark surface. */
+  --heat-low: #139aa6;
+  --heat-mid: #b57600;
+  --heat-high: #d9452e;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -1061,41 +1067,83 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 
 /* ---------- The timeline ---------- */
 
-/* The line between two days is drawn down from the first, and then a pulse of light runs along it, as money moving on. */
-@keyframes tl-draw {
-  from {
-    transform: scaleY(0);
-  }
+/* The line between days is a small river. Its coloured part is shown from the top down as far as the page has been scrolled
+   (--p, set as the page moves, so it follows the finger and trails it a little), and a bead of light rides the leading edge,
+   swaying with the river. The grey river under it is always there. */
+.tl-fill {
+  clip-path: inset(0 0 calc((1 - var(--p, 1)) * 100%) 0);
 }
-.tl-line {
-  transform-origin: top;
-  animation: tl-draw 0.7s cubic-bezier(0.3, 0.7, 0.3, 1) calc(var(--d, 0ms) + 120ms) backwards;
+.tl-head {
+  left: calc(50% + var(--hx, 0px));
+  top: calc(var(--p, 1) * 100%);
+  translate: -50% -50%;
+  opacity: 0;
+  background: color-mix(in oklab, var(--to) calc(var(--p, 1) * 100%), var(--from));
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--from) 22%, transparent),
+    0 0 14px 5px color-mix(in oklab, var(--from) 55%, transparent);
+  transition: opacity 0.25s ease;
+  pointer-events: none;
 }
-@keyframes tl-flow {
-  from {
-    transform: translateY(-120%);
-    opacity: 0.9;
+.tl-river[data-live='true'] .tl-head {
+  opacity: 1;
+}
+
+/* A date is dark until the line reaches it, then it fills in its colour with a little spring. */
+.tl-dot {
+  background: var(--surface);
+  color: var(--ink-2);
+  box-shadow:
+    inset 0 0 0 2px var(--edge),
+    0 0 0 4px var(--bg);
+  transform: scale(0.82);
+  transition:
+    transform 0.55s cubic-bezier(0.3, 1.55, 0.5, 1),
+    background-color 0.4s ease,
+    box-shadow 0.4s ease,
+    color 0.4s ease;
+}
+.tl-dot[data-lit='true'] {
+  background: color-mix(in oklab, var(--c) 24%, var(--surface));
+  color: var(--ink);
+  box-shadow:
+    inset 0 0 0 2px var(--c),
+    0 0 0 4px var(--bg);
+  transform: none;
+}
+
+/* Today's date gives out a ring now and then, thin and small enough to stay inside its own column, so nothing is cut off at the
+   side and the card beside it is not drawn over it. */
+@keyframes tl-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
   }
-  to {
-    transform: translateY(260%);
+  70%,
+  100% {
+    transform: scale(1.42);
     opacity: 0;
   }
 }
-.tl-flow {
-  opacity: 0;
-  background: linear-gradient(to bottom, transparent, color-mix(in oklab, var(--surface) 85%, transparent), transparent);
-  animation: tl-flow 1.5s ease-in-out calc(var(--d, 0ms) + 650ms) backwards;
+.tl-ping {
+  box-shadow: inset 0 0 0 2px currentColor;
+  animation: tl-ping 2.6s ease-out 1.2s infinite;
+  pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .pager-track,
   .pager-pill {
     transition: none;
   }
-  .tl-line {
-    animation: none;
+  .tl-dot {
+    transition: none;
   }
-  .tl-flow {
+  .tl-head {
     display: none;
+  }
+  .tl-ping {
+    animation: none;
+    opacity: 0;
   }
 }
 

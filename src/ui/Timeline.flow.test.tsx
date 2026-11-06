@@ -83,24 +83,73 @@ describe('Timeline: the days', () => {
     expect(days().getByRole('button', { name: /^.+, 3 days ago, ₹1,500, 1 expense$/ })).toBeInTheDocument()
   })
 
-  it('gives each day one dot, bigger for a bigger day, and a folded line for the quiet ones', () => {
+  it('makes each dot the date of its day, the weekday small over the number, with a tick for a run of quiet days', () => {
     mount()
     expect(document.querySelectorAll('[data-dot]')).toHaveLength(6) // four days and two quiet lines
-    const size = (date: string) => Number((dayRow(date).querySelector('[data-dot]') as HTMLElement).style.width.replace('px', ''))
-    expect(size('2026-11-03')).toBeGreaterThan(size('2026-11-05'))
-    expect(size('2026-11-05')).toBeGreaterThan(size('2026-11-06'))
-    expect(size('2026-11-03')).toBe(20)
-    const quiet = [...document.querySelectorAll('[data-quiet]')].map((q) => q.textContent)
-    expect(quiet).toHaveLength(2)
-    expect(quiet.some((t) => t?.includes('2 quiet days'))).toBe(true)
-    expect(quiet.some((t) => t?.startsWith('Nothing spent on'))).toBe(true)
+    const dot = (date: string) => dayRow(date).querySelector('[data-dot]') as HTMLElement
+    const date = (d: HTMLElement) => d.querySelector('[data-date]')?.textContent
+    expect(date(dot('2026-11-06'))).toBe('6')
+    expect(date(dot('2026-11-05'))).toBe('5')
+    expect(date(dot('2026-11-03'))).toBe('3')
+    expect(date(dot('2026-10-31'))).toBe('31')
+    const weekday = (d: string, y: number, m: number, day: number) => expect(dot(d).querySelector('[data-weekday]')?.textContent).toBe(new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(new Date(y, m, day)))
+    weekday('2026-11-05', 2026, 10, 5)
+    weekday('2026-10-31', 2026, 9, 31)
+    const quiet = [...document.querySelectorAll('[data-quiet]')]
+    const single = quiet.find((q) => q.getAttribute('data-quiet') === '2026-11-04')!
+    const run = quiet.find((q) => q.getAttribute('data-quiet') === '2026-11-02')!
+    expect(single.querySelector('[data-date]')?.textContent).toBe('4')
+    expect(run.querySelector('[data-date]')).toBeNull() // a tick, not a number
+    expect(run.querySelector('[data-dot] svg')).toBeInTheDocument()
   })
 
-  it('colours each dot by what most of that day went on', () => {
+  it('keeps every dot the same size, since the colour now says how much', () => {
     mount()
-    const colour = (date: string) => (dayRow(date).querySelector('[data-dot]') as HTMLElement).style.background
-    expect(colour('2026-11-05')).toContain('--s1') // Food, 450 of 750
-    expect(colour('2026-11-03')).toContain('--s5')
+    const classes = [...document.querySelectorAll('[data-dot]')].map((d) => d.className)
+    expect(new Set(classes).size).toBe(1)
+    expect(classes[0]).toContain('size-[2.625rem]')
+  })
+
+  it('colours each dot by how much was spent that day against the biggest: calm teal, then amber, then warm coral', () => {
+    mount()
+    const style = (date: string) => (dayRow(date).querySelector('[data-dot]') as HTMLElement).getAttribute('style')!
+    expect(style('2026-11-03')).toContain('var(--heat-high) 100%') // the biggest day, 1,500
+    expect(style('2026-11-05')).toContain('var(--heat-high) 0%') // half of it: amber
+    expect(style('2026-11-06')).toContain('var(--heat-mid) 16%') // 120 of 1,500: still mostly teal
+    expect(style('2026-10-31')).toContain('var(--heat-mid) 11%')
+    const quiet = document.querySelector('[data-quiet="2026-11-04"] [data-dot]') as HTMLElement
+    expect(quiet.getAttribute('style')).toContain('var(--heat-low)')
+    // Not by category, and not a traffic light: the category colours stay on the bars.
+    expect(style('2026-11-03')).not.toContain('--s5')
+    expect(style('2026-11-03')).not.toContain('--critical')
+    expect(style('2026-11-03')).not.toContain('--good')
+  })
+
+  it('explains the colours: from spent less to spent more', () => {
+    mount()
+    expect(screen.getByText('Spent less')).toBeInTheDocument()
+    expect(screen.getByText('Spent more')).toBeInTheDocument()
+    const scale = screen.getByTestId('spend-scale').getAttribute('style')!
+    expect(scale).toContain('var(--heat-low)')
+    expect(scale).toContain('var(--heat-high)')
+  })
+
+  it('says days with nothing spent are good news', () => {
+    mount()
+    const single = document.querySelector('[data-quiet="2026-11-04"]')!
+    const run = document.querySelector('[data-quiet="2026-11-02"]')!
+    expect(single).toHaveTextContent(/No spending on .+\. Nicely done\./)
+    expect(run).toHaveTextContent(/2 days with no spending, .+ to .+\. Well done\./)
+  })
+
+  it('counts the quiet days of the week on the card at the top', () => {
+    mount()
+    expect(screen.getByTestId('week-quiet')).toHaveTextContent('3 days of the 7 with no spending. Nicely done.')
+  })
+
+  it('has no such line when every day of the week had spending', () => {
+    mount([tx('2026-11-06', 1, 1, 'a'), tx('2026-11-05', 1, 1, 'a'), tx('2026-11-04', 1, 1, 'a'), tx('2026-11-03', 1, 1, 'a'), tx('2026-11-02', 1, 1, 'a'), tx('2026-11-01', 1, 1, 'a'), tx('2026-10-31', 1, 1, 'a')])
+    expect(screen.queryByTestId('week-quiet')).toBeNull()
   })
 
   it('shows each day as a bar of what it went on, as long as the day is against the biggest', () => {
@@ -130,7 +179,8 @@ describe('Timeline: the days', () => {
 
   it('keeps today as a row even before anything is spent', () => {
     mount([tx('2026-11-04', 100, 1, 'Cafe')])
-    expect(within(dayRow('2026-11-06')).getByText('Nothing spent yet today.')).toBeInTheDocument()
+    expect(within(dayRow('2026-11-06')).getByText('Nothing spent yet today. A good start.')).toBeInTheDocument()
+    expect(dayRow('2026-11-06').querySelector('[data-dot]')).toHaveTextContent('6')
   })
 })
 
@@ -199,27 +249,91 @@ describe('Timeline: further back, and nothing', () => {
   })
 })
 
+describe('Timeline: the line', () => {
+  const css = readFileSync('src/index.css', 'utf8').replace(/\r/g, '')
+  const segs = () => [...document.querySelectorAll<HTMLElement>('[data-seg]')]
+
+  it('runs from each day to the next as a river, grey beneath and coloured above', () => {
+    mount()
+    const seg = dayRow('2026-11-05').querySelector('[data-seg]') as HTMLElement
+    expect(seg.querySelectorAll('svg')).toHaveLength(2)
+    expect(seg.querySelector('.tl-fill')).toBeInTheDocument()
+    expect(seg.querySelector('linearGradient')).toBeInTheDocument()
+    expect(seg.querySelector('.tl-head')).toBeInTheDocument()
+  })
+
+  it('winds: each stretch sways the other way from the one before', () => {
+    mount()
+    const dirs = segs().map((x) => x.dataset.dir)
+    expect(new Set(dirs)).toEqual(new Set(['1', '-1']))
+    for (let i = 1; i < dirs.length; i++) expect(dirs[i]).not.toBe(dirs[i - 1])
+  })
+
+  it('is broader where more was spent: a wider outline after the biggest day than after a quiet one', () => {
+    mount()
+    const width = (date: string) => {
+      const d = dayRow(date).querySelector('[data-seg] path')!.getAttribute('d')!
+      const xs = d.slice(1, -1).split('L').map((p) => Number(p.split(' ')[0]))
+      return Math.max(...xs) - Math.min(...xs)
+    }
+    expect(width('2026-11-03')).toBeGreaterThan(width('2026-11-06') - 0.0001)
+  })
+
+  it('stops at the foot of the row before a month heading, which carries it on', () => {
+    mount()
+    const heading = screen.getByRole('heading', { level: 3, name: 'October' }).closest('li')!
+    expect(heading.querySelector('[data-seg]')).toBeInTheDocument()
+    const before = document.querySelector('[data-quiet="2026-11-02"] [data-seg]') as HTMLElement
+    expect(before.style.bottom).toBe('0px')
+  })
+
+  it('has every stretch drawn, and every date lit, when there is no layout to scroll through', () => {
+    mount()
+    for (const x of segs()) expect(x.style.getPropertyValue('--p')).toBe('1')
+    for (const d of document.querySelectorAll('[data-dot]')) expect(d).toHaveAttribute('data-lit', 'true')
+  })
+
+  it('is drawn by scrolling, on the screen, and not by the day it comes to be on screen', () => {
+    expect(css).toMatch(/\.tl-fill \{[^}]*clip-path: inset\(0 0 calc\(\(1 - var\(--p, 1\)\) \* 100%\) 0\)/)
+    expect(css).toMatch(/\.tl-head \{[^}]*top: calc\(var\(--p, 1\) \* 100%\)/)
+    expect(css).not.toContain('tl-draw')
+    expect(css).not.toContain('tl-flow')
+  })
+
+  it('has dates that are dark until the line reaches them, and fill in with a spring', () => {
+    expect(css).toMatch(/\.tl-dot \{[^}]*transform: scale\(0\.82\)[^}]*transition:[^}]*transform 0\.55s cubic-bezier\(0\.3, 1\.55/)
+    expect(css).toMatch(/\.tl-dot\[data-lit='true'\] \{[^}]*var\(--c\)[^}]*transform: none/)
+  })
+
+  it('shows a bead of light only on the stretch being drawn', () => {
+    expect(css).toMatch(/\.tl-head \{[^}]*opacity: 0/)
+    expect(css).toMatch(/\.tl-river\[data-live='true'\] \.tl-head \{\s*opacity: 1/)
+  })
+})
+
 describe('Timeline: motion', () => {
   const css = readFileSync('src/index.css', 'utf8').replace(/\r/g, '')
 
-  it('draws the line down, and sends a pulse of light along it, once the day is reached; neither with reduced motion', () => {
-    expect(css).toMatch(/\.tl-line \{[^}]*animation: tl-draw/)
-    expect(css).toMatch(/\.tl-flow \{[^}]*animation: tl-flow/)
-    expect(css).toMatch(/prefers-reduced-motion: reduce\) \{[\s\S]*?\.tl-line \{\s*animation: none;\s*\}\s*\.tl-flow \{\s*display: none/)
-  })
-
-  it('holds each day’s animations until it is on screen', () => {
+  it('holds each day’s bar and amount until it is on screen', () => {
     mount()
     expect(dayRow('2026-11-05')).toHaveClass('when-seen')
     expect(dayRow('2026-11-05')).toHaveAttribute('data-seen')
-    expect(dayRow('2026-11-05').querySelector('.tl-line')).toBeInTheDocument()
-    expect(dayRow('2026-11-05').querySelector('.ai-pop')).toBeInTheDocument()
     expect(dayRow('2026-11-05').querySelector('.ai-bar-right')).toBeInTheDocument()
   })
 
-  it('marks today with a pulse that says you are here', () => {
+  it('marks today with a thin ring that gives out a ping, and no other day', () => {
     mount()
-    expect(dayRow('2026-11-06').querySelector('.ai-pulse')).toBeInTheDocument()
-    expect(dayRow('2026-11-05').querySelector('.ai-pulse')).toBeNull()
+    expect(dayRow('2026-11-06').querySelector('.tl-ping')).toBeInTheDocument()
+    expect(dayRow('2026-11-05').querySelector('.tl-ping')).toBeNull()
+  })
+
+  it('keeps the ping small enough to stay inside its own column, so nothing is cut off at the left or drawn over by the card', () => {
+    const peak = Number(css.match(/@keyframes tl-ping \{[\s\S]*?scale\(([\d.]+)\)/g)!.join(' ').match(/scale\(([\d.]+)\)/g)!.map((m) => m.slice(6, -1)).sort().at(-1))
+    // The dot is 2.625rem in a 3rem column: a ring this much bigger reaches about 0.4rem past the dot, either side.
+    expect(peak).toBeLessThanOrEqual(1.5)
+  })
+
+  it('does nothing of this, or not much, when motion is reduced', () => {
+    expect(css).toMatch(/prefers-reduced-motion: reduce\) \{[\s\S]*?\.tl-dot \{\s*transition: none[\s\S]*?\.tl-head \{\s*display: none[\s\S]*?\.tl-ping \{\s*animation: none/)
   })
 })

@@ -160,6 +160,40 @@ describe('HomePager: dragging the page', () => {
   })
 })
 
+describe('HomePager: the page beneath', () => {
+  it('goes to the top of the other page, scrolling the main area it sits in (not the window)', () => {
+    const scrollTo = vi.fn()
+    render(
+      <main>
+        <HomePager overview={<p>Overview content</p>} timeline={<p>Timeline content</p>} />
+      </main>,
+    )
+    const main = document.querySelector('main') as HTMLElement
+    main.scrollTo = scrollTo as typeof main.scrollTo
+    Object.defineProperty(main, 'scrollTop', { value: 480, configurable: true })
+    fireEvent.click(screen.getByRole('button', { name: 'Timeline' }))
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0 })
+  })
+
+  it('does not scroll at all when it is already at the top', () => {
+    const scrollTo = vi.fn()
+    render(
+      <main>
+        <HomePager overview={<p>Overview content</p>} timeline={<p>Timeline content</p>} />
+      </main>,
+    )
+    ;(document.querySelector('main') as HTMLElement).scrollTo = scrollTo as never
+    fireEvent.click(screen.getByRole('button', { name: 'Timeline' }))
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('cuts the pages off at the screen’s edge, not at the content’s, so a ring beside the first column is not clipped on the left', () => {
+    setup()
+    const clip = document.querySelector('.pager-track')!.parentElement!
+    expect(clip).toHaveClass('overflow-x-clip', '-mx-5', 'px-5')
+  })
+})
+
 describe('HomePager: motion', () => {
   const css = readFileSync('src/index.css', 'utf8').replace(/\r/g, '')
 
