@@ -1,15 +1,21 @@
 import { formatMoney } from '../db/money'
 import { Icon } from '../ui/Icon'
 import { useIntro } from '../ui/motion'
+import { WaterTank } from '../ui/Water'
 
 interface Props {
   spentMinor: number
   limitMinor: number
   currency: string
+  /** 'water' draws it as a tank that fills as the money is spent; 'bar' (the default) is a plain bar, for lists of many. */
+  variant?: 'bar' | 'water'
 }
 
+/** The colour of the unfilled part. */
+const SKY = 'color-mix(in oklab, var(--accent) 16%, var(--surface))'
+
 /** Budget progress. The state is always stated in words and an icon, never by color alone. */
-export function Meter({ spentMinor, limitMinor, currency }: Props) {
+export function Meter({ spentMinor, limitMinor, currency, variant = 'bar' }: Props) {
   const intro = useIntro()
   const ratio = spentMinor / limitMinor
   const over = ratio >= 1
@@ -38,13 +44,17 @@ export function Meter({ spentMinor, limitMinor, currency }: Props) {
         aria-valuemax={limitMinor / 100}
         aria-valuenow={Math.min(spentMinor, limitMinor) / 100}
         aria-valuetext={status}
-        className="mt-2 h-2.5 overflow-hidden rounded-full"
-        style={{ background: 'color-mix(in oklab, var(--accent) 16%, var(--surface))' }}
+        className={variant === 'water' ? 'mt-3' : 'mt-2 h-2.5 overflow-hidden rounded-full'}
+        style={variant === 'water' ? undefined : { background: SKY }}
       >
-        <div
-          className={`${intro ? 'bar-reveal ' : ''}h-full rounded-full transition-[width] duration-300`}
-          style={{ width: `${Math.min(ratio, 1) * 100}%`, background: fill }}
-        />
+        {variant === 'water' ? (
+          <WaterTank level={ratio} color={fill} sky={SKY} rise={intro} className="h-16 rounded-2xl" />
+        ) : (
+          <div
+            className={`${intro ? 'bar-reveal ' : ''}h-full rounded-full transition-[width] duration-300`}
+            style={{ width: `${Math.min(ratio, 1) * 100}%`, background: fill }}
+          />
+        )}
       </div>
       <p className={`mt-2 flex items-center gap-1.5 ${over ? 'font-semibold text-critical' : close ? 'font-medium text-ink' : 'text-ink-2'}`}>
         {(over || close) && (

@@ -134,7 +134,7 @@ export function SpendingOverview({
 
       {budgetMinor !== null && (
         <div className="mt-4 border-t border-line pt-4">
-          <Meter spentMinor={totalMinor} limitMinor={budgetMinor} currency={currency} />
+          <Meter spentMinor={totalMinor} limitMinor={budgetMinor} currency={currency} variant="water" />
         </div>
       )}
 

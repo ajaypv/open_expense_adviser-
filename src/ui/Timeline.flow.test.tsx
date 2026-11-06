@@ -352,14 +352,14 @@ describe('Timeline: today’s water bar', () => {
     expect(document.querySelectorAll('[data-today-bar]')).toHaveLength(1)
     expect(dayRow('2026-11-06').querySelector('[data-today-bar]')).toBeInTheDocument()
     for (const date of ['2026-11-05', '2026-11-03', '2026-10-31']) {
-      expect(dayRow(date).querySelector('.today-wave')).toBeNull()
+      expect(dayRow(date).querySelector('.water-wave')).toBeNull()
       expect(dayRow(date).querySelector('[data-floater]')).toBeNull()
     }
   })
 
   it('rolls two waves along the top of the water', () => {
     mount()
-    expect(todayBar()!.querySelectorAll('.today-wave')).toHaveLength(2)
+    expect(todayBar()!.querySelectorAll('.water-wave')).toHaveLength(2)
   })
 
   it('floats the icon of the expense added last on the end of the bar, and ends the bar on its category', () => {
@@ -390,6 +390,6 @@ describe('Timeline: today’s water bar', () => {
     const css = readFileSync('src/index.css', 'utf8')
     const block = css.slice(css.indexOf('@keyframes wave-roll'))
     const reduced = block.slice(block.indexOf('@media (prefers-reduced-motion: reduce)'))
-    for (const name of ['.today-wave-front', '.today-wave-back', '.today-slosh', '.today-drop', '.today-float']) expect(reduced.slice(0, 300)).toContain(name)
+    for (const name of ['.water-wave-front', '.water-wave-back', '.water-slosh', '.today-drop', '.today-float']) expect(reduced.slice(0, 300)).toContain(name)
   })
 })

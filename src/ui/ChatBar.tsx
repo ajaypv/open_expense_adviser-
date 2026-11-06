@@ -1,4 +1,4 @@
-import { memo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { memo, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import type { Person } from '../db/schema'
 import { mentionAt } from '../ingest/mention'
 import { matchPeople, personNamed } from '../insights/people'
@@ -32,6 +32,15 @@ export const ChatBar = memo(function ChatBar({ initialText = '', onSubmit, onOpe
   const [active, setActive] = useState(-1)
   const [busy, setBusy] = useState(false)
   const canSend = value.trim().length > 0 && !busy
+  // Where the caret goes once a chosen name is in the box. Set as soon as the text is changed, and used as it is drawn, so it does not wait for a later frame.
+  const pendingCaret = useRef<number | null>(null)
+  useLayoutEffect(() => {
+    const at = pendingCaret.current
+    if (at === null) return
+    pendingCaret.current = null
+    box.current?.focus()
+    box.current?.setSelectionRange(at, at)
+  })
 
   const mention = focused ? mentionAt(value, caret) : null
   const matches = mention ? matchPeople(people, mention.query).filter((p) => p !== personNamed(people, mention.query)) : []
@@ -55,13 +64,10 @@ export const ChatBar = memo(function ChatBar({ initialText = '', onSubmit, onOpe
     const inserted = `@${person.name} `
     const next = value.slice(0, mention.start) + inserted + value.slice(caret)
     const at = mention.start + inserted.length
+    pendingCaret.current = at
     setValue(next)
     setCaret(at)
     setActive(-1)
-    requestAnimationFrame(() => {
-      box.current?.focus()
-      box.current?.setSelectionRange(at, at)
-    })
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
