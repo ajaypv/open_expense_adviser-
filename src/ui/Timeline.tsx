@@ -81,72 +81,6 @@ function Pieces({ parts, look, delay = 0 }: { parts: DayPart[]; look: Look; dela
   )
 }
 
-/** The last seven days at a glance: the total, against the week before, one bar of what it went on, and the biggest day. */
-function WeekCard({ week, look }: { week: ReturnType<typeof buildTimeline>['week']; look: Look }) {
-  const [watch, seen] = useSeen()
-  const money = (m: number) => formatMoney(m, look.currency)
-  const { totalMinor, previousMinor, perDayMinor, peak, parts, quietDays } = week
-  if (totalMinor <= 0) {
-    return (
-      <section aria-labelledby="tl-week-h" className="rounded-3xl bg-surface p-5 shadow-[0_0_0_1px_var(--ring)]">
-        <h2 id="tl-week-h" className="text-xl font-bold tracking-tight">
-          Last 7 days
-        </h2>
-        <p className="mt-1 text-ink-2">Nothing spent in the last 7 days.</p>
-      </section>
-    )
-  }
-  const diff = previousMinor === null ? null : totalMinor - previousMinor
-  const shown = parts.slice(0, 4)
-  const rest = parts.slice(4).reduce((a, p) => a + p.minor, 0)
-  return (
-    <section ref={watch} data-seen={seen} aria-labelledby="tl-week-h" className="when-seen rounded-3xl bg-surface p-5 shadow-[0_0_0_1px_var(--ring)]">
-      <h2 id="tl-week-h" className="text-xl font-bold tracking-tight">
-        Last 7 days
-      </h2>
-      <p data-testid="week-total" className="font-ai-display mt-1 text-5xl font-medium leading-none tracking-tight">
-        <Amount minor={totalMinor} currency={look.currency} seen={seen} />
-      </p>
-      <p className="mt-2 text-[0.9375rem] leading-snug text-ink-2">
-        {`${money(perDayMinor)} a day${diff === null || diff === 0 ? '' : `, ${money(Math.abs(diff))} ${diff > 0 ? 'more' : 'less'} than the 7 days before`}.`}
-      </p>
-
-      <div role="img" aria-label={parts.map((p) => `${look.nameOf(p.categoryId)} ${formatShare(p.minor / totalMinor)}`).join(', ')} className="mt-4 h-4 overflow-hidden rounded-full bg-surface-2">
-        <Pieces parts={parts} look={look} delay={200} />
-      </div>
-      <ul aria-label="Last 7 days, by category" className="mt-3 space-y-1.5">
-        {shown.map((p) => (
-          <li key={p.categoryId} className="flex items-center gap-3 text-[0.9375rem]">
-            <span aria-hidden="true" className="size-3 shrink-0 rounded-full" style={{ background: look.colorOf(p.categoryId) }} />
-            <span className="min-w-0 flex-1 truncate">{look.nameOf(p.categoryId)}</span>
-            <span className="shrink-0 tabular-nums text-ink-2">{formatShare(p.minor / totalMinor)}</span>
-            <span className="w-20 shrink-0 text-right font-semibold tabular-nums">{money(p.minor)}</span>
-          </li>
-        ))}
-        {rest > 0 && (
-          <li className="flex items-center gap-3 text-[0.9375rem]">
-            <span aria-hidden="true" className="size-3 shrink-0 rounded-full" style={{ background: 'var(--other)' }} />
-            <span className="min-w-0 flex-1 truncate">Everything else</span>
-            <span className="shrink-0 tabular-nums text-ink-2">{formatShare(rest / totalMinor)}</span>
-            <span className="w-20 shrink-0 text-right font-semibold tabular-nums">{money(rest)}</span>
-          </li>
-        )}
-      </ul>
-      <div className="mt-3 space-y-2">
-        {quietDays > 0 && (
-          <p data-testid="week-quiet" className="flex items-center gap-2 rounded-2xl bg-surface-2 p-3 text-[0.9375rem] leading-snug">
-            <span aria-hidden="true" className="flex size-6 shrink-0 items-center justify-center rounded-full" style={{ background: `color-mix(in oklab, ${LOW} 22%, var(--surface))`, color: LOW }}>
-              <Icon name="check" size={14} />
-            </span>
-            <span>{`${plural(quietDays, 'day')} of the 7 with no spending. Nicely done.`}</span>
-          </p>
-        )}
-        {peak && <p className="rounded-2xl bg-surface-2 p-3 text-[0.9375rem] leading-snug text-ink-2">{`The biggest day was ${dayLabel(peak.date)}, ${money(peak.minor)}.`}</p>}
-      </div>
-    </section>
-  )
-}
-
 /** One stretch of the line, from the dot of one day to the next, straight down and as wide as the money on it. */
 function River({ from, to, wFrom, wTo, edge, top = DOT_Y, left = '50%' }: { from: string; to: string; wFrom: number; wTo: number; edge?: boolean; top?: string; left?: string }) {
   const id = useId().replace(/:/g, '')
@@ -416,9 +350,7 @@ export function Timeline({ expenses, categoryById, currency, today, onPickDay }:
 
   return (
     <div className="pb-6 pt-2">
-      <WeekCard week={tl.week} look={look} />
-
-      <div className="mt-8 flex items-center gap-3 px-1 text-sm text-ink-2">
+      <div className="mt-1 flex items-center gap-3 px-1 text-sm text-ink-2">
         <span>Spent less</span>
         <span aria-hidden="true" data-testid="spend-scale" className="h-2 flex-1 rounded-full" style={{ background: `linear-gradient(to right in oklab, var(--heat-low), var(--heat-mid), var(--heat-high))` }} />
         <span>Spent more</span>

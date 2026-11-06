@@ -37,42 +37,6 @@ function mount(list: Transaction[] = expenses(), onPickDay = vi.fn()) {
 const days = () => within(screen.getByRole('list', { name: 'Spending, day by day' }))
 const dayRow = (date: string) => document.querySelector(`li[data-day="${date}"]`) as HTMLElement
 
-describe('Timeline: the week at the top', () => {
-  it('says what went in the last 7 days, and what that is a day', () => {
-    mount()
-    const card = screen.getByRole('region', { name: 'Last 7 days' })
-    expect(screen.getByTestId('week-total')).toHaveTextContent('₹2,450')
-    expect(card).toHaveTextContent('₹350 a day')
-  })
-
-  it('draws one bar of what it went on, described in words, with each category and its share below', () => {
-    mount()
-    const card = screen.getByRole('region', { name: 'Last 7 days' })
-    expect(within(card).getByRole('img')).toHaveAccessibleName('Bills & Utilities 61.2%, Food & Dining 26.5%, Transport 12.2%')
-    const list = within(card).getByRole('list', { name: 'Last 7 days, by category' })
-    expect(list).toHaveTextContent('Bills & Utilities')
-    expect(list).toHaveTextContent('61.2%')
-    expect(list).toHaveTextContent('₹1,500')
-    expect(card.querySelectorAll('[data-piece]')).toHaveLength(3)
-  })
-
-  it('names the biggest day', () => {
-    mount()
-    expect(screen.getByRole('region', { name: 'Last 7 days' })).toHaveTextContent('The biggest day was')
-    expect(screen.getByRole('region', { name: 'Last 7 days' })).toHaveTextContent('₹1,500.')
-  })
-
-  it('compares with the 7 days before, when there was spending then', () => {
-    mount([...expenses(), tx('2026-10-28', 5000, 1, 'Big')])
-    expect(screen.getByRole('region', { name: 'Last 7 days' })).toHaveTextContent('₹2,550 less than the 7 days before')
-  })
-
-  it('says so when nothing was spent in the week', () => {
-    mount([tx('2026-09-01', 100, 1, 'Old')])
-    expect(screen.getByRole('region', { name: 'Last 7 days' })).toHaveTextContent('Nothing spent in the last 7 days.')
-  })
-})
-
 describe('Timeline: the days', () => {
   it('has a row for each day something was spent, newest first, named Today and Yesterday', () => {
     mount()
@@ -140,16 +104,6 @@ describe('Timeline: the days', () => {
     const run = document.querySelector('[data-quiet="2026-11-02"]')!
     expect(single).toHaveTextContent(/No spending on .+\. Nicely done\./)
     expect(run).toHaveTextContent(/2 days with no spending, .+ to .+\. Well done\./)
-  })
-
-  it('counts the quiet days of the week on the card at the top', () => {
-    mount()
-    expect(screen.getByTestId('week-quiet')).toHaveTextContent('3 days of the 7 with no spending. Nicely done.')
-  })
-
-  it('has no such line when every day of the week had spending', () => {
-    mount([tx('2026-11-06', 1, 1, 'a'), tx('2026-11-05', 1, 1, 'a'), tx('2026-11-04', 1, 1, 'a'), tx('2026-11-03', 1, 1, 'a'), tx('2026-11-02', 1, 1, 'a'), tx('2026-11-01', 1, 1, 'a'), tx('2026-10-31', 1, 1, 'a')])
-    expect(screen.queryByTestId('week-quiet')).toBeNull()
   })
 
   it('shows each day as a bar of what it went on, as long as the day is against the biggest', () => {

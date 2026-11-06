@@ -60,7 +60,9 @@ describe('Home: the timeline', () => {
     const list = await screen.findByRole('list', { name: 'Spending, day by day' })
     expect(within(list).getByRole('button', { name: 'Today, ₹450, 1 expense' })).toBeInTheDocument()
     expect(within(list).getByRole('button', { name: 'Yesterday, ₹300, 1 expense' })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Last 7 days' })).toHaveTextContent('₹750')
+    // It begins with the days themselves: no summary card above them.
+    expect(screen.queryByRole('heading', { name: 'Last 7 days' })).toBeNull()
+    expect(screen.queryByTestId('week-total')).toBeNull()
   })
 
   it('folds the overview away once it has slid out, and brings it back with the other tab', async () => {

@@ -21,19 +21,6 @@ export interface TimelineDay {
   txs: Transaction[]
 }
 
-/** The latest seven days (today and the six before), for the card at the top. */
-export interface WeekFlow {
-  totalMinor: number
-  /** The seven days before those, or null when nothing was spent in them, so there is nothing to compare with. */
-  previousMinor: number | null
-  perDayMinor: number
-  peak: { date: string; minor: number } | null
-  /** How many of the seven days had nothing spent (counting only days since the first expense). */
-  quietDays: number
-  /** By category, biggest first. */
-  parts: DayPart[]
-}
-
 export interface Timeline {
   /** Every calendar day from today back, newest first, the quiet ones too. */
   days: TimelineDay[]
@@ -41,7 +28,6 @@ export interface Timeline {
   maxMinor: number
   /** There are expenses from before the earliest day shown. */
   earlier: boolean
-  week: WeekFlow
 }
 
 const DAY_MS = 86_400_000
@@ -93,23 +79,10 @@ export function buildTimeline(expenses: Transaction[], today: Date, span: number
     days.push({ date, daysAgo: n, totalMinor: sumOf(txs), count: txs.length, parts: partsOf(txs), txs })
   }
 
-  const dayTxs = (n: number) => byDate.get(keyDaysAgo(today, n)) ?? []
-  const weekTxs = Array.from({ length: 7 }, (_, n) => dayTxs(n)).flat()
-  const before = sumOf(Array.from({ length: 7 }, (_, n) => dayTxs(n + 7)).flat())
-  let peak: WeekFlow['peak'] = null
-  let quietDays = 0
-  for (let n = 0; n < 7; n++) {
-    const minor = sumOf(dayTxs(n))
-    if (minor === 0 && n < available) quietDays++
-    if (minor > 0 && (peak === null || minor > peak.minor)) peak = { date: keyDaysAgo(today, n), minor }
-  }
-  const totalMinor = sumOf(weekTxs)
-
   return {
     days,
     maxMinor: days.reduce((a, d) => Math.max(a, d.totalMinor), 0),
     earlier: available > count,
-    week: { totalMinor, previousMinor: before > 0 ? before : null, perDayMinor: Math.round(totalMinor / 7), peak, quietDays, parts: partsOf(weekTxs) },
   }
 }
 
