@@ -5,13 +5,14 @@ import { backupToJson, shareOrDownload, type BackupData } from './exporters'
 
 /** Everything as stored, each transaction in its own currency. */
 export async function snapshot(): Promise<BackupData> {
-  const [transactions, categories, budgets, accounts, recurring, goals, currency, rates] = await Promise.all([
+  const [transactions, categories, budgets, accounts, recurring, goals, people, currency, rates] = await Promise.all([
     db.transactions.toArray(),
     db.categories.toArray(),
     db.budgets.toArray(),
     db.accounts.toArray(),
     db.recurring.toArray(),
     db.goals.toArray(),
+    db.people.toArray(),
     db.settings.get('currency'),
     db.settings.get('rates'),
   ])
@@ -23,6 +24,7 @@ export async function snapshot(): Promise<BackupData> {
     accounts,
     recurring,
     goals,
+    people,
     rates: (rates?.value ?? {}) as Record<string, number>,
   }
 }

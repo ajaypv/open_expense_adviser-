@@ -35,6 +35,21 @@ export interface Transaction {
   toAccountId?: number
   /** Set when moved to the trash. Trashed rows stay for 30 days, then are purged. */
   deletedAt?: number
+  /** Set when the money was sent to a person (the merchant is then their name). */
+  personId?: number
+  /** For money sent to a person: 'sent' until they have it, then 'received'. */
+  delivery?: 'sent' | 'received'
+  /** When it was marked received. */
+  receivedAt?: number
+}
+
+/** Someone you send money to. Kept on this device only; the phone's contacts are never read in the background. */
+export interface Person {
+  id: number
+  name: string
+  /** Only when picked from the phone's contacts. */
+  phone?: string
+  createdAt: number
 }
 
 /** A place money is kept: cash, a bank account, a card. */
@@ -125,6 +140,7 @@ export const db = new Dexie('expense-tracker') as Dexie & {
   accounts: EntityTable<Account, 'id'>
   recurring: EntityTable<Recurring, 'id'>
   goals: EntityTable<Goal, 'id'>
+  people: EntityTable<Person, 'id'>
 }
 
 db.version(1).stores({
@@ -184,6 +200,9 @@ db.version(4)
 
 // v5: goals. A new table only, so nothing existing needs migrating.
 db.version(5).stores({ goals: '++id' })
+
+// v6: people you send money to. A new table only, so nothing existing needs migrating.
+db.version(6).stores({ people: '++id, name' })
 
 db.on('populate', (tx) => {
   void tx.table('categories').bulkAdd(DEFAULT_CATEGORIES.map((c) => ({ ...c })))

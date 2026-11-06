@@ -763,3 +763,24 @@ The map at the bottom of Insights.
 | SWP-6 | Only on the card | Swipe on the cash flow or the lists | The month does not change | Auto: `swipeMonths.flow` |
 | SWP-7 | Other ways still work | Use the arrows or the month list at the top | They change the month as before | Auto: `swipeMonths.flow` |
 | SWP-8 | Mouse and motion | Drag with a mouse; turn on reduce motion | The mouse is ignored (text can still be selected); the figures change without sliding | Auto: `useSwipe.flow`, `contrast` |
+
+## Sending money to people
+
+Money sent to a person is an ordinary expense (it counts in your spending), with their name as the merchant, who it went to, and whether they have it yet.
+
+| ID | Case | Do | Expect | Covered by |
+|---|---|---|---|---|
+| PPL-1 | Switch on | In a new transaction on Spent, tick Sent to a person | The Merchant box becomes Sent to, with a Sent on date and Has it reached them? (Not received yet chosen); the switch is not there for Received or Transfer | Auto: `AddSheet.people.flow` |
+| PPL-2 | Suggestions as you type | Tick it, then type the first letters of a name you sent money to before | The people who fit are listed under the box, names starting with the letters first; with nothing typed the people sent to most recently are shown; tapping one (or the arrow keys and Enter) fills the name in without saving | Auto: `AddSheet.people.flow`, `people.test` |
+| PPL-3 | Save a payment | Choose Shweta, enter 500 and a past date, tap Add | Saved as ₹500 spent on that date, under Other unless another category is chosen, named Shweta, linked to her, Not received yet; the pop-up says Sent ₹500 to Shweta; a second quick tap does not save it twice | Auto: `AddSheet.people.flow` |
+| PPL-4 | Already received | Choose Received by them before saving | It is saved as received, with when | Auto: `AddSheet.people.flow` |
+| PPL-5 | A new name | Type a name nobody has, enter an amount, tap Add | They are remembered (once, whatever the case) and shown the next time as you type; a name that matches someone known, in any case, is that person | Auto: `AddSheet.people.flow` |
+| PPL-6 | No name | Tick it, enter an amount, leave the name empty | "Enter who you sent it to.", nothing is saved | Auto: `AddSheet.people.flow` |
+| PPL-7 | Edit | Open a payment to a person; change it to Received by them, back again; turn the switch off | It opens with the person, date and state; each change is saved (received also records when); with the switch off it is a plain purchase again and forgets the person | Auto: `AddSheet.people.flow` |
+| PPL-8 | In the list | Look at Activity and the Timeline | A payment to a person has a person's icon and a chip: Not received yet (outlined) or Received (with a tick); a screen reader hears the state; ordinary purchases and received money are unchanged | Auto: `TxRow.people.flow` |
+| PPL-9 | Choose from contacts | On Chrome for Android, tick it and tap Contacts | The phone's own contact picker opens; the one chosen fills in the name and is remembered with their number; closing it changes nothing; a refusal says so and keeps what was typed. On iPhone, desktop and Firefox the button is not shown | Auto: `AddSheet.people.flow`, `contacts.test`; Device (Android) |
+| PPL-10 | People in Settings | Settings, Money, People | Each person with what was sent to them and what is not received yet (most recent first), a total waiting, and Add a person by name or Add from contacts (several at once, saying how many were new); the app never reads contacts on its own | Auto: `PeopleSection.flow`; Device (Android) |
+| PPL-11 | Mark received | Open a person, press Mark received on a payment, or Mark all received | It is saved as received and the pop-up offers Undo; when all are in, it says so | Auto: `PeopleSection.flow` |
+| PPL-12 | Remove a person | Open a person, Remove, and confirm | They are gone from the list; their payments stay in your history with the name | Auto: `PeopleSection.flow`, `people.test` |
+| PPL-13 | Backup and restore | Export a backup and restore it (merge or replace) | People, who each payment went to and whether it was received come back; a person already here (by name) is not doubled; restoring twice adds nothing; older backups still restore; the spreadsheet has a delivery column | Auto: `importBackup.test`, `exporters.test` |
+| PPL-14 | Upgrade | Open the app after updating | Everything already saved is untouched; the new People list starts empty | Auto: `people.test` (database upgrade) |

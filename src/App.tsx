@@ -512,6 +512,7 @@ function Shell() {
         editing={sheet.editing}
         categories={ledger.categories}
         accounts={ledger.accounts}
+        people={ledger.people}
         currency={ledger.currency}
         suggestions={sheetSuggestions}
         showSuggestions={placement !== 'off'}

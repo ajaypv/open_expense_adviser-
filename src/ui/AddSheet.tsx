@@ -6,6 +6,7 @@ import { CURRENCIES, currencyOptions } from '../db/currencies'
 import { INCOME_CATEGORY } from '../db/defaultCategories'
 import { localDateString, parseLocalDate, toMinor, formatMoney } from '../db/money'
 import {
+  addPerson,
   addRecurring,
   addTransaction,
   deleteTransaction,
@@ -14,14 +15,16 @@ import {
   restoreTransaction,
   updateTransaction,
 } from '../db/repo'
-import { db, type Account, type Category, type Place, type Transaction } from '../db/schema'
+import { db, type Account, type Category, type Person, type Place, type Transaction } from '../db/schema'
 import { earlierEntriesToMove } from '../ingest/recategorize'
 import { defaultAccountId } from '../insights/accounts'
+import { personNamed } from '../insights/people'
 import { nextDueAfter } from '../insights/recurring'
 import type { Suggestion } from '../insights/suggestions'
 import { useBackClose } from './backStack'
 import { spendIcon } from './categoryIcon'
 import { Icon } from './Icon'
+import { PersonField } from './PersonField'
 import { PickerField, type PickerOption } from './PickerField'
 import { SuggestionList } from './SuggestionList'
 import { useToast } from './toast'
@@ -33,6 +36,8 @@ interface Props {
   /** Every category; the sheet picks the right ones for sent or received money. */
   categories: Category[]
   accounts: Account[]
+  /** People money has been sent to, the most recent first: offered as the name is typed. */
+  people?: Person[]
   /** The main currency, used unless the user picks another for a transaction. */
   currency: string
   /** Regulars that fit right now, shown as one-tap fills when adding. */
@@ -50,6 +55,7 @@ type Kind = Transaction['kind']
 type Repeat = 'never' | 'weekly' | 'monthly'
 
 const PAYMENT_METHODS = ['Cash', 'Card', 'Online'] as const
+const NO_PEOPLE: Person[] = []
 
 const REPEAT_OPTIONS: PickerOption<Repeat>[] = [
   { value: 'never', label: 'Doesn’t repeat' },
@@ -119,7 +125,7 @@ function Select<T extends string | number>({
 }
 
 export const AddSheet = memo(function AddSheet({
-  open, editing, categories, accounts, currency, suggestions, showSuggestions, prefill, startKind, onClose,
+  open, editing, categories, accounts, people = NO_PEOPLE, currency, suggestions, showSuggestions, prefill, startKind, onClose,
 }: Props) {
   useDisplay() // the suggestions show amounts, so redraw when display settings change
   // The phone's back button closes the form, as the Close button does.
@@ -144,6 +150,10 @@ export const AddSheet = memo(function AddSheet({
   const [place, setPlace] = useState<Place | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [more, setMore] = useState(false)
+  // Money sent to a person: who, and whether they have it yet.
+  const [toPerson, setToPerson] = useState(false)
+  const [personName, setPersonName] = useState('')
+  const [delivery, setDelivery] = useState<'sent' | 'received'>('sent')
   // Set the moment Add is tapped, so a second tap can't save the same thing again while the first is under way.
   // The ref answers at once (two taps can land before React redraws); the state dims the button.
   const [saving, setSaving] = useState(false)
@@ -170,6 +180,10 @@ export const AddSheet = memo(function AddSheet({
       setPlace(start?.location ?? null)
       setError(null)
       setMore(start !== null) // an edit shows everything; a new entry keeps the extras tucked away
+      const toSomeone = start !== null && start.kind === 'expense' && (start.personId !== undefined || start.delivery !== undefined)
+      setToPerson(toSomeone)
+      setPersonName(toSomeone ? start.merchant : '')
+      setDelivery(start?.delivery ?? 'sent')
       el.showModal()
       // A filled-in form doesn't need the keyboard up; an empty one does.
       if (!start && !prefill) requestAnimationFrame(() => amountInput.current?.focus())
@@ -219,6 +233,8 @@ export const AddSheet = memo(function AddSheet({
 
   const received = kind === 'income'
   const transfer = kind === 'transfer'
+  // Only money sent can go to a person.
+  const person = toPerson && kind === 'expense'
   const categoryById = new Map(categories.map((c) => [c.id, c]))
   const kindSuggestions = suggestions.filter((s) => s.kind === kind).slice(0, 4)
 
@@ -256,24 +272,34 @@ export const AddSheet = memo(function AddSheet({
       setError('Choose two different accounts.')
       return
     }
-    const fields = {
+    if (person && personName.trim() === '') {
+      setError('Enter who you sent it to.')
+      return
+    }
+    // Set at once, before anything is awaited, so a second tap cannot save the same payment twice.
+    savingNow.current = true
+    setSaving(true)
+    try {
+      // A name that is not known yet is remembered now, so it is offered the next time.
+      const sentTo = person ? (personNamed(people, personName) ?? (await addPerson(personName))) : undefined
+      const fields = {
       kind,
       amountMinor: toMinor(value),
       currency: transfer ? currency : txCurrency,
       categoryId: selectedCategory,
-      merchant: transfer ? '' : merchant.trim(),
+      merchant: transfer ? '' : sentTo ? sentTo.name : merchant.trim(),
       note: note.trim(),
       date,
       paymentMethod: transfer ? '' : payment,
       ...(fromId !== null ? { accountId: fromId } : {}),
       ...(transfer && toId !== null ? { toAccountId: toId } : {}),
+      ...(sentTo ? { personId: sentTo.id, delivery, ...(delivery === 'received' ? { receivedAt: editing?.receivedAt ?? Date.now() } : editing ? { receivedAt: undefined } : {}) } : {}),
     }
-    savingNow.current = true
-    setSaving(true)
-    try {
+    // An edit that is no longer a payment to a person forgets who it went to.
+    const noPerson = sentTo ? {} : { personId: undefined, delivery: undefined, receivedAt: undefined }
       if (editing) {
         // A transaction that stopped being a transfer must forget its second account.
-        await updateTransaction(editing.id, transfer ? fields : { ...fields, toAccountId: undefined })
+        await updateTransaction(editing.id, transfer ? { ...fields, ...noPerson } : { ...fields, toAccountId: undefined, ...noPerson })
         // A new category for a name is worth offering to the others with that name; it is also what the chat bar learns from.
         const categoryChanged = !transfer && fields.merchant !== '' && editing.categoryId !== selectedCategory
         const others = categoryChanged
@@ -305,7 +331,7 @@ export const AddSheet = memo(function AddSheet({
       } else {
         void attachLocation(await addTransaction({ ...fields, source: 'manual' }))
         const money = formatMoney(fields.amountMinor, fields.currency)
-        let message = transfer ? `Moved ${money}` : received ? `Added ${money} received` : `Added ${money} spent`
+        let message = transfer ? `Moved ${money}` : received ? `Added ${money} received` : sentTo ? `Sent ${money} to ${sentTo.name}` : `Added ${money} spent`
         if (repeat !== 'never' && !transfer) {
           await addRecurring({
             kind: kind as 'expense' | 'income',
@@ -327,7 +353,7 @@ export const AddSheet = memo(function AddSheet({
         toast({
           message,
           // What it was added to: the category's own icon and colour; an arrow in for money received; swapping arrows for a transfer.
-          icon: transfer ? 'swap' : received ? 'arrowDown' : spendIcon(fields.merchant, chosen?.name),
+          icon: transfer ? 'swap' : received ? 'arrowDown' : sentTo ? 'person' : spendIcon(fields.merchant, chosen?.name),
           color: transfer ? undefined : received ? 'var(--good-text)' : chosen?.color,
         })
       }
@@ -363,6 +389,24 @@ export const AddSheet = memo(function AddSheet({
   }
 
   const title = editing ? 'Edit transaction' : 'New transaction'
+
+  const dateField = (label: string) => (
+    <div className={person ? 'min-[26rem]:col-span-2' : undefined}>
+      <label htmlFor="date" className="text-sm text-ink-2">
+        {label}
+      </label>
+      <input
+        id="date"
+        type="date"
+        required
+        max={localDateString()}
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        onInvalid={() => setMore(true)} // a bad date can't be fixed while it is folded away
+        className={input}
+      />
+    </div>
+  )
 
   return (
     <dialog
@@ -410,7 +454,15 @@ export const AddSheet = memo(function AddSheet({
           ))}
         </div>
 
-        {!editing && showSuggestions && !transfer && (
+        {kind === 'expense' && (
+          <label className={`${chip} self-start`}>
+            <input type="checkbox" className="sr-only" checked={toPerson} onChange={(e) => setToPerson(e.target.checked)} />
+            <Icon name="person" size={18} />
+            Sent to a person
+          </label>
+        )}
+
+        {!editing && showSuggestions && !transfer && !person && (
           <section aria-labelledby="sheet-suggest-h">
             <h3 id="sheet-suggest-h" className="mb-2 text-sm text-ink-2">
               Suggested for now
@@ -520,19 +572,59 @@ export const AddSheet = memo(function AddSheet({
             </>
           ) : (
             <>
-              <div className="min-[26rem]:col-span-2">
-                <label htmlFor="merchant" className="text-sm text-ink-2">
-                  {received ? 'From' : 'Merchant'}
-                </label>
-                <input
-                  id="merchant"
-                  value={merchant}
-                  onChange={(e) => setMerchant(e.target.value)}
-                  autoComplete="off"
-                  placeholder={received ? 'Person or employer' : 'Merchant or place'}
-                  className={input}
-                />
-              </div>
+              {person ? (
+                <>
+                  <div className="min-[26rem]:col-span-2">
+                    <PersonField
+                      id="person"
+                      value={personName}
+                      onChange={(name) => {
+                        setPersonName(name)
+                        if (error) setError(null)
+                      }}
+                      people={people}
+                      onPick={(p) => {
+                        setPersonName(p.name)
+                        setError(null)
+                      }}
+                      invalid={error?.startsWith('Enter who')}
+                      describedBy={error ? 'sheet-error' : undefined}
+                    />
+                  </div>
+                  {dateField('Sent on')}
+                  <fieldset className="min-w-0 min-[26rem]:col-span-2">
+                    <legend className="text-sm text-ink-2">Has it reached them?</legend>
+                    <div role="radiogroup" aria-label="Has the money reached them" className="mt-1 grid grid-cols-2 gap-1.5">
+                      {(
+                        [
+                          ['sent', 'Not received yet'],
+                          ['received', 'Received by them'],
+                        ] as const
+                      ).map(([id, label]) => (
+                        <label key={id} className={`${chip} justify-center px-2`}>
+                          <input type="radio" name="delivery" className="sr-only" checked={delivery === id} onChange={() => setDelivery(id)} />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                    <p className="mt-1 text-sm text-ink-2">Mark it Received once they have it. You can change this later.</p>
+                  </fieldset>
+                </>
+              ) : (
+                <div className="min-[26rem]:col-span-2">
+                  <label htmlFor="merchant" className="text-sm text-ink-2">
+                    {received ? 'From' : 'Merchant'}
+                  </label>
+                  <input
+                    id="merchant"
+                    value={merchant}
+                    onChange={(e) => setMerchant(e.target.value)}
+                    autoComplete="off"
+                    placeholder={received ? 'Person or employer' : 'Merchant or place'}
+                    className={input}
+                  />
+                </div>
+              )}
               {showAccounts && (
                 <div className="min-[26rem]:col-span-2">
                   <Select
@@ -568,21 +660,7 @@ export const AddSheet = memo(function AddSheet({
             </span>
           </summary>
           <div className="grid grid-cols-1 gap-3 px-4 pb-4 min-[26rem]:grid-cols-2">
-          <div>
-            <label htmlFor="date" className="text-sm text-ink-2">
-              Date
-            </label>
-            <input
-              id="date"
-              type="date"
-              required
-              max={localDateString()}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              onInvalid={() => setMore(true)} // a bad date can't be fixed while it is folded away
-              className={input}
-            />
-          </div>
+          {!person && dateField('Date')}
           {!transfer && (
             <fieldset className="min-w-0">
               <legend className="text-sm text-ink-2">{received ? 'Received via' : 'Paid with'}</legend>

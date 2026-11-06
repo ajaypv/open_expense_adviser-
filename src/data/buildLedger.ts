@@ -1,6 +1,7 @@
 import { INCOME_CATEGORY } from '../db/defaultCategories'
-import type { Account, Budget, Category, Recurring, Transaction } from '../db/schema'
+import type { Account, Budget, Category, Person, Recurring, Transaction } from '../db/schema'
 import { balancesByAccount } from '../insights/accounts'
+import { personStats } from '../insights/people'
 
 /**
  * A transaction as the screens see it. Amounts (and `currency`) are in the main currency so every
@@ -23,6 +24,8 @@ export interface RawData {
   accounts: Account[]
   budgets: Budget[]
   recurring: Recurring[]
+  /** The people money is sent to; older callers have none. */
+  people?: Person[]
   currency: string
   rates: Rates
 }
@@ -49,6 +52,7 @@ export function buildLedger(raw: RawData) {
       return { ...t, currency, amountMinor: Math.round(t.amountMinor * rate), originalMinor: t.amountMinor, originalCurrency: t.currency }
     })
 
+  const stats = personStats(raw.people ?? [], txs)
   const balances = balancesByAccount(txs, accounts)
   let estimated = 0
   let net = 0
@@ -83,6 +87,10 @@ export function buildLedger(raw: RawData) {
       raw.budgets.filter((b) => b.categoryId !== null).map((b) => [b.categoryId as number, b.monthlyLimitMinor]),
     ),
     recurring,
+    /** Each person money is sent to, with what was sent and what has not been received yet; the most recent first. */
+    personStats: stats,
+    /** The people themselves, in the same order. */
+    people: stats.map((s) => s.person),
     /** True once the user has told the app a balance for any account; otherwise the estimate starts from zero. */
     balanceSet: accounts.some((a) => a.openingMinor !== null),
     /** Opening balances + everything received - everything sent, across all accounts. */

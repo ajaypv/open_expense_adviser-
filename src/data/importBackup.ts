@@ -23,6 +23,9 @@ const txSchema = z.object({
   location: place.optional(),
   accountId: z.number().int().optional(),
   toAccountId: z.number().int().optional(),
+  personId: z.number().int().optional(),
+  delivery: z.enum(['sent', 'received']).optional(),
+  receivedAt: z.number().optional(),
 })
 
 const recurringSchema = z.object({
@@ -46,6 +49,13 @@ const goalSchema = z.object({
   targetMinor: amount,
   savedMinor: z.number().int().min(0).max(MAX_AMOUNT_MINOR).default(0),
   dueDate: day.optional(),
+  createdAt: z.number().optional(),
+})
+
+const personSchema = z.object({
+  id: z.number().int(),
+  name: z.string().trim().min(1),
+  phone: z.string().optional(),
   createdAt: z.number().optional(),
 })
 
@@ -74,6 +84,8 @@ const backupSchema = z.object({
   recurring: z.array(recurringSchema).default([]),
   /** Added after version 2 shipped; older files simply have none. */
   goals: z.array(goalSchema).default([]),
+  /** Added with payments to people; older files simply have none. */
+  people: z.array(personSchema).default([]),
   rates: z.record(currencyCode, z.number().positive().max(1_000_000)).default({}),
   /** Version 1 files kept one balance for everything. */
   openingBalanceMinor: z.number().int().nullable().optional(),
@@ -171,7 +183,7 @@ export interface ImportResult {
  * and accounts are matched by name and created when missing, never deleted.
  */
 export async function importBackup(backup: Backup, mode: 'merge' | 'replace'): Promise<ImportResult> {
-  const tables = [db.transactions, db.categories, db.accounts, db.budgets, db.recurring, db.goals, db.settings]
+  const tables = [db.transactions, db.categories, db.accounts, db.budgets, db.recurring, db.goals, db.people, db.settings]
   return db.transaction('rw', tables, async () => {
     if (mode === 'replace') {
       await db.transactions.clear()
@@ -219,6 +231,21 @@ export async function importBackup(backup: Backup, mode: 'merge' | 'replace'): P
     }
     const mapAcc = (id: number | undefined) => (id === undefined ? undefined : accId.get(id))
 
+    // People by name, made when missing, so a payment to someone stays linked to them.
+    const localPeople = await db.people.toArray()
+    const personId = new Map<number, number>()
+    for (const p of backup.people) {
+      const found = localPeople.find((l) => l.name.toLowerCase() === p.name.toLowerCase())
+      if (found) personId.set(p.id, found.id)
+      else {
+        const row = { name: p.name, ...(p.phone ? { phone: p.phone } : {}), createdAt: p.createdAt ?? Date.now() }
+        const id = (await db.people.add(row as never)) as number
+        localPeople.push({ ...row, id })
+        personId.set(p.id, id)
+      }
+    }
+    const mapPerson = (id: number | undefined) => (id === undefined ? undefined : personId.get(id))
+
     // Transactions, skipping any that are already here.
     const { toAdd, toRevive } = plan(await db.transactions.toArray(), backup.transactions)
     const now = Date.now()
@@ -241,6 +268,8 @@ export async function importBackup(backup: Backup, mode: 'merge' | 'replace'): P
         ...(t.location ? { location: t.location } : {}),
         ...(mapAcc(t.accountId) !== undefined ? { accountId: mapAcc(t.accountId) } : {}),
         ...(mapAcc(t.toAccountId) !== undefined ? { toAccountId: mapAcc(t.toAccountId) } : {}),
+        ...(t.delivery ? { delivery: t.delivery, ...(t.receivedAt !== undefined ? { receivedAt: t.receivedAt } : {}) } : {}),
+        ...(mapPerson(t.personId) !== undefined ? { personId: mapPerson(t.personId) } : {}),
       })
     })
     await db.transactions.bulkAdd(fresh as Transaction[])

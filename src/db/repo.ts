@@ -1,5 +1,5 @@
 import { isValidCurrency, localDateString, MAX_AMOUNT_MINOR, parseLocalDate } from './money'
-import { db, type Goal, type Recurring, type Transaction } from './schema'
+import { db, type Goal, type Person, type Recurring, type Transaction } from './schema'
 
 const DEFAULT_CURRENCY = 'INR'
 
@@ -97,8 +97,9 @@ export async function recategorizeTransactions(ids: number[], categoryId: number
 
 /** A copy dated today, so repeating a regular purchase is one tap. Returns the new id. */
 export async function duplicateTransaction(tx: Transaction): Promise<number> {
-  const { id: _id, createdAt: _created, deletedAt: _trashed, location: _location, ...fields } = tx
-  return addTransaction({ ...fields, date: localDateString(), source: 'manual' })
+  const { id: _id, createdAt: _created, deletedAt: _trashed, location: _location, receivedAt: _received, ...fields } = tx
+  // A copy of a payment to a person has not reached them yet.
+  return addTransaction({ ...fields, ...(fields.delivery ? { delivery: 'sent' as const } : {}), date: localDateString(), source: 'manual' })
 }
 
 /**
@@ -276,4 +277,55 @@ export async function setRate(currency: string, rate: number | null): Promise<vo
   else if (Number.isFinite(rate) && rate > 0) next[currency] = rate
   else throw new Error('A rate must be a number above 0')
   await db.settings.put({ key: 'rates', value: next })
+}
+
+const cleanPersonName = (name: string) => {
+  const clean = name.trim().replace(/\s+/g, ' ')
+  if (!clean) throw new Error('Enter who it was sent to')
+  return clean
+}
+
+/**
+ * A person by name (case does not matter), made if there is none yet. A phone number is kept when one is given
+ * and the person has none. Returns the stored person.
+ */
+export async function addPerson(name: string, phone?: string): Promise<Person> {
+  const clean = cleanPersonName(name)
+  const lower = clean.toLowerCase()
+  return db.transaction('rw', db.people, async () => {
+    const found = await db.people.filter((p) => p.name.toLowerCase() === lower).first()
+    if (found) {
+      if (phone && !found.phone) {
+        await db.people.update(found.id, { phone })
+        return { ...found, phone }
+      }
+      return found
+    }
+    const person = { name: clean, ...(phone ? { phone } : {}), createdAt: Date.now() }
+    const id = (await db.people.add(person as Person)) as number
+    return { ...person, id }
+  })
+}
+
+/** Add several people at once (from the phone's contacts). Returns how many were new. */
+export async function addPeople(list: { name: string; phone?: string }[]): Promise<number> {
+  const before = await db.people.count()
+  for (const p of list) if (p.name.trim()) await addPerson(p.name, p.phone)
+  return (await db.people.count()) - before
+}
+
+/** Forget a person. Payments already sent to them keep the name they were saved with. */
+export async function deletePerson(id: number): Promise<void> {
+  await db.transaction('rw', db.people, db.transactions, async () => {
+    await db.transactions.filter((t) => t.personId === id).modify((t) => {
+      delete t.personId
+    })
+    await db.people.delete(id)
+  })
+}
+
+/** Say whether a payment to a person has reached them. */
+export async function setDelivery(id: number, delivery: 'sent' | 'received'): Promise<void> {
+  if (delivery === 'received') await db.transactions.update(id, { delivery, receivedAt: Date.now() })
+  else await db.transactions.update(id, { delivery, receivedAt: undefined })
 }

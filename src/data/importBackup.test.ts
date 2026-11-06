@@ -361,3 +361,63 @@ describe('regular payments in a backup', () => {
     expect(parseBackup(backupText({ recurring: [{ kind: 'expense', amountMinor: 100, merchant: 'Rent', frequency: 'monthly', nextDue: '2026-11-01', tag: 'mortgage' }] })).ok).toBe(false)
   })
 });
+
+describe('payments to people in a backup', () => {
+  const people = [{ id: 7, name: 'Shweta Rao', phone: '+91 98765 43210', createdAt: 50 }, { id: 8, name: 'Ankit' }]
+  const payments = [
+    tx({ merchant: 'Shweta Rao', personId: 7, delivery: 'sent', createdAt: 10 }),
+    tx({ merchant: 'Ankit', personId: 8, delivery: 'received', receivedAt: 777, createdAt: 11, amountMinor: 7000 }),
+  ]
+
+  it('brings back the people, and each payment with who it went to and whether it was received', async () => {
+    const { db, parseBackup, importBackup } = await load()
+    const parsed = parseBackup(backupText({ people, transactions: payments }))
+    if (!parsed.ok) throw new Error(parsed.error)
+    await importBackup(parsed.backup, 'merge')
+    const stored = await db.people.toArray()
+    expect(stored.map((p) => p.name).sort()).toEqual(['Ankit', 'Shweta Rao'])
+    expect(stored.find((p) => p.name === 'Shweta Rao')?.phone).toBe('+91 98765 43210')
+    const rows = await db.transactions.toArray()
+    const shweta = rows.find((r) => r.merchant === 'Shweta Rao')!
+    const ankit = rows.find((r) => r.merchant === 'Ankit')!
+    expect(shweta).toMatchObject({ personId: stored.find((p) => p.name === 'Shweta Rao')!.id, delivery: 'sent' })
+    expect(ankit).toMatchObject({ personId: stored.find((p) => p.name === 'Ankit')!.id, delivery: 'received', receivedAt: 777 })
+  })
+
+  it('links to the person already here, by name, rather than making a second', async () => {
+    const { db, parseBackup, importBackup, addPerson } = await load()
+    const here = await addPerson('shweta rao')
+    const parsed = parseBackup(backupText({ people, transactions: payments }))
+    if (!parsed.ok) throw new Error(parsed.error)
+    await importBackup(parsed.backup, 'merge')
+    expect(await db.people.count()).toBe(2)
+    expect((await db.transactions.toArray()).find((r) => r.merchant === 'Shweta Rao')?.personId).toBe(here.id)
+  })
+
+  it('keeps the people when everything else is replaced, and restoring twice adds nothing', async () => {
+    const { db, parseBackup, importBackup, addPerson } = await load()
+    await addPerson('Meera')
+    const parsed = parseBackup(backupText({ people, transactions: payments }))
+    if (!parsed.ok) throw new Error(parsed.error)
+    await importBackup(parsed.backup, 'replace')
+    await importBackup(parsed.backup, 'replace')
+    expect((await db.people.toArray()).map((p) => p.name).sort()).toEqual(['Ankit', 'Meera', 'Shweta Rao'])
+    expect(await db.transactions.count()).toBe(2)
+  })
+
+  it('still reads a file from before there were people, and refuses a delivery state it does not know', async () => {
+    const { parseBackup } = await load()
+    expect(parseBackup(backupText()).ok).toBe(true)
+    expect(parseBackup(backupText({ transactions: [tx({ delivery: 'lost' })] })).ok).toBe(false)
+  })
+
+  it('leaves out the link when the file has no such person', async () => {
+    const { db, parseBackup, importBackup } = await load()
+    const parsed = parseBackup(backupText({ transactions: [tx({ personId: 99, delivery: 'sent' })] }))
+    if (!parsed.ok) throw new Error(parsed.error)
+    await importBackup(parsed.backup, 'merge')
+    const [row] = await db.transactions.toArray()
+    expect(row.personId).toBeUndefined()
+    expect(row.delivery).toBe('sent')
+  })
+})

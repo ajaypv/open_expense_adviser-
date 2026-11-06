@@ -1,4 +1,4 @@
-import type { Account, Budget, Category, Goal, Recurring, Transaction } from '../db/schema'
+import type { Account, Budget, Category, Goal, Person, Recurring, Transaction } from '../db/schema'
 
 /**
  * One CSV cell. Quotes values with commas, quotes or newlines, and neutralises spreadsheet
@@ -23,7 +23,7 @@ export function transactionsToCsv(
 ): string {
   const header = [
     'date', 'type', 'amount', 'currency', 'category', 'merchant', 'note', 'payment_method', 'source',
-    'latitude', 'longitude', 'account', 'to_account',
+    'latitude', 'longitude', 'account', 'to_account', 'delivery',
   ]
   const typeOf = (t: Transaction) => (t.kind === 'income' ? 'received' : t.kind === 'transfer' ? 'transfer' : 'sent')
   const rows = [...txs]
@@ -44,6 +44,8 @@ export function transactionsToCsv(
         t.location?.lon ?? '',
         t.accountId !== undefined ? (accountById.get(t.accountId)?.name ?? '') : '',
         t.toAccountId !== undefined ? (accountById.get(t.toAccountId)?.name ?? '') : '',
+        // Money sent to a person: whether it has reached them.
+        t.delivery === 'received' ? 'received' : t.delivery === 'sent' ? 'not received yet' : '',
       ]
         .map(csvCell)
         .join(','),
@@ -63,6 +65,8 @@ export interface BackupData {
   accounts: Account[]
   recurring: Recurring[]
   goals: Goal[]
+  /** The people money is sent to. Older backups have none. */
+  people: Person[]
   rates: Record<string, number>
 }
 

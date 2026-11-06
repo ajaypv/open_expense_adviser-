@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Category, Transaction } from '../db/schema'
-import { csvCell, transactionsToCsv } from './exporters'
+import { backupToJson, csvCell, transactionsToCsv } from './exporters'
 
 describe('csvCell', () => {
   it('quotes commas, quotes and newlines', () => {
@@ -32,16 +32,16 @@ describe('transactionsToCsv', () => {
       [tx(2, 'income', '2026-10-05', 500000, 2, 'Employer'), tx(1, 'expense', '2026-10-01', 45050, 1, 'Cafe, Main St')],
       cats,
     ).split('\n')
-    expect(csv[0]).toBe('date,type,amount,currency,category,merchant,note,payment_method,source,latitude,longitude,account,to_account')
-    expect(csv[1]).toBe('2026-10-01,sent,450.50,INR,Food & Dining,"Cafe, Main St",,,manual,,,,')
-    expect(csv[2]).toBe('2026-10-05,received,5000.00,INR,Income,Employer,,,manual,,,,')
+    expect(csv[0]).toBe('date,type,amount,currency,category,merchant,note,payment_method,source,latitude,longitude,account,to_account,delivery')
+    expect(csv[1]).toBe('2026-10-01,sent,450.50,INR,Food & Dining,"Cafe, Main St",,,manual,,,,,')
+    expect(csv[2]).toBe('2026-10-05,received,5000.00,INR,Income,Employer,,,manual,,,,,')
   })
 
   it('exports the place a transaction was added, and leaves the columns empty without one', () => {
     const withPlace = { ...tx(1, 'expense', '2026-10-01', 45000, 1, 'Cafe'), location: { lat: 12.9716, lon: 77.5946, accuracyM: 20 } }
     const csv = transactionsToCsv([withPlace, tx(2, 'expense', '2026-10-02', 100, 1, 'Bus')], cats).split('\n')
-    expect(csv[1]).toBe('2026-10-01,sent,450.00,INR,Food & Dining,Cafe,,,manual,12.9716,77.5946,,')
-    expect(csv[2]).toMatch(/,manual,,,,$/)
+    expect(csv[1]).toBe('2026-10-01,sent,450.00,INR,Food & Dining,Cafe,,,manual,12.9716,77.5946,,,')
+    expect(csv[2]).toMatch(/,manual,,,,,$/)
   })
 })
 
@@ -54,5 +54,28 @@ describe('forSpreadsheet', () => {
   it('does not add a second mark', async () => {
     const { forSpreadsheet } = await import('./exporters')
     expect(forSpreadsheet(forSpreadsheet('a,b'))).toBe('\uFEFFa,b')
+  })
+})
+
+describe('payments to people in exports', () => {
+  const cats = new Map<number, Category>([[1, { id: 1, name: 'Other', color: 'var(--other)' }]])
+  const base = { kind: 'expense', amountMinor: 50_000, currency: 'INR', categoryId: 1, merchant: 'Shweta', note: '', date: '2026-11-05', paymentMethod: '', source: 'manual', createdAt: 1 } as const
+
+  it('says in the spreadsheet whether each payment to a person has been received', () => {
+    const csv = transactionsToCsv(
+      [{ ...base, id: 1, personId: 1, delivery: 'sent' }, { ...base, id: 2, date: '2026-11-06', personId: 1, delivery: 'received' }, { ...base, id: 3, date: '2026-11-07', merchant: 'Cafe' }],
+      cats,
+    ).split('\n')
+    expect(csv[1].endsWith(',not received yet')).toBe(true)
+    expect(csv[2].endsWith(',received')).toBe(true)
+    expect(csv[3].endsWith(',,')).toBe(true) // an ordinary purchase leaves it empty
+  })
+
+  it('puts the people in the backup file', () => {
+    const file = JSON.parse(
+      backupToJson({ currency: 'INR', categories: [], transactions: [], budgets: [], accounts: [], recurring: [], goals: [], people: [{ id: 1, name: 'Shweta', createdAt: 1 }], rates: {} }),
+    )
+    expect(file.people).toEqual([{ id: 1, name: 'Shweta', createdAt: 1 }])
+    expect(file.version).toBe(2)
   })
 })

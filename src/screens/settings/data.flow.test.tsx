@@ -128,7 +128,7 @@ describe('Back up and export', () => {
     await waitFor(() => expect(shared).toHaveLength(1))
     expect(shared[0].name).toBe(`expenses-${localDateString()}.csv`)
     const lines = (await shared[0].text).split('\n')
-    expect(lines[0]).toBe('date,type,amount,currency,category,merchant,note,payment_method,source,latitude,longitude,account,to_account')
+    expect(lines[0]).toBe('date,type,amount,currency,category,merchant,note,payment_method,source,latitude,longitude,account,to_account,delivery')
     expect(lines).toHaveLength(3)
     expect(lines.join('\n')).toContain('Swiggy')
     expect(lines.join('\n')).toContain('Food & Dining')

@@ -51,7 +51,10 @@ export const TxRow = memo(function TxRow({ tx, category, currency, accountById, 
   const color = category?.color ?? 'var(--other)'
   // When the title is already the category (no merchant given), don't say it twice.
   const showCategory = !transfer && title !== categoryName
-  const glyph: IconName = transfer ? 'swap' : received ? 'arrowDown' : spendIcon(tx.merchant, category?.name)
+  // Money sent to a person says whether it has reached them.
+  const toPerson = tx.kind === 'expense' && (tx.personId !== undefined || tx.delivery !== undefined)
+  const delivery = toPerson ? (tx.delivery === 'received' ? 'Received' : 'Not received yet') : null
+  const glyph: IconName = transfer ? 'swap' : received ? 'arrowDown' : toPerson ? 'person' : spendIcon(tx.merchant, category?.name)
   const time = showTime ? timeOf(tx) : null
 
   // What was actually paid, in the currency it was paid in; the converted figure goes beneath it.
@@ -59,7 +62,7 @@ export const TxRow = memo(function TxRow({ tx, category, currency, accountById, 
   const foreign = tx.originalCurrency !== undefined && tx.originalCurrency !== currency
   const converted = foreign && !tx.unconverted ? `≈ ${formatMoney(tx.amountMinor, currency)}` : null
 
-  const spoken = `${selecting ? (selected ? 'Selected' : 'Select') : 'Edit'} ${transfer ? 'transfer' : received ? 'received' : 'spent'} ${title}, ${paid}${showCategory ? `, ${categoryName}` : ''}${showDate ? `, ${shortDate(tx.date)}` : ''}${tx.note ? `, note: ${tx.note}` : ''}${tx.source === 'recurring' ? ', added from a regular payment' : tx.source === 'import' ? ', imported from a file' : ''}${tx.location ? ', added with location' : ''}`
+  const spoken = `${selecting ? (selected ? 'Selected' : 'Select') : 'Edit'} ${transfer ? 'transfer' : received ? 'received' : 'spent'} ${title}, ${paid}${showCategory ? `, ${categoryName}` : ''}${delivery ? `, ${delivery.toLowerCase()}` : ''}${showDate ? `, ${shortDate(tx.date)}` : ''}${tx.note ? `, note: ${tx.note}` : ''}${tx.source === 'recurring' ? ', added from a regular payment' : tx.source === 'import' ? ', imported from a file' : ''}${tx.location ? ', added with location' : ''}`
 
   return (
     <button
@@ -96,6 +99,15 @@ export const TxRow = memo(function TxRow({ tx, category, currency, accountById, 
             <span className="flex min-w-0 items-center gap-1.5">
               <span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: color }} />
               <span className="truncate">{categoryName}</span>
+            </span>
+          )}
+          {delivery && (
+            <span
+              data-delivery={tx.delivery ?? 'sent'}
+              className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-px text-sm ${tx.delivery === 'received' ? 'bg-surface-2 text-ink-2' : 'text-ink shadow-[inset_0_0_0_1px_var(--warn-ui)]'}`}
+            >
+              {tx.delivery === 'received' && <Icon name="check" size={12} />}
+              {delivery}
             </span>
           )}
           {tx.paymentMethod && <span className="shrink-0 rounded-full bg-surface-2 px-2 py-px text-sm">{tx.paymentMethod}</span>}

@@ -24,6 +24,8 @@ export function makeLedger(over: Partial<TestLedger> = {}): TestLedger {
     categoryBudgets: new Map(),
     recurring: [],
     goals: [],
+    people: [],
+    personStats: [],
     balanceSet: false,
     estimatedBalanceMinor: 0,
     netMinor: 0,

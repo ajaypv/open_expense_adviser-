@@ -15,6 +15,7 @@ import { DisplaySection } from './settings/DisplaySection'
 import { BackupCard, UpdateCard } from './settings/EssentialCards'
 import { LocationSection } from './settings/LocationSection'
 import { type Ledger } from './settings/parts'
+import { PeopleSection } from './settings/PeopleSection'
 import { RecurringSection } from './settings/RecurringSection'
 import { RemindersSection } from './settings/RemindersSection'
 import { SecuritySection } from './settings/SecuritySection'
@@ -43,7 +44,7 @@ interface Props {
 }
 
 const PAGES: { id: SettingsPage; title: string; summary: string; icon: IconName }[] = [
-  { id: 'money', title: 'Money', summary: 'Currency, accounts and balance, monthly budget', icon: 'bank' },
+  { id: 'money', title: 'Money', summary: 'Currency, accounts and balance, people, monthly budget', icon: 'bank' },
   { id: 'auto', title: 'Automatic', summary: 'Regular payments, reminders, widget', icon: 'autopay' },
   { id: 'suggestions', title: 'Suggestions', summary: 'Your regulars, on Home or above the input bar', icon: 'spark' },
   { id: 'look', title: 'Appearance', summary: 'Colour theme, light or dark, text size, hide amounts', icon: 'palette' },
@@ -97,6 +98,7 @@ export const Settings = memo(function Settings({ ledger, theme, onTheme, palette
           <>
             <CurrencySection ledger={ledger} />
             <AccountsSection ledger={ledger} />
+            <PeopleSection ledger={ledger} />
             <BudgetSection ledger={ledger} />
           </>
         )}
