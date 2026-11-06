@@ -25,12 +25,6 @@ describe('Bubbles: how they arrive and move', () => {
     expect(bubbles.map(delay)).toEqual([0, 70, 140, 210])
   })
 
-  it('gives every bubble a wedge and a rim arc that sweep open after the pop', () => {
-    mount(make(3))
-    expect(document.querySelectorAll('.bubble-wedge')).toHaveLength(3)
-    expect(document.querySelectorAll('.bubble-arc')).toHaveLength(3)
-  })
-
   it('lets a bubble glide to its new place when the month changes, rather than replacing it', () => {
     const { rerender } = mount(make(4))
     const before = screen.getByRole('button', { name: /^Groceries/ }).closest('li')!
@@ -121,17 +115,13 @@ describe('the category views: their motion in the style sheet', () => {
   const block = sheet.slice(sheet.indexOf('/* ---------- The category views arriving'), sheet.indexOf('/* ---------- Pins on the places map'))
 
   it('defines each of the movements', () => {
-    for (const name of ['bubble-sweep', 'donut-draw', 'donut-pop', 'row-in', 'bar-grow']) {
-      expect(block, name).toContain(`@keyframes ${name} {`)
+    for (const name of ['bubble-glint', 'donut-draw', 'donut-pop', 'row-in', 'bar-grow']) {
+      expect(sheet, name).toContain(`@keyframes ${name} {`)
     }
   })
 
-  it('registers the wedge angle so it can be animated rather than snapping', () => {
-    expect(block).toMatch(/@property --a \{[^}]*syntax: '<angle>'/)
-  })
-
   it('leaves nothing holding a value after it has played', () => {
-    for (const rule of ['.bubble-wedge,\n.bubble-arc {', '.donut-seg {', '.donut-pop {', '.row-in {', '.bar-grow {']) {
+    for (const rule of ['.donut-seg {', '.donut-pop {', '.row-in {', '.bar-grow {']) {
       const at = block.indexOf(rule)
       expect(at, rule).toBeGreaterThan(-1)
       expect(block.slice(at, block.indexOf('}', at))).toContain('backwards;')
@@ -140,7 +130,7 @@ describe('the category views: their motion in the style sheet', () => {
 
   it('stops all of it for someone who asked for less motion', () => {
     const reduced = block.slice(block.indexOf('@media (prefers-reduced-motion: reduce)'))
-    for (const cls of ['.bubble-wedge', '.bubble-arc', '.donut-seg', '.donut-pop', '.row-in', '.bar-grow']) {
+    for (const cls of ['.bubble::after', '.donut-seg', '.donut-pop', '.row-in', '.bar-grow']) {
       expect(reduced, cls).toContain(cls)
     }
     expect(reduced).toContain('animation: none')

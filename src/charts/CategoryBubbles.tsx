@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { formatMoney } from '../db/money'
+import { formatMoney, formatMoneyCompact } from '../db/money'
 import type { Category } from '../db/schema'
 import type { CategoryTotal } from '../insights/aggregates'
 import { categoryIcon } from '../ui/categoryIcon'
@@ -12,13 +12,19 @@ interface Props {
   totals: CategoryTotal[]
   categoryById: Map<number, Category>
   currency: string
-  /** Show this many categories and fold the rest into one grey "Everything else" bubble. */
+  /** Show at most this many categories and fold the rest (and any under 2%) into one grey "Everything else" bubble. */
   limit?: number
   onPick?: (categoryId: number) => void
 }
 
 /** A bubble whose radius (in units where the whole width is 100) is under this has no room for the name. */
-const NAME_MIN_R = 11
+const NAME_MIN_R = 9
+/** A bubble this big (same units) has room for the amount under its share, so the figure can be read without a tap. */
+const AMOUNT_MIN_R = 17
+/** Categories under this share are folded into the grey "Everything else" bubble: a row of 0.1% bubbles is clutter. */
+const MIN_SHARE = 0.02
+/** ...but the biggest few always keep their own bubble, so a quiet month does not collapse into one grey circle. */
+const MIN_BUBBLES = 3
 
 const percent = formatShare
 
@@ -38,11 +44,12 @@ function BubbleShare({ share, play, delayMs }: { share: number; play: boolean; d
 }
 
 /**
- * Spend by category as glassy bubbles: the area of each is its share, and a pie wedge inside it shows that share as
- * an angle from the top, with the same arc along the rim. Each has the category's icon, name and share, and a tap
- * opens the category. Colour is the category's own, as everywhere else. A bubble too small for its name keeps its icon
- * and share, and every one carries the full name, share and amount for a screen reader; the list view has the
- * same figures in order for anyone who prefers to read them.
+ * Spend by category as glassy bubbles: the area of each is its share, and that is the only thing the size says. Each has
+ * the category's icon, name and share (and the amount, where there is room), and a tap opens the category. Colour is
+ * the category's own, as everywhere else. Categories under a few percent are folded into one grey "Everything else"
+ * bubble rather than drawn as a scatter of tiny ones. A bubble too small for its name keeps its icon and share, and
+ * every one carries the full name, share and amount for a screen reader; the list view has every category, in order,
+ * for anyone who wants the small ones too.
  */
 export function CategoryBubbles({ totals, categoryById, currency, limit = 8, onPick }: Props) {
   // They arrive when the person can see them, not when the page was drawn.
@@ -50,8 +57,8 @@ export function CategoryBubbles({ totals, categoryById, currency, limit = 8, onP
   const grand = totals.reduce((a, t) => a + t.totalMinor, 0)
   if (grand <= 0) return null
 
-  const shown = totals.slice(0, limit)
-  const restMinor = totals.slice(limit).reduce((a, t) => a + t.totalMinor, 0)
+  const shown = totals.filter((t, i) => i < Math.min(limit, MIN_BUBBLES) || (i < limit && t.totalMinor / grand >= MIN_SHARE))
+  const restMinor = grand - shown.reduce((a, t) => a + t.totalMinor, 0)
   const rows: Row[] = shown.map((t) => {
     const cat = categoryById.get(t.categoryId)
     const name = t.name ?? cat?.name ?? 'No category'
@@ -81,21 +88,19 @@ export function CategoryBubbles({ totals, categoryById, currency, limit = 8, onP
           const showName = b.r >= NAME_MIN_R
           const vars = {
             '--c': row.color,
-            '--a': `${Math.round(share * 3600) / 10}deg`,
             '--d': `${(rankOf.get(row.key) ?? 0) * 70}ms`,
             '--fs': `${(b.r * 0.15).toFixed(2)}cqw`,
             '--ic': `${(b.r * 0.56).toFixed(2)}cqw`,
           } as CSSProperties
           const body = (
             <span className="bubble" style={vars}>
-              <span aria-hidden="true" className="bubble-wedge" />
-              <span aria-hidden="true" className="bubble-arc" />
               <span className="bubble-text">
                 <span aria-hidden="true" data-icon={row.icon} className="bubble-icon">
                   <Icon name={row.icon} size={24} />
                 </span>
                 {showName && <span className="bubble-name">{row.name}</span>}
                 <BubbleShare share={share} play={seen} delayMs={(rankOf.get(row.key) ?? 0) * 70 + 250} />
+                {b.r >= AMOUNT_MIN_R && <span className="bubble-amount">{formatMoneyCompact(row.minor, currency)}</span>}
               </span>
             </span>
           )

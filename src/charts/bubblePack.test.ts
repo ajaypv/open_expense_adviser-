@@ -63,7 +63,7 @@ describe('packBubbles: circles sized by share', () => {
     const { bubbles } = packBubbles([{ key: 'huge', value: 1000 }, { key: 'tiny', value: 1 }])
     const huge = bubbles.find((b) => b.key === 'huge')!
     const tiny = bubbles.find((b) => b.key === 'tiny')!
-    expect(tiny.r / huge.r).toBeGreaterThanOrEqual(0.32 - 1e-9)
+    expect(tiny.r / huge.r).toBeGreaterThanOrEqual(0.4 - 1e-9)
   })
 
   it('keeps even the smallest circle big enough to tap on a phone with nine categories', () => {

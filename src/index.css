@@ -725,8 +725,8 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 /* ---------- Category bubbles ---------- */
 
 /* A glass bubble in the category's colour. The body is only a light tint of the colour over the surface, so the text
-   keeps its normal contrast whatever the colour; the colour itself is carried by the wedge, the rim and the icon's
-   ring. The wedge is the category's share as an angle, counted from the top and going left, as in the reference. */
+   keeps its normal contrast whatever the colour; the colour itself is carried by the rim. Size is the one thing that
+   shows the share (the figure is written in it), so there is nothing else drawn inside to read. */
 .bubble {
   position: relative;
   display: flex;
@@ -744,25 +744,10 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
     color-mix(in oklab, var(--c) 8%, var(--surface)) 100%
   );
   box-shadow:
-    inset 0 0 0 1px color-mix(in oklab, var(--c) 38%, transparent),
+    inset 0 0 0 1.5px color-mix(in oklab, var(--c) 60%, transparent),
     inset 0 6px 14px -8px rgb(255 255 255 / 0.35),
     0 10px 20px -12px color-mix(in oklab, var(--c) 70%, transparent);
   animation: bubble-in 0.75s cubic-bezier(0.3, 1.45, 0.5, 1) var(--d, 0ms) backwards;
-}
-.bubble-wedge,
-.bubble-arc {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-}
-.bubble-wedge {
-  background: conic-gradient(from calc(360deg - var(--a)), color-mix(in oklab, var(--c) 30%, transparent) 0 var(--a), transparent var(--a) 360deg);
-}
-.bubble-arc {
-  background: conic-gradient(from calc(360deg - var(--a)), var(--c) 0 var(--a), transparent var(--a) 360deg);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
 }
 .bubble-text {
   position: relative;
@@ -795,6 +780,11 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+.bubble-amount {
+  font-size: 0.8em;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
 /* Each bubble rises a little as it swells and overshoots, then settles. */
 @keyframes bubble-in {
   from {
@@ -810,14 +800,9 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 
 /* ---------- The category views arriving ---------- */
 
-/* Each view plays once when it appears: the bubbles pop, then their wedges sweep open; the donut's segments draw round
+/* Each view plays once when it appears: the bubbles pop and a band of light crosses each; the donut's segments draw round
    one after another; list bars grow from the left. The delay of each comes from --d, set in steps by the component so the
    biggest arrives first. `backwards` fill, so nothing is left holding a value once it has played. */
-@property --a {
-  syntax: '<angle>';
-  inherits: true;
-  initial-value: 0deg;
-}
 /* Nothing starts until the box is on screen: the component marks it data-seen, and until then every animation inside
    is held at its first frame (the delay and the backwards fill keep it hidden). Pausing rather than not applying the
    animation means it begins from the start at the moment the person can see it. */
@@ -825,11 +810,6 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 .when-seen[data-seen='false'] *::before,
 .when-seen[data-seen='false'] *::after {
   animation-play-state: paused;
-}
-@keyframes bubble-sweep {
-  from {
-    --a: 0deg;
-  }
 }
 /* A band of light crosses each bubble once, after it has landed, like light moving over glass. The band sits just
    outside the window at rest and at the end, so nothing is left behind. */
@@ -849,10 +829,6 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   to {
     background-position: 0% 0;
   }
-}
-.bubble-wedge,
-.bubble-arc {
-  animation: bubble-sweep 0.9s cubic-bezier(0.3, 0.7, 0.3, 1) calc(var(--d, 0ms) + 250ms) backwards;
 }
 @keyframes donut-draw {
   from {
@@ -897,8 +873,6 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 }
 @media (prefers-reduced-motion: reduce) {
   .bubble::after,
-  .bubble-wedge,
-  .bubble-arc,
   .donut-seg,
   .donut-pop,
   .row-in,

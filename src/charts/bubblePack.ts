@@ -18,7 +18,7 @@ export interface Packed {
 }
 
 /** The smallest circle is never less than this share of the biggest one's radius, so it can still be read and touched. */
-const MIN_RELATIVE_RADIUS = 0.32
+const MIN_RELATIVE_RADIUS = 0.4
 /** The gap left between circles, as a share of the biggest circle's radius. */
 const GAP = 0.07
 /** Spreading sideways costs more than spreading down, so the cluster comes out tall, as a phone screen is. */

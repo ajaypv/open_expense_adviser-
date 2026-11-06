@@ -51,11 +51,21 @@ describe('CategoryBubbles: a bubble for each category', () => {
     expect(sizes[4]).toBeLessThan(sizes[3]) // Transport (6.7%) is smaller than Health (8.4%)
   })
 
-  it('draws each category\'s own pie wedge, an angle equal to its share of the whole', () => {
+  it('says the share once, in the size and the figure, without a second pie drawn inside each bubble', () => {
     mount({ onPick: () => {} })
-    const wedge = (name: RegExp) => screen.getByRole('button', { name }).querySelector<HTMLElement>('.bubble')!.style.getPropertyValue('--a')
-    expect(wedge(/^Groceries,/)).toBe('118.1deg') // 32.8% of 360
-    expect(wedge(/^Shopping,/)).toBe('58deg') // 16.1%
+    expect(document.querySelector('.bubble-wedge, .bubble-arc')).toBeNull()
+    expect(screen.getByRole('button', { name: /^Groceries,/ }).querySelector<HTMLElement>('.bubble')!.style.getPropertyValue('--a')).toBe('')
+  })
+
+  it('writes the amount under the share of a bubble big enough to hold it, and not in a small one', () => {
+    mount({ onPick: () => {} })
+    const biggest = screen.getByRole('button', { name: /^Groceries,/ })
+    expect(biggest.querySelector('.bubble-amount')).toHaveTextContent('₹328')
+    const rows: CategoryTotal[] = [60, 25, 8, 4, 3].map((k, i) => ({ categoryId: i + 1, totalMinor: k * 1000 }))
+    const { container } = render(<CategoryBubbles totals={rows} categoryById={categoryById} currency="INR" onPick={() => {}} />)
+    const amounts = Array.from(container.querySelectorAll('.bubble-amount'))
+    expect(amounts.length).toBeGreaterThan(0)
+    expect(amounts.length).toBeLessThan(5)
   })
 
   it('draws the category\'s icon, in its colour', () => {
@@ -87,17 +97,33 @@ describe('CategoryBubbles: a bubble for each category', () => {
 })
 
 describe('CategoryBubbles: small and many', () => {
-  it('leaves the name off a bubble too small to hold it, but keeps its icon, its share and its label', () => {
+  it('folds categories under 2% into the grey "Everything else" bubble instead of drawing a scatter of tiny ones', () => {
     const ids = Array.from({ length: 8 }, (_, i) => i + 1)
     const names = new Map<number, Category>(ids.map((id) => [id, category(id, `Cat ${id}`)]))
-    // 40, 30, 20, 12, 8, 6, 4 and 3 out of 123: the last is 2.4% and gets the smallest bubble.
-    const rows: CategoryTotal[] = [40, 30, 20, 12, 8, 6, 4, 3].map((k, i) => ({ categoryId: i + 1, totalMinor: k * 1000 }))
+    // 40, 30, 20, 6, 2.5, 1, 0.25 and 0.25 out of 100: the last three are each under 2% and become one 1.5% bubble.
+    const rows: CategoryTotal[] = [40_000, 30_000, 20_000, 6_000, 2_500, 1_000, 250, 250].map((m, i) => ({ categoryId: i + 1, totalMinor: m }))
     mount({ totals: rows, categoryById: names, onPick: () => {} })
-    const small = screen.getByRole('button', { name: /^Cat 8, 2\.4%, ₹30/ })
-    expect(small).toHaveTextContent('2.4%')
-    expect(small).not.toHaveTextContent('Cat 8')
-    expect(small.querySelector('[data-icon]')).not.toBeNull()
-    expect(screen.getByRole('button', { name: /^Cat 1,/ })).toHaveTextContent('Cat 1')
+    expect(within(list()).getAllByRole('button')).toHaveLength(5)
+    expect(screen.getByRole('button', { name: /^Cat 5, 2\.5%/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Cat 6,/ })).toBeNull()
+    expect(within(list()).getByLabelText(/^Everything else, 1\.5%/).tagName).toBe('LI')
+  })
+
+  it('always keeps the three biggest as their own bubbles, however small, so a quiet month is not one grey circle', () => {
+    // One category holds nearly everything; the next five are each far under 3%.
+    const tiny: CategoryTotal[] = Array.from({ length: 6 }, (_, i) => ({ categoryId: i + 1, totalMinor: i === 0 ? 1_000_000 : 10 }))
+    const more = new Map<number, Category>(tiny.map((t) => [t.categoryId, category(t.categoryId, `Tiny ${t.categoryId}`)]))
+    mount({ totals: tiny, categoryById: more, onPick: () => {} })
+    const buttons = within(list()).getAllByRole('button')
+    expect(buttons.map((b) => b.getAttribute('aria-label')?.split(',')[0])).toEqual(['Tiny 1', 'Tiny 2', 'Tiny 3'])
+    expect(within(list()).getByLabelText(/^Everything else, /)).toBeInTheDocument()
+  })
+
+  it('keeps the name on every bubble that is left, since each is big enough to hold it', () => {
+    mount({ onPick: () => {} })
+    for (const name of ['Groceries', 'Shopping', 'Food & Dining', 'Health', 'Transport', 'Other']) {
+      expect(screen.getByRole('button', { name: new RegExp(`^${name.replace('&', '\\&')},`) })).toHaveTextContent(name)
+    }
   })
 
   it('folds everything past the eighth into one grey "Everything else" bubble, which opens nothing', () => {
