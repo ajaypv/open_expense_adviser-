@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { memo, useCallback, useId, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { formatShare } from '../charts/share'
 import { useDisplay } from '../data/display'
 import { formatMoney, parseLocalDate } from '../db/money'
@@ -82,7 +82,7 @@ function Pieces({ parts, look, delay = 0 }: { parts: DayPart[]; look: Look; dela
 }
 
 /** One stretch of the line, from the dot of one day to the next, straight down and as wide as the money on it. */
-function River({ from, to, wFrom, wTo, edge, top = DOT_Y, left = '50%' }: { from: string; to: string; wFrom: number; wTo: number; edge?: boolean; top?: string; left?: string }) {
+function RiverBase({ from, to, wFrom, wTo, edge, top = DOT_Y, left = '50%' }: { from: string; to: string; wFrom: number; wTo: number; edge?: boolean; top?: string; left?: string }) {
   const id = useId().replace(/:/g, '')
   const d = riverPath(wFrom, edge ? wFrom : wTo)
   const end = edge ? from : to
@@ -161,12 +161,13 @@ interface DayProps {
   wFrom: number
   wTo: number
   open: boolean
-  onToggle: () => void
+  /** Opens the day, or shuts it if it is open. Keeps its identity, so a row is not redrawn for another one being opened. */
+  onToggle: (date: string) => void
   onPickDay: (date: string) => void
   categoryById: Map<number, Category>
 }
 
-function DayRow({ day, look, max, color, next, edge, wFrom, wTo, open, onToggle, onPickDay, categoryById }: DayProps) {
+function DayRowBase({ day, look, max, color, next, edge, wFrom, wTo, open, onToggle, onPickDay, categoryById }: DayProps) {
   const [watch, seen] = useSeen(0.2)
   const money = (m: number) => formatMoney(m, look.currency)
   const empty = day.totalMinor === 0
@@ -194,7 +195,7 @@ function DayRow({ day, look, max, color, next, edge, wFrom, wTo, open, onToggle,
               aria-expanded={open}
               aria-controls={`tl-${day.date}`}
               aria-label={`${title}${ago ? `, ${ago}` : ''}, ${money(day.totalMinor)}, ${plural(day.count, 'expense')}`}
-              onClick={onToggle}
+              onClick={() => onToggle(day.date)}
               className="block w-full p-4 text-left active:bg-surface-2 [@media(hover:hover)]:hover:bg-surface-2"
             >
               <span className="flex items-start justify-between gap-3">
@@ -275,7 +276,7 @@ function DayRow({ day, look, max, color, next, edge, wFrom, wTo, open, onToggle,
 }
 
 /** Days with nothing spent are good news, and are said so: one day has its date in the dot, a run of them a tick. */
-function QuietRow({ row, color, next, edge, wFrom, wTo }: { row: Extract<TimelineRow, { kind: 'quiet' }>; color: string; next: string | null; edge: boolean; wFrom: number; wTo: number }) {
+function QuietRowBase({ row, color, next, edge, wFrom, wTo }: { row: Extract<TimelineRow, { kind: 'quiet' }>; color: string; next: string | null; edge: boolean; wFrom: number; wTo: number }) {
   const one = row.count === 1
   return (
     <li data-quiet={row.to} className="grid grid-cols-[3rem_minmax(0,1fr)] gap-x-2">
@@ -296,6 +297,14 @@ function QuietRow({ row, color, next, edge, wFrom, wTo }: { row: Extract<Timelin
     </li>
   )
 }
+
+/*
+ * Each of these is drawn again only when something about it has changed. Opening a day changes two rows (the one that opens and the one
+ * that shuts), not the thirty or so on the page, and the line's drawing, which is dear (two pictures to a stretch), is not made again.
+ */
+const River = memo(RiverBase)
+const DayRow = memo(DayRowBase)
+const QuietRow = memo(QuietRowBase)
 
 /**
  * The days behind you, newest first, down a line of dots, each dot the date of its day, ringed in a colour for how much was
@@ -319,14 +328,19 @@ export function Timeline({ expenses, categoryById, currency, today, onPickDay }:
     return m
   }, [expenses])
 
-  // The line is drawn as the page scrolls; it measures again when the list gets longer or a day is opened.
-  useLineScroll(listRef, `${rows.length}:${open ?? ''}`)
+  // The line is drawn as the page scrolls; it looks again when the list gets longer (a day opening is seen by its size changing).
+  useLineScroll(listRef, rows.length)
 
-  const look: Look = {
-    colorOf: (id) => categoryById.get(id)?.color ?? 'var(--other)',
-    nameOf: (id) => categoryById.get(id)?.name ?? 'No category',
-    currency,
-  }
+  // These keep their identity until the categories or the currency change, so the rows that are given them are not redrawn for nothing.
+  const look = useMemo<Look>(
+    () => ({
+      colorOf: (id) => categoryById.get(id)?.color ?? 'var(--other)',
+      nameOf: (id) => categoryById.get(id)?.name ?? 'No category',
+      currency,
+    }),
+    [categoryById, currency],
+  )
+  const toggle = useCallback((date: string) => setOpen((o) => (o === date ? null : date)), [])
   const thisYear = today.getFullYear()
 
   if (tl.days.length === 0) {
@@ -390,7 +404,7 @@ export function Timeline({ expenses, categoryById, currency, today, onPickDay }:
               wFrom={widths[i]}
               wTo={wTo}
               open={open === r.day.date}
-              onToggle={() => setOpen((o) => (o === r.day.date ? null : r.day.date))}
+              onToggle={toggle}
               onPickDay={onPickDay}
               categoryById={categoryById}
             />

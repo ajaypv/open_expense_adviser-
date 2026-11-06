@@ -1036,29 +1036,39 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 
 /* ---------- Home: the overview and the timeline ---------- */
 
-/* Two pages side by side; the track slides by a page, and follows the finger while it is down (no easing then). */
+/* Two pages side by side; the track slides by a page, and follows the finger while it is down (no easing then). Where it is is a
+   transform written on the element by the component, never a custom property, which would be inherited and make the browser work
+   out the style of both pages again at every move. */
 .pager-track {
   display: flex;
   align-items: flex-start;
-  transform: translateX(calc(var(--i, 0) * -100% + var(--drag, 0px)));
   transition: transform 380ms cubic-bezier(0.22, 0.85, 0.25, 1);
 }
 .pager-track[data-dragging='true'] {
   transition: none;
 }
+/* Only while it is moving is it worth giving the track a layer of its own on the graphics card. */
+.pager-track[data-dragging='true'],
+.pager-track[data-moving='true'] {
+  will-change: transform;
+}
 .pager-panel {
   flex: 0 0 100%;
   min-width: 0;
 }
-/* The page that is not in view, once the slide is over, takes no room and cannot be reached. */
+/* The page that is not in view, once the slide is over, takes no room, cannot be reached, and is not laid out or drawn at all (it
+   keeps its state, so it is as it was when it comes back), and nothing in it keeps animating. */
 .pager-panel[data-rest='true'] {
   height: 0;
   overflow: hidden;
   visibility: hidden;
+  content-visibility: hidden;
 }
-/* The tab's marker is carried along by how far across the pages are. */
+.pager-panel[data-rest='true'] * {
+  animation-play-state: paused;
+}
+/* The tab's marker is carried along by how far across the pages are (a transform written by the component too). */
 .pager-pill {
-  transform: translateX(calc(var(--p, 0) * 100%));
   transition: transform 380ms cubic-bezier(0.22, 0.85, 0.25, 1);
 }
 .pager-pill[data-dragging='true'] {

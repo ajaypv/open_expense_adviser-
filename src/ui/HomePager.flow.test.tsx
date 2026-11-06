@@ -2,6 +2,7 @@
 import '../test/dom'
 import { readFileSync } from 'node:fs'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { Profiler } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { HomePager } from './HomePager'
 
@@ -44,6 +45,11 @@ function setup() {
 
 const tab = (name: string) => screen.getByRole('button', { name })
 const panel = (id: 'overview' | 'timeline') => document.querySelector(`[data-page="${id}"]`) as HTMLElement
+const track = () => document.querySelector('.pager-track') as HTMLElement
+const pill = () => document.querySelector('.pager-pill') as HTMLElement
+
+/** Where the pages are for a given page and drag, as the component writes it. */
+const at = (index: number, px = 0) => `translate3d(calc(${-index * 100}% + ${px}px), 0, 0)`
 
 describe('HomePager: the tabs', () => {
   it('starts on the overview, with the timeline not built yet', () => {
@@ -54,15 +60,24 @@ describe('HomePager: the tabs', () => {
     expect(screen.queryByTestId('timeline')).toBeNull()
   })
 
+  it('builds the timeline behind the scenes shortly after, so opening it does not stall the slide', async () => {
+    setup()
+    expect(screen.queryByTestId('timeline')).toBeNull()
+    await waitFor(() => expect(screen.getByTestId('timeline')).toBeInTheDocument())
+    // Built, but the overview is still the page in view.
+    expect(tab('Overview')).toHaveAttribute('aria-pressed', 'true')
+    expect(panel('timeline')).toHaveAttribute('data-rest', 'true')
+  })
+
   it('moves to the timeline when its tab is pressed, and back', () => {
     setup()
     fireEvent.click(tab('Timeline'))
     expect(tab('Timeline')).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByTestId('timeline')).toBeInTheDocument()
-    expect(document.querySelector('.pager-track')).toHaveStyle({ '--i': '1' })
+    expect(track().style.transform).toBe(at(1))
     fireEvent.click(tab('Overview'))
     expect(tab('Overview')).toHaveAttribute('aria-pressed', 'true')
-    expect(document.querySelector('.pager-track')).toHaveStyle({ '--i': '0' })
+    expect(track().style.transform).toBe(at(0))
   })
 
   it('folds away the page that is not in view once the slide is over, so the screen is as long as the one you are on', async () => {
@@ -80,10 +95,9 @@ describe('HomePager: the tabs', () => {
 
   it('has a marker that slides to the chosen tab', () => {
     setup()
-    const group = screen.getByRole('group', { name: 'Home view' })
-    expect(group).toHaveStyle({ '--p': '0' })
+    expect(pill().style.transform).toBe('translate3d(0%, 0, 0)')
     fireEvent.click(tab('Timeline'))
-    expect(group).toHaveStyle({ '--p': '1' })
+    expect(pill().style.transform).toBe('translate3d(100%, 0, 0)')
   })
 })
 
@@ -97,15 +111,28 @@ describe('HomePager: dragging the page', () => {
     expect(tab('Overview')).toHaveAttribute('aria-pressed', 'true')
   })
 
+  it('sends the pages and the marker to where they belong when a drag lets go, so they glide there from the finger', () => {
+    setup()
+    drag(screen.getByTestId('overview'), -140)
+    expect(track().style.transform).toBe(at(1))
+    expect(pill().style.transform).toBe('translate3d(100%, 0, 0)')
+    expect(track()).toHaveAttribute('data-dragging', 'false')
+    drag(screen.getByTestId('timeline'), 140)
+    expect(track().style.transform).toBe(at(0))
+    expect(pill().style.transform).toBe('translate3d(0%, 0, 0)')
+  })
+
   it('stays put for a short movement, a tap, or a drag the wrong way past either end', () => {
     setup()
     drag(screen.getByTestId('overview'), -30)
     drag(screen.getByTestId('overview'), 160)
     expect(tab('Overview')).toHaveAttribute('aria-pressed', 'true')
+    expect(track().style.transform).toBe(at(0))
     fireEvent.click(tab('Timeline'))
     drag(screen.getByTestId('timeline'), -160)
     drag(screen.getByTestId('timeline'), 20)
     expect(tab('Timeline')).toHaveAttribute('aria-pressed', 'true')
+    expect(track().style.transform).toBe(at(1))
   })
 
   it('leaves a mostly up-and-down movement to the page, which is scrolling', () => {
@@ -140,14 +167,24 @@ describe('HomePager: dragging the page', () => {
     fireEvent(target, pointer('pointerdown', 0, 0))
     fireEvent(target, pointer('pointermove', -60, 0))
     fireEvent(target, pointer('pointermove', -90, 0))
-    const track = document.querySelector('.pager-track') as HTMLElement
-    expect(track).toHaveAttribute('data-dragging', 'true')
-    expect(track.style.getPropertyValue('--drag')).toBe('-90px')
+    expect(track()).toHaveAttribute('data-dragging', 'true')
+    expect(track().style.transform).toBe(at(0, -90))
     // The timeline is built as soon as it starts to come in, so there is something to see under the finger.
     expect(screen.getByTestId('timeline')).toBeInTheDocument()
     fireEvent(target, pointer('pointercancel', -90, 0))
-    expect(track).toHaveAttribute('data-dragging', 'false')
-    expect(track.style.getPropertyValue('--drag')).toBe('0px')
+    expect(track()).toHaveAttribute('data-dragging', 'false')
+    expect(track().style.transform).toBe(at(0))
+  })
+
+  it('carries the marker along with the finger, by how far across the pages are', () => {
+    setup()
+    const target = screen.getByTestId('overview')
+    fireEvent(target, pointer('pointerdown', 0, 0))
+    fireEvent(target, pointer('pointermove', -40, 0))
+    fireEvent(target, pointer('pointermove', -100, 0))
+    // The jsdom page has no width, so a movement of 100 is taken as the whole of it: the marker is all the way across.
+    expect(pill().style.transform).toBe('translate3d(100%, 0, 0)')
+    expect(pill()).toHaveAttribute('data-dragging', 'true')
   })
 
   it('gives only a little past the first page, and springs back', () => {
@@ -156,7 +193,38 @@ describe('HomePager: dragging the page', () => {
     fireEvent(target, pointer('pointerdown', 0, 0))
     fireEvent(target, pointer('pointermove', 40, 0))
     fireEvent(target, pointer('pointermove', 120, 0))
-    expect((document.querySelector('.pager-track') as HTMLElement).style.getPropertyValue('--drag')).toBe('30px')
+    expect(track().style.transform).toBe(at(0, 30))
+  })
+})
+
+describe('HomePager: it stays cheap while the finger moves', () => {
+  it('does not draw the component again at every move of the finger, only when a drag starts and ends', () => {
+    const commits = vi.fn()
+    render(
+      <Profiler id="pager" onRender={commits}>
+        <HomePager overview={<p data-testid="overview">Overview content</p>} timeline={<p data-testid="timeline">Timeline content</p>} />
+      </Profiler>,
+    )
+    const target = screen.getByTestId('overview')
+    fireEvent(target, pointer('pointerdown', 0, 0))
+    fireEvent(target, pointer('pointermove', -30, 0)) // the drag starts here
+    const afterStart = commits.mock.calls.length
+    for (let x = -35; x >= -140; x -= 5) fireEvent(target, pointer('pointermove', x, 0))
+    expect(commits.mock.calls.length).toBe(afterStart) // twenty-two more moves, no more drawing
+    expect(track().style.transform).toBe(at(0, -140))
+    fireEvent(target, pointer('pointerup', -140, 0))
+  })
+
+  it('moves the pages with a transform on the track and the marker, never a custom property, which would be inherited by everything inside', () => {
+    setup()
+    const target = screen.getByTestId('overview')
+    fireEvent(target, pointer('pointerdown', 0, 0))
+    fireEvent(target, pointer('pointermove', -50, 0))
+    fireEvent(target, pointer('pointermove', -90, 0))
+    for (const el of [track(), pill(), screen.getByRole('group', { name: 'Home view' })]) {
+      expect(el.getAttribute('style') ?? '').not.toMatch(/--(i|p|drag)\b/)
+    }
+    expect(track().style.transform).not.toBe('')
   })
 })
 
@@ -189,7 +257,7 @@ describe('HomePager: the page beneath', () => {
 
   it('cuts the pages off at the screen’s edge, not at the content’s, so a ring beside the first column is not clipped on the left', () => {
     setup()
-    const clip = document.querySelector('.pager-track')!.parentElement!
+    const clip = track().parentElement!
     expect(clip).toHaveClass('overflow-x-clip', '-mx-5', 'px-5')
   })
 })
@@ -201,5 +269,20 @@ describe('HomePager: motion', () => {
     expect(css).toMatch(/\.pager-track \{[^}]*transition: transform 380ms/)
     expect(css).toMatch(/\.pager-track\[data-dragging='true'\] \{[^}]*transition: none/)
     expect(css).toMatch(/prefers-reduced-motion: reduce\) \{\s*\.pager-track,\s*\.pager-pill \{\s*transition: none/)
+  })
+
+  it('does not use a custom property to place the pages, since that is inherited and costs the whole page its style at every move', () => {
+    expect(css).not.toMatch(/\.pager-track \{[^}]*var\(--(i|drag)/)
+    expect(css).not.toMatch(/\.pager-pill \{[^}]*var\(--p/)
+  })
+
+  it('gives the track a layer of its own only while it is moving', () => {
+    expect(css).toMatch(/\.pager-track\[data-dragging='true'\],\s*\.pager-track\[data-moving='true'\] \{\s*will-change: transform/)
+    expect(css).not.toMatch(/\.pager-track \{[^}]*will-change/)
+  })
+
+  it('leaves the page out of view not laid out or drawn at all, and nothing in it animating', () => {
+    expect(css).toMatch(/\.pager-panel\[data-rest='true'\] \{[^}]*content-visibility: hidden/)
+    expect(css).toMatch(/\.pager-panel\[data-rest='true'\] \* \{\s*animation-play-state: paused/)
   })
 })

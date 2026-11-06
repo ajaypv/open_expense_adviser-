@@ -4,7 +4,14 @@ import { readFileSync } from 'node:fs'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Category, Transaction } from '../db/schema'
+import { riverPath } from './river'
 import { Timeline } from './Timeline'
+
+// The real thing, watched: how often the line's pictures are made says how often its rows are drawn.
+vi.mock('./river', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./river')>()
+  return { ...actual, riverPath: vi.fn(actual.riverPath) }
+})
 
 const today = new Date(2026, 10, 6) // Fri 6 Nov 2026
 
@@ -178,6 +185,42 @@ describe('Timeline: opening a day', () => {
     fireEvent.click(days().getByRole('button', { name: 'Yesterday, ₹750, 2 expenses' }))
     fireEvent.click(screen.getByRole('button', { name: 'See yesterday’s expenses' }))
     expect(onPickDay).toHaveBeenCalledWith('2026-11-05')
+  })
+})
+
+describe('Timeline: it does not redraw what has not changed', () => {
+  const drawn = vi.mocked(riverPath)
+
+  it('draws no stretch of the line again when a day is opened or shut', () => {
+    mount()
+    drawn.mockClear()
+    fireEvent.click(days().getByRole('button', { name: 'Yesterday, ₹750, 2 expenses' }))
+    fireEvent.click(days().getByRole('button', { name: 'Today, ₹120, 1 expense' }))
+    fireEvent.click(days().getByRole('button', { name: 'Today, ₹120, 1 expense' }))
+    expect(drawn).not.toHaveBeenCalled()
+  })
+
+  it('draws only what changed when a new expense comes in: not the line for days it did not touch', () => {
+    const list = expenses()
+    const { rerender } = render(<Timeline expenses={list} categoryById={categoryById} currency="INR" today={today} onPickDay={vi.fn()} />)
+    drawn.mockClear()
+    // A small new expense on the 5th (not the biggest day): that day, the stretch before it and the one after it change, and the rest of the line stays as it was.
+    const onPickDay = vi.fn()
+    rerender(<Timeline expenses={[...list, tx('2026-11-05', 10, 1, 'Tea')]} categoryById={categoryById} currency="INR" today={today} onPickDay={onPickDay} />)
+    const afterSecond = drawn.mock.calls.length
+    expect(afterSecond).toBeGreaterThan(0) // it does draw what changed
+    expect(afterSecond).toBeLessThanOrEqual(3) // the two stretches either side of that day, and not the other five
+  })
+
+  it('opens the one day it is asked to, and shuts the other', () => {
+    mount()
+    const yesterday = days().getByRole('button', { name: 'Yesterday, ₹750, 2 expenses' })
+    const today = days().getByRole('button', { name: 'Today, ₹120, 1 expense' })
+    fireEvent.click(yesterday)
+    expect(yesterday).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(today)
+    expect(yesterday).toHaveAttribute('aria-expanded', 'false')
+    expect(today).toHaveAttribute('aria-expanded', 'true')
   })
 })
 

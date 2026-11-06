@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import type { LedgerTx } from '../data/buildLedger'
 import { setDisplay, useDisplay } from '../data/display'
 import { CategoryBars } from '../charts/CategoryBars'
@@ -105,6 +105,8 @@ export const Home = memo(function Home({
   const currentMonth = todayKey.slice(0, 7)
   const isCurrent = month === currentMonth
   const display = useDisplay()
+  // The timeline is not redrawn for a handler that is new at every render of Home, so this one keeps its identity.
+  const pickDay = useCallback((date: string) => onPickPeriod({ from: date, to: date }), [onPickPeriod])
 
   // Everything below depends only on the data, the month and the day, so it is worked out once
   // per change rather than on every render.
@@ -253,7 +255,7 @@ export const Home = memo(function Home({
                       lastDay={isCurrent ? today.getDate() : null}
                       currency={currency}
                       budgetMinor={budgetMinor}
-                      onPickDay={(date) => onPickPeriod({ from: date, to: date })}
+                      onPickDay={pickDay}
                     />
                   </div>
                 </section>
@@ -286,7 +288,7 @@ export const Home = memo(function Home({
             <GoalsSummary goals={ledger.goals} currency={currency} today={today} onOpen={onOpenGoals} />
           </>
         }
-        timeline={<Timeline expenses={expenses} categoryById={categoryById} currency={currency} today={today} onPickDay={(date) => onPickPeriod({ from: date, to: date })} />}
+        timeline={<Timeline expenses={expenses} categoryById={categoryById} currency={currency} today={today} onPickDay={pickDay} />}
       />
     </div>
   )
