@@ -1218,51 +1218,55 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 .today-float {
   animation: float-bob 2.6s ease-in-out 1.6s infinite;
 }
-/* The tank on Home: water that rises to how much of the budget is spent, with the same rolling surface, and a few bubbles drifting
-   up through it. The level is only a transform, so changing it moves the water and redraws nothing else. */
-@keyframes water-fill {
+/* The budget on Home is the outline of the Overview card: a line in the budget's colour grows around the border as far as the share
+   spent, with water running along it, ripples going one way and fainter ones the other. The ripples are dashes of one period that
+   slide by exactly that period, so the loop has no seam. Going round is only the line's dash, so a new share moves it smoothly. */
+@keyframes border-fill {
   from {
-    transform: translateY(100%);
+    stroke-dasharray: 0 1;
   }
 }
-@keyframes bubble-up {
-  0% {
-    transform: translateY(0);
-    opacity: 0;
-  }
-  15% {
-    opacity: 0.55;
-  }
-  100% {
-    transform: translateY(-3.2rem);
-    opacity: 0;
+@keyframes border-flow {
+  to {
+    stroke-dashoffset: -0.06;
   }
 }
-.water-level {
-  transition: transform 1s cubic-bezier(0.3, 0.8, 0.3, 1);
+@keyframes border-flow-back {
+  from {
+    stroke-dashoffset: -0.1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
-.water-rise {
-  animation: water-fill 1.4s cubic-bezier(0.25, 0.85, 0.3, 1) backwards;
+.water-border-fill {
+  transition: stroke-dasharray 1s cubic-bezier(0.3, 0.8, 0.3, 1);
 }
-.water-bubble {
-  background: rgb(255 255 255 / 0.55);
-  animation: bubble-up 4.5s ease-in infinite;
+.water-border-fill[data-rise] {
+  animation: border-fill 1.6s cubic-bezier(0.25, 0.85, 0.3, 1) backwards;
+}
+.water-border-flow {
+  animation: border-flow 2.4s linear infinite;
+}
+.water-border-flow-back {
+  animation: border-flow-back 4s linear infinite;
+}
+[data-water-border][data-over] .water-border-flow {
+  animation-duration: 1.2s;
 }
 @media (prefers-reduced-motion: reduce) {
   .water-wave-front,
   .water-wave-back,
   .water-slosh,
-  .water-rise,
-  .water-bubble,
   .today-drop,
-  .today-float {
+  .today-float,
+  .water-border-fill[data-rise],
+  .water-border-flow,
+  .water-border-flow-back {
     animation: none;
   }
-  .water-level {
+  .water-border-fill {
     transition: none;
-  }
-  .water-bubble {
-    display: none;
   }
 }
 

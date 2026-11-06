@@ -1,4 +1,6 @@
-import { useId, type CSSProperties } from 'react'
+import { useId, useLayoutEffect, useRef, useState, type RefObject } from 'react'
+import { BUDGET_SKY, budgetTone } from '../charts/budgetTone'
+import { useIntro } from './motion'
 
 /** One wave as a tile that repeats: the surface rises and falls once in 28 pixels, and meets itself at both ends. */
 const WAVE = 'M0 4C7 -0.5 7 -0.5 14 4C21 8.5 21 8.5 28 4V0H0Z'
@@ -32,47 +34,77 @@ export function WaveCover() {
   )
 }
 
-/** Where the little bubbles rise, as a share of the width, and when they start. */
-const BUBBLES = [
-  { left: '14%', delay: '0s', size: 5 },
-  { left: '41%', delay: '1.3s', size: 4 },
-  { left: '68%', delay: '0.6s', size: 6 },
-  { left: '86%', delay: '2s', size: 4 },
-]
+/** How thick the line is, and the corner radius of the card it goes around (the card's own corners are set to this, in pixels, so they match). */
+const LINE = 3
+export const CARD_RADIUS = 24
 
-interface TankProps {
-  /** How full it is, from 0 to 1. */
-  level: number
-  /** The water's colour. */
-  color: string
-  /** The colour of the empty part, which the waves are cut out of. */
-  sky: string
-  /** Rises from empty when first drawn (the first time the screen is shown), rather than starting at its level. */
-  rise?: boolean
-  className?: string
+/** The path of a rounded rectangle from its top left corner, clockwise, which is the way the line grows. */
+export function roundedRect(w: number, h: number, r: number): string {
+  const k = Math.max(0, Math.min(r, w / 2, h / 2))
+  const arc = `A${k} ${k} 0 0 1`
+  return `M${k} 0H${w - k}${arc} ${w} ${k}V${h - k}${arc} ${w - k} ${h}H${k}${arc} 0 ${h - k}V${k}${arc} ${k} 0Z`
+}
+
+/** The size an element has, kept up to date as it changes. Until it is known (and where there is no layout at all) a plain square. */
+function useBox(ref: RefObject<Element | null>): { w: number; h: number } {
+  const [box, setBox] = useState({ w: 320, h: 320 })
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const read = () => {
+      const r = el.getBoundingClientRect()
+      if (r.width > 0 && r.height > 0) setBox((b) => (b.w === r.width && b.h === r.height ? b : { w: r.width, h: r.height }))
+    }
+    read()
+    if (typeof ResizeObserver === 'undefined') return
+    const watch = new ResizeObserver(read)
+    watch.observe(el)
+    return () => watch.disconnect()
+  }, [ref])
+  return box
 }
 
 /**
- * A tank of water that fills to `level`: the water rises to it, rolls along its surface, and keeps a few bubbles drifting up.
- * A change of level rises or falls to the new one. Only transforms move, so it is cheap to keep running.
+ * The outline of a card as a gauge, drawn right on its border: a line in the budget's colour grows around the card (from the top
+ * left, clockwise) as far as the share of the budget that is spent, and goes all the way round, in red, once it is passed. Water
+ * runs along the filled part: ripples travelling one way and a fainter set the other. The first time the app shows it the line fills
+ * from nothing; later it moves to a new share. Put it inside the card, which must be positioned; it takes no clicks.
+ *
+ * It is a path of the card's measured size, with its length given as 1, so every dash below is a share of the way round.
  */
-export function WaterTank({ level, color, sky, rise = false, className = '' }: TankProps) {
-  // Never quite empty, so a little spent still looks like water, and never past the brim.
-  const shown = Math.min(1, Math.max(0.1, level))
+export function WaterBorder({ ratio }: { ratio: number }) {
+  const id = useId().replace(/:/g, '')
+  const rise = useIntro()
+  const svg = useRef<SVGSVGElement>(null)
+  const { w, h } = useBox(svg)
+  const { over, fill } = budgetTone(ratio)
+  // Never quite empty, so a little spent still shows, and never past the full round.
+  const share = Math.min(1, Math.max(0.03, ratio))
+  const dash = `${share} 1`
+  const edge = { d: roundedRect(w, h, CARD_RADIUS - LINE / 2), pathLength: 1, fill: 'none', strokeWidth: LINE } as const
+
   return (
-    <div
-      data-water
-      data-level={Math.round(level * 100)}
-      className={`water-tank relative overflow-hidden ${className}`}
-      style={{ background: sky, '--wave-sky': sky } as CSSProperties}
+    <svg
+      ref={svg}
+      aria-hidden="true"
+      data-water-border
+      data-level={Math.round(ratio * 100)}
+      data-over={over || undefined}
+      className="pointer-events-none absolute overflow-visible"
+      style={{ left: LINE / 2, top: LINE / 2, width: `calc(100% - ${LINE}px)`, height: `calc(100% - ${LINE}px)` }}
     >
-      <div className={`water-level absolute inset-0${rise ? ' water-rise' : ''}`} style={{ transform: `translateY(${(1 - shown) * 100}%)` }}>
-        <span className="absolute inset-0" style={{ background: color }} />
-        <WaveCover />
-        {BUBBLES.map((b) => (
-          <span key={b.left} aria-hidden="true" className="water-bubble absolute bottom-1 rounded-full" style={{ left: b.left, width: b.size, height: b.size, animationDelay: b.delay }} />
-        ))}
-      </div>
-    </div>
+      <defs>
+        {/* The ripples are only shown where the line is filled. */}
+        <mask id={id}>
+          <path {...edge} stroke="#fff" strokeLinecap="round" strokeDasharray={dash} className="water-border-fill" />
+        </mask>
+      </defs>
+      <path {...edge} stroke={BUDGET_SKY} />
+      <path {...edge} stroke={fill} strokeLinecap="round" strokeDasharray={dash} className="water-border-fill" data-rise={rise || undefined} />
+      <g mask={`url(#${id})`}>
+        <path {...edge} stroke="#fff" strokeOpacity="0.5" strokeDasharray="0.014 0.046" className="water-border-flow" />
+        <path {...edge} stroke="#fff" strokeOpacity="0.3" strokeWidth={LINE / 2} strokeDasharray="0.02 0.08" className="water-border-flow-back" />
+      </g>
+    </svg>
   )
 }

@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react'
 import { AnimatedMoney } from './AnimatedMoney'
 import { Icon } from './Icon'
 import { useSwipe } from './useSwipe'
+import { WaterBorder } from './Water'
 
 export interface PeriodTile {
   id: string
@@ -75,7 +76,9 @@ export function SpendingOverview({
   }
 
   return (
-    <section aria-label="Summary" {...swipe} className="relative mt-3 touch-pan-y rounded-3xl bg-surface p-5 shadow-[0_0_0_1px_var(--ring)]">
+    <section aria-label="Summary" {...swipe} className="relative mt-3 touch-pan-y rounded-[24px] bg-surface p-5 shadow-[0_0_0_1px_var(--ring)]">
+      {/* The budget, drawn on the card's own outline. */}
+      {budgetMinor !== null && <WaterBorder ratio={totalMinor / budgetMinor} />}
       <button
         type="button"
         aria-pressed={privacy}
@@ -134,7 +137,7 @@ export function SpendingOverview({
 
       {budgetMinor !== null && (
         <div className="mt-4 border-t border-line pt-4">
-          <Meter spentMinor={totalMinor} limitMinor={budgetMinor} currency={currency} variant="water" />
+          <Meter spentMinor={totalMinor} limitMinor={budgetMinor} currency={currency} variant="text" />
         </div>
       )}
 

@@ -1,26 +1,24 @@
 import { formatMoney } from '../db/money'
 import { Icon } from '../ui/Icon'
 import { useIntro } from '../ui/motion'
-import { WaterTank } from '../ui/Water'
+import { BUDGET_SKY, budgetTone } from './budgetTone'
 
 interface Props {
   spentMinor: number
   limitMinor: number
   currency: string
-  /** 'water' draws it as a tank that fills as the money is spent; 'bar' (the default) is a plain bar, for lists of many. */
-  variant?: 'bar' | 'water'
+  /**
+   * 'bar' (the default) draws a bar. 'text' draws none: something else on the page shows the level (the water around the card on
+   * Home), and the meter is kept for the words and for a screen reader.
+   */
+  variant?: 'bar' | 'text'
 }
-
-/** The colour of the unfilled part. */
-const SKY = 'color-mix(in oklab, var(--accent) 16%, var(--surface))'
 
 /** Budget progress. The state is always stated in words and an icon, never by color alone. */
 export function Meter({ spentMinor, limitMinor, currency, variant = 'bar' }: Props) {
   const intro = useIntro()
   const ratio = spentMinor / limitMinor
-  const over = ratio >= 1
-  const close = ratio >= 0.8 && !over
-  const fill = over ? 'var(--critical)' : close ? 'var(--warn-ui)' : 'var(--accent)'
+  const { over, close, fill } = budgetTone(ratio)
 
   const status = over
     ? `Over budget by ${formatMoney(spentMinor - limitMinor, currency)}`
@@ -44,12 +42,10 @@ export function Meter({ spentMinor, limitMinor, currency, variant = 'bar' }: Pro
         aria-valuemax={limitMinor / 100}
         aria-valuenow={Math.min(spentMinor, limitMinor) / 100}
         aria-valuetext={status}
-        className={variant === 'water' ? 'mt-3' : 'mt-2 h-2.5 overflow-hidden rounded-full'}
-        style={variant === 'water' ? undefined : { background: SKY }}
+        className={variant === 'text' ? 'sr-only' : 'mt-2 h-2.5 overflow-hidden rounded-full'}
+        style={variant === 'text' ? undefined : { background: BUDGET_SKY }}
       >
-        {variant === 'water' ? (
-          <WaterTank level={ratio} color={fill} sky={SKY} rise={intro} className="h-16 rounded-2xl" />
-        ) : (
+        {variant === 'bar' && (
           <div
             className={`${intro ? 'bar-reveal ' : ''}h-full rounded-full transition-[width] duration-300`}
             style={{ width: `${Math.min(ratio, 1) * 100}%`, background: fill }}
