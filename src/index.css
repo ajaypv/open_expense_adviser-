@@ -1069,12 +1069,12 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 
 /* The line between days is a small river. Its coloured part is shown from the top down as far as the page has been scrolled
    (--p, set as the page moves, so it follows the finger and trails it a little), and a bead of light rides the leading edge,
-   swaying with the river. The grey river under it is always there. */
+   along it. The grey line under it is always there. */
 .tl-fill {
   clip-path: inset(0 0 calc((1 - var(--p, 1)) * 100%) 0);
 }
 .tl-head {
-  left: calc(50% + var(--hx, 0px));
+  left: 50%;
   top: calc(var(--p, 1) * 100%);
   translate: -50% -50%;
   opacity: 0;

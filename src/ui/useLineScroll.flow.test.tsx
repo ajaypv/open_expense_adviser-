@@ -21,7 +21,7 @@ function List({ k = 0 }: { k?: number }) {
         {[0, 1, 2].map((i) => (
           <li key={i}>
             <span data-dot data-at={30 + i * 200} />
-            <span data-seg data-dir={i % 2 ? '-1' : '1'} data-top={30 + i * 200} data-height="100" />
+            <span data-seg data-top={30 + i * 200} data-height="100" />
           </li>
         ))}
         <li>
@@ -66,15 +66,6 @@ describe('useLineScroll', () => {
     layout()
     render(<List />)
     expect(segs().map((s) => s.dataset.live)).toEqual(['false', 'false', 'true'])
-  })
-
-  it('sets the bead sideways with the sway, so it rides the river and not a straight line', () => {
-    layout()
-    render(<List />)
-    const x = (i: number) => parseFloat(segs()[i].style.getPropertyValue('--hx'))
-    expect(x(0)).toBeCloseTo(0, 5)
-    expect(Math.abs(x(2))).toBeGreaterThan(0)
-    expect(x(2)).toBeGreaterThan(0) // the third sways to the right
   })
 
   it('leaves what is below the line undrawn and dark', () => {

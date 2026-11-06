@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { RIVER_HEIGHT, RIVER_WIDTH, riverPath, SWAY, swayAt, widthFor } from './river'
+import { RIVER_HEIGHT, RIVER_WIDTH, riverPath, widthFor } from './river'
 
 const points = (d: string) =>
   d
@@ -22,29 +22,9 @@ describe('widthFor', () => {
   })
 })
 
-describe('swayAt', () => {
-  it('is nothing at either end, so one stretch meets the next running straight down', () => {
-    expect(swayAt(0, 1)).toBeCloseTo(0, 10)
-    expect(swayAt(1, 1)).toBeCloseTo(0, 10)
-    expect(swayAt(0, -1)).toBeCloseTo(0, 10)
-  })
-
-  it('is greatest in the middle, to one side or the other', () => {
-    expect(swayAt(0.5, 1)).toBeCloseTo(SWAY)
-    expect(swayAt(0.5, -1)).toBeCloseTo(-SWAY)
-    expect(swayAt(0.25, 1)).toBeLessThan(swayAt(0.5, 1))
-  })
-
-  it('leaves its slope at the ends at nothing too, so there is no kink where stretches join', () => {
-    const slope = (t: number) => (swayAt(t + 1e-4, 1) - swayAt(t, 1)) / 1e-4
-    expect(Math.abs(slope(0))).toBeLessThan(0.01)
-    expect(Math.abs(slope(1 - 1e-4))).toBeLessThan(0.01)
-  })
-})
-
 describe('riverPath', () => {
   it('is one closed outline inside its box', () => {
-    const d = riverPath(3, 6, 1)
+    const d = riverPath(3, 6)
     expect(d.startsWith('M')).toBe(true)
     expect(d.endsWith('Z')).toBe(true)
     for (const [x, y] of points(d)) {
@@ -55,26 +35,32 @@ describe('riverPath', () => {
     }
   })
 
-  it('starts as wide as the top width and ends as wide as the bottom width, centred on the line', () => {
-    const p = points(riverPath(3, 7, 1, 10))
+  it('starts as wide as the top width and ends as wide as the bottom width, centred', () => {
+    const p = points(riverPath(3, 7, 10))
     expect(p[0]).toEqual([12 - 1.5, 0]) // left edge, top
     expect(p[10]).toEqual([12 - 3.5, RIVER_HEIGHT]) // left edge, bottom
     expect(p[11]).toEqual([12 + 3.5, RIVER_HEIGHT]) // right edge, bottom
     expect(p[21]).toEqual([12 + 1.5, 0]) // right edge, top
   })
 
-  it('bows to the side it is told, and the other way for the other', () => {
-    const middle = (d: string) => {
-      const p = points(d)
-      const half = (p.length - 2) / 2
-      return (p[half / 2][0] + p[p.length - 1 - half / 2][0]) / 2
+  it('runs straight down: both edges are the same distance either side of the middle at every height, so it never bends or crosses itself', () => {
+    const p = points(riverPath(2.5, 8, 12))
+    const n = p.length / 2
+    for (let i = 0; i < n; i++) {
+      const [lx, ly] = p[i]
+      const [rx, ry] = p[p.length - 1 - i]
+      expect(ry).toBe(ly)
+      expect(12 - lx).toBeCloseTo(rx - 12, 1)
     }
-    expect(middle(riverPath(4, 4, 1))).toBeGreaterThan(12)
-    expect(middle(riverPath(4, 4, -1))).toBeLessThan(12)
+  })
+
+  it('goes steadily down, never back up', () => {
+    const ys = points(riverPath(3, 6)).slice(0, 21).map(([, y]) => y)
+    for (let i = 1; i < ys.length; i++) expect(ys[i]).toBeGreaterThan(ys[i - 1])
   })
 
   it('is as wide all the way down when both ends are', () => {
-    const p = points(riverPath(5, 5, 1, 8))
+    const p = points(riverPath(5, 5, 8))
     const n = p.length / 2
     for (let i = 0; i < n; i++) expect(p[p.length - 1 - i][0] - p[i][0]).toBeCloseTo(5, 1)
   })

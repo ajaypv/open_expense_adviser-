@@ -147,15 +147,14 @@ function WeekCard({ week, look }: { week: ReturnType<typeof buildTimeline>['week
   )
 }
 
-/** One stretch of the line, from the dot of one day to the next: a small river that sways and is as wide as the money on it. */
-function River({ from, to, wFrom, wTo, dir, edge, top = DOT_Y, left = '50%' }: { from: string; to: string; wFrom: number; wTo: number; dir: 1 | -1; edge?: boolean; top?: string; left?: string }) {
+/** One stretch of the line, from the dot of one day to the next, straight down and as wide as the money on it. */
+function River({ from, to, wFrom, wTo, edge, top = DOT_Y, left = '50%' }: { from: string; to: string; wFrom: number; wTo: number; edge?: boolean; top?: string; left?: string }) {
   const id = useId().replace(/:/g, '')
-  const d = riverPath(wFrom, edge ? wFrom : wTo, dir)
+  const d = riverPath(wFrom, edge ? wFrom : wTo)
   const end = edge ? from : to
   return (
     <span
       data-seg
-      data-dir={dir}
       className="tl-river absolute w-6 -translate-x-1/2"
       style={{ top, left, bottom: edge ? 0 : `calc(${DOT_Y} * -1)`, '--from': from, '--to': end } as CSSProperties}
     >
@@ -202,10 +201,10 @@ function DateChip({ date }: { date: string }) {
  * ping. The river runs from this dot to the next, from one colour into the next's, and stops at the foot of the row when a month
  * heading comes next, which carries it on.
  */
-function Spine({ color, next, wFrom, wTo, dir, today, edge, children }: { color: string; next: string | null; wFrom: number; wTo: number; dir: 1 | -1; today?: boolean; edge?: boolean; children: React.ReactNode }) {
+function Spine({ color, next, wFrom, wTo, today, edge, children }: { color: string; next: string | null; wFrom: number; wTo: number; today?: boolean; edge?: boolean; children: React.ReactNode }) {
   return (
     <div aria-hidden="true" className="relative">
-      {next !== null && <River from={color} to={next} wFrom={wFrom} wTo={wTo} dir={dir} edge={edge} />}
+      {next !== null && <River from={color} to={next} wFrom={wFrom} wTo={wTo} edge={edge} />}
       <span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ top: DOT_Y }}>
         {today && <span className="tl-ping absolute inset-0 rounded-full" style={{ color }} />}
         <span data-dot className="tl-dot relative flex size-[2.625rem] flex-col items-center justify-center rounded-full leading-none" style={{ '--c': color } as CSSProperties}>
@@ -224,17 +223,16 @@ interface DayProps {
   next: string | null
   /** A month heading comes next, so the line stops at the foot of this row. */
   edge: boolean
-  /** How wide the line is where it leaves this day and where it meets the next, and which way it sways between. */
+  /** How wide the line is where it leaves this day and where it meets the next. */
   wFrom: number
   wTo: number
-  dir: 1 | -1
   open: boolean
   onToggle: () => void
   onPickDay: (date: string) => void
   categoryById: Map<number, Category>
 }
 
-function DayRow({ day, look, max, color, next, edge, wFrom, wTo, dir, open, onToggle, onPickDay, categoryById }: DayProps) {
+function DayRow({ day, look, max, color, next, edge, wFrom, wTo, open, onToggle, onPickDay, categoryById }: DayProps) {
   const [watch, seen] = useSeen(0.2)
   const money = (m: number) => formatMoney(m, look.currency)
   const empty = day.totalMinor === 0
@@ -246,7 +244,7 @@ function DayRow({ day, look, max, color, next, edge, wFrom, wTo, dir, open, onTo
 
   return (
     <li ref={watch} data-seen={seen} data-day={day.date} className="when-seen grid grid-cols-[3rem_minmax(0,1fr)] gap-x-2" style={delayOf(0)}>
-      <Spine color={color} next={next} edge={edge} wFrom={wFrom} wTo={wTo} dir={dir} today={day.daysAgo === 0}>
+      <Spine color={color} next={next} edge={edge} wFrom={wFrom} wTo={wTo} today={day.daysAgo === 0}>
         <DateChip date={day.date} />
       </Spine>
       <div className="pb-4">
@@ -343,11 +341,11 @@ function DayRow({ day, look, max, color, next, edge, wFrom, wTo, dir, open, onTo
 }
 
 /** Days with nothing spent are good news, and are said so: one day has its date in the dot, a run of them a tick. */
-function QuietRow({ row, color, next, edge, wFrom, wTo, dir }: { row: Extract<TimelineRow, { kind: 'quiet' }>; color: string; next: string | null; edge: boolean; wFrom: number; wTo: number; dir: 1 | -1 }) {
+function QuietRow({ row, color, next, edge, wFrom, wTo }: { row: Extract<TimelineRow, { kind: 'quiet' }>; color: string; next: string | null; edge: boolean; wFrom: number; wTo: number }) {
   const one = row.count === 1
   return (
     <li data-quiet={row.to} className="grid grid-cols-[3rem_minmax(0,1fr)] gap-x-2">
-      <Spine color={color} next={next} edge={edge} wFrom={wFrom} wTo={wTo} dir={dir}>
+      <Spine color={color} next={next} edge={edge} wFrom={wFrom} wTo={wTo}>
         {one ? <DateChip date={row.to} /> : <Icon name="check" size={18} />}
       </Spine>
       <div className="pb-4 pt-3.5">
@@ -437,7 +435,7 @@ export function Timeline({ expenses, categoryById, currency, today, onPickDay }:
               <li key={r.key} className="relative flex items-baseline justify-between gap-3 pb-3 pl-[3.5rem] pr-1 pt-2">
                 {/* The river goes on behind the heading, from one day's colour and width to the next's. */}
                 {before !== -1 && after !== -1 && (
-                  <River from={colors[before]} to={colors[after]} wFrom={widths[before]} wTo={widths[after]} dir={i % 2 === 0 ? 1 : -1} top="0px" left="1.5rem" />
+                  <River from={colors[before]} to={colors[after]} wFrom={widths[before]} wTo={widths[after]} top="0px" left="1.5rem" />
                 )}
                 <h3 className="text-lg font-bold tracking-tight">{label}</h3>
                 <span className="text-sm text-ink-2">{`${formatMoney(monthTotals.get(r.month) ?? 0, currency)} spent`}</span>
@@ -446,9 +444,8 @@ export function Timeline({ expenses, categoryById, currency, today, onPickDay }:
           }
           const next = after === -1 ? null : colors[after]
           const edge = rows[i + 1]?.kind === 'month'
-          const dir = i % 2 === 0 ? 1 : -1
           const wTo = after === -1 ? widths[i] : widths[after]
-          if (r.kind === 'quiet') return <QuietRow key={r.key} row={r} color={colors[i]} next={next} edge={edge} wFrom={widths[i]} wTo={wTo} dir={dir} />
+          if (r.kind === 'quiet') return <QuietRow key={r.key} row={r} color={colors[i]} next={next} edge={edge} wFrom={widths[i]} wTo={wTo} />
           return (
             <DayRow
               key={r.key}
@@ -460,7 +457,6 @@ export function Timeline({ expenses, categoryById, currency, today, onPickDay }:
               edge={edge}
               wFrom={widths[i]}
               wTo={wTo}
-              dir={dir}
               open={open === r.day.date}
               onToggle={() => setOpen((o) => (o === r.day.date ? null : r.day.date))}
               onPickDay={onPickDay}

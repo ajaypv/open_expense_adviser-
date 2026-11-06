@@ -253,7 +253,7 @@ describe('Timeline: the line', () => {
   const css = readFileSync('src/index.css', 'utf8').replace(/\r/g, '')
   const segs = () => [...document.querySelectorAll<HTMLElement>('[data-seg]')]
 
-  it('runs from each day to the next as a river, grey beneath and coloured above', () => {
+  it('runs from each day to the next as a line, grey beneath and coloured above', () => {
     mount()
     const seg = dayRow('2026-11-05').querySelector('[data-seg]') as HTMLElement
     expect(seg.querySelectorAll('svg')).toHaveLength(2)
@@ -262,11 +262,19 @@ describe('Timeline: the line', () => {
     expect(seg.querySelector('.tl-head')).toBeInTheDocument()
   })
 
-  it('winds: each stretch sways the other way from the one before', () => {
+  it('runs straight down, with no sway, so it never crosses over itself or the dates', () => {
     mount()
-    const dirs = segs().map((x) => x.dataset.dir)
-    expect(new Set(dirs)).toEqual(new Set(['1', '-1']))
-    for (let i = 1; i < dirs.length; i++) expect(dirs[i]).not.toBe(dirs[i - 1])
+    for (const seg of segs()) {
+      const d = seg.querySelector('path')!.getAttribute('d')!
+      const points = d.slice(1, -1).split('L').map((p) => p.split(' ').map(Number))
+      const half = (points.length - 0) / 2
+      for (let i = 0; i < half; i++) {
+        const [lx] = points[i]
+        const [rx] = points[points.length - 1 - i]
+        expect(12 - lx).toBeCloseTo(rx - 12, 1) // centred on the middle at every height
+      }
+      expect(seg.dataset.dir).toBeUndefined()
+    }
   })
 
   it('is broader where more was spent: a wider outline after the biggest day than after a quiet one', () => {

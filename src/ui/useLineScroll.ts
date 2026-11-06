@@ -1,5 +1,4 @@
 import { useLayoutEffect, type RefObject } from 'react'
-import { swayAt } from './river'
 
 /** How far down the screen the line has reached when it is drawn: a little below the middle, where the eye is. */
 const READ_AT = 0.62
@@ -28,9 +27,7 @@ export function useLineScroll(list: RefObject<HTMLElement | null>, layoutKey: st
       dot.dataset.lit = String(on)
     }
     const draw = (seg: HTMLElement, p: number) => {
-      const dir = seg.dataset.dir === '1' ? 1 : -1
       seg.style.setProperty('--p', String(p))
-      seg.style.setProperty('--hx', `${swayAt(p, dir).toFixed(2)}px`)
       seg.dataset.live = String(p > 0 && p < 1)
     }
 
