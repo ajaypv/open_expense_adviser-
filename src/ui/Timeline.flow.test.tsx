@@ -342,3 +342,54 @@ describe('Timeline: motion', () => {
     expect(css).toMatch(/prefers-reduced-motion: reduce\) \{[\s\S]*?\.tl-dot \{\s*transition: none[\s\S]*?\.tl-head \{\s*display: none[\s\S]*?\.tl-ping \{\s*animation: none/)
   })
 })
+
+describe('Timeline: today’s water bar', () => {
+  const todayBar = () => document.querySelector('[data-today-bar]') as HTMLElement | null
+  const pieces = (row: HTMLElement) => [...row.querySelectorAll('[data-piece]')].map((p) => p.getAttribute('data-piece'))
+
+  it('is only on today, and no other day has waves or a floater', () => {
+    mount()
+    expect(document.querySelectorAll('[data-today-bar]')).toHaveLength(1)
+    expect(dayRow('2026-11-06').querySelector('[data-today-bar]')).toBeInTheDocument()
+    for (const date of ['2026-11-05', '2026-11-03', '2026-10-31']) {
+      expect(dayRow(date).querySelector('.today-wave')).toBeNull()
+      expect(dayRow(date).querySelector('[data-floater]')).toBeNull()
+    }
+  })
+
+  it('rolls two waves along the top of the water', () => {
+    mount()
+    expect(todayBar()!.querySelectorAll('.today-wave')).toHaveLength(2)
+  })
+
+  it('floats the icon of the expense added last on the end of the bar, and ends the bar on its category', () => {
+    const list = [tx('2026-11-06', 300, 2, 'Uber'), tx('2026-11-06', 120, 1, 'Cafe'), tx('2026-11-06', 50, 2, 'Metro')]
+    mount(list)
+    const floater = todayBar()!.querySelector('[data-floater]') as HTMLElement
+    expect(floater.getAttribute('data-floater')).toBe(String(list[2].id)) // the Metro, added last
+    // Transport is the biggest and Food & Dining the smallest, yet the colour on the end is the one just spent on.
+    expect(pieces(dayRow('2026-11-06'))).toEqual(['1', '2'])
+  })
+
+  it('drops a new float in when a newer expense is added', () => {
+    const first = [tx('2026-11-06', 120, 1, 'Cafe')]
+    const { rerender } = render(<Timeline expenses={first} categoryById={categoryById} currency="INR" today={today} onPickDay={vi.fn()} />)
+    const before = document.querySelector('[data-floater]')!
+    rerender(<Timeline expenses={[...first, tx('2026-11-06', 60, 2, 'Bus')]} categoryById={categoryById} currency="INR" today={today} onPickDay={vi.fn()} />)
+    const after = document.querySelector('[data-floater]')!
+    expect(after).not.toBe(before)
+    expect(after.getAttribute('data-floater')).not.toBe(before.getAttribute('data-floater'))
+  })
+
+  it('has no bar, and so no water, on a day with nothing spent', () => {
+    mount([tx('2026-11-05', 450, 1, 'Swiggy')])
+    expect(todayBar()).toBeNull()
+  })
+
+  it('stills the water for reduced motion', () => {
+    const css = readFileSync('src/index.css', 'utf8')
+    const block = css.slice(css.indexOf('@keyframes wave-roll'))
+    const reduced = block.slice(block.indexOf('@media (prefers-reduced-motion: reduce)'))
+    for (const name of ['.today-wave-front', '.today-wave-back', '.today-slosh', '.today-drop', '.today-float']) expect(reduced.slice(0, 300)).toContain(name)
+  })
+})

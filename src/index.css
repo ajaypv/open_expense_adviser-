@@ -1131,6 +1131,103 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   }
 }
 
+/* Today's bar is water. Two strips of wave, the colour of the track, roll along the top of the coloured fill and leave its surface
+   wavy; the pair is slid sideways by exactly one tile, so the loop has no seam. When the bar comes into view the surface sloshes, tall
+   and settling, like a bottle just filled and shaken. The expense added last floats on the end: it drops in with a little bounce, then
+   bobs and tips. Everything is held until the bar is seen (.when-seen) and stopped for reduced motion. */
+@keyframes wave-roll {
+  to {
+    transform: translateX(-28px);
+  }
+}
+@keyframes wave-roll-back {
+  from {
+    transform: translateX(-28px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes water-slosh {
+  0% {
+    transform: scaleY(0.2);
+  }
+  22% {
+    transform: scaleY(2.1);
+  }
+  44% {
+    transform: scaleY(0.6);
+  }
+  66% {
+    transform: scaleY(1.5);
+  }
+  84% {
+    transform: scaleY(0.85);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+@keyframes float-drop {
+  0% {
+    transform: translateY(-1.2rem) scale(0.5);
+    opacity: 0;
+  }
+  55% {
+    transform: translateY(0.2rem) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes float-bob {
+  0%,
+  100% {
+    transform: translateY(1px) rotate(-9deg);
+  }
+  50% {
+    transform: translateY(-2px) rotate(9deg);
+  }
+}
+.today-wave {
+  position: absolute;
+  left: 0;
+  top: -1px;
+  pointer-events: none;
+}
+.today-wave path {
+  fill: var(--surface-2);
+}
+.today-wave-front {
+  animation: wave-roll 2.4s linear infinite;
+}
+.today-wave-back {
+  opacity: 0.55;
+  top: 1px;
+  animation: wave-roll-back 3.6s linear infinite;
+}
+.today-slosh {
+  transform-origin: top;
+  animation: water-slosh 1.8s ease-out 0.9s backwards;
+}
+.today-drop {
+  animation: float-drop 0.7s cubic-bezier(0.3, 1.4, 0.5, 1) 0.9s backwards;
+}
+.today-float {
+  animation: float-bob 2.6s ease-in-out 1.6s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .today-wave-front,
+  .today-wave-back,
+  .today-slosh,
+  .today-drop,
+  .today-float {
+    animation: none;
+  }
+}
+
 /* ---------- Settings ---------- */
 
 /* Settings is set in a rounded geometric face (Plus Jakarta Sans, already shipped for the glass themes), whatever the theme. */

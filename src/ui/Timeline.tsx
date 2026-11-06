@@ -81,6 +81,53 @@ function Pieces({ parts, look, delay = 0 }: { parts: DayPart[]; look: Look; dela
   )
 }
 
+/** One wave as a tile that repeats: the surface rises and falls once in 28 pixels, and meets itself at both ends. */
+const WAVE = 'M0 4C7 -0.5 7 -0.5 14 4C21 8.5 21 8.5 28 4V0H0Z'
+
+/** A strip of wave across the top of the water. It is the colour of the track above it, so what shows below is the water's own surface. */
+function Wave({ id, className }: { id: string; className: string }) {
+  return (
+    <svg aria-hidden="true" className={`today-wave ${className}`} height="8" width="100%" style={{ width: 'calc(100% + 28px)' }}>
+      <defs>
+        <pattern id={id} width="28" height="8" patternUnits="userSpaceOnUse">
+          <path d={WAVE} />
+        </pattern>
+      </defs>
+      <rect width="100%" height="8" fill={`url(#${id})`} />
+    </svg>
+  )
+}
+
+/**
+ * Today's bar, the one bar that moves. It is the day's bar as it always is (the categories side by side, as long as the day is
+ * against the biggest), but as water: two waves roll along its surface and slosh when it comes into view, and the expense added last
+ * floats on the end of it, in its category's icon, bobbing, and drops in with a splash when it is new.
+ */
+function TodayBar({ day, look, width, categoryById }: { day: TimelineDay; look: Look; width: number; categoryById: Map<number, Category> }) {
+  const id = useId().replace(/:/g, '')
+  const last = day.txs[0]
+  const category = categoryById.get(last.categoryId)
+  // The category of the expense added last is the end of the bar, so the colour on the end is what was just spent on.
+  const parts = useMemo(() => [...day.parts.filter((p) => p.categoryId !== last.categoryId), ...day.parts.filter((p) => p.categoryId === last.categoryId)], [day.parts, last.categoryId])
+  return (
+    <span aria-hidden="true" data-today-bar className="today-bar relative mt-3 block h-8 overflow-hidden rounded-full bg-surface-2">
+      <span className="relative block h-full" style={{ width: `${width}%` }}>
+        <Pieces parts={parts} look={look} delay={250} />
+        <span className="today-slosh absolute inset-x-0 top-0">
+          <Wave id={`${id}-b`} className="today-wave-back" />
+          <Wave id={`${id}-f`} className="today-wave-front" />
+        </span>
+        {/* A new expense is a new float: keyed, so it drops in again. */}
+        <span key={last.id} data-floater={last.id} className="today-drop absolute right-1 top-1/2 -mt-3.5">
+          <span className="today-float flex size-7 items-center justify-center rounded-full bg-surface text-ink shadow-[0_1px_4px_rgb(0_0_0/0.25)]" style={{ boxShadow: `inset 0 0 0 2px ${look.colorOf(last.categoryId)}, 0 1px 4px rgb(0 0 0 / 0.25)` }}>
+            <Icon name={spendIcon(last.merchant, category?.name)} size={15} />
+          </span>
+        </span>
+      </span>
+    </span>
+  )
+}
+
 /** One stretch of the line, from the dot of one day to the next, straight down and as wide as the money on it. */
 function RiverBase({ from, to, wFrom, wTo, edge, top = DOT_Y, left = '50%' }: { from: string; to: string; wFrom: number; wTo: number; edge?: boolean; top?: string; left?: string }) {
   const id = useId().replace(/:/g, '')
@@ -211,11 +258,15 @@ function DayRowBase({ day, look, max, color, next, edge, wFrom, wTo, open, onTog
                 </span>
               </span>
 
-              <span aria-hidden="true" className="mt-3 block h-3.5 overflow-hidden rounded-full bg-surface-2">
-                <span className="block h-full" style={{ width: `${Math.max(10, (day.totalMinor / Math.max(max, 1)) * 100)}%` }}>
-                  <Pieces parts={day.parts} look={look} delay={250} />
+              {day.daysAgo === 0 ? (
+                <TodayBar day={day} look={look} width={Math.max(14, (day.totalMinor / Math.max(max, 1)) * 100)} categoryById={categoryById} />
+              ) : (
+                <span aria-hidden="true" className="mt-3 block h-3.5 overflow-hidden rounded-full bg-surface-2">
+                  <span className="block h-full" style={{ width: `${Math.max(10, (day.totalMinor / Math.max(max, 1)) * 100)}%` }}>
+                    <Pieces parts={day.parts} look={look} delay={250} />
+                  </span>
                 </span>
-              </span>
+              )}
 
               <span className="mt-3 flex flex-wrap gap-1.5">
                 {shown.map((p) => (
