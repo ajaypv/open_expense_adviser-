@@ -1028,6 +1028,77 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   }
 }
 
+/* ---------- Home: the overview and the timeline ---------- */
+
+/* Two pages side by side; the track slides by a page, and follows the finger while it is down (no easing then). */
+.pager-track {
+  display: flex;
+  align-items: flex-start;
+  transform: translateX(calc(var(--i, 0) * -100% + var(--drag, 0px)));
+  transition: transform 380ms cubic-bezier(0.22, 0.85, 0.25, 1);
+}
+.pager-track[data-dragging='true'] {
+  transition: none;
+}
+.pager-panel {
+  flex: 0 0 100%;
+  min-width: 0;
+}
+/* The page that is not in view, once the slide is over, takes no room and cannot be reached. */
+.pager-panel[data-rest='true'] {
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+/* The tab's marker is carried along by how far across the pages are. */
+.pager-pill {
+  transform: translateX(calc(var(--p, 0) * 100%));
+  transition: transform 380ms cubic-bezier(0.22, 0.85, 0.25, 1);
+}
+.pager-pill[data-dragging='true'] {
+  transition: none;
+}
+
+/* ---------- The timeline ---------- */
+
+/* The line between two days is drawn down from the first, and then a pulse of light runs along it, as money moving on. */
+@keyframes tl-draw {
+  from {
+    transform: scaleY(0);
+  }
+}
+.tl-line {
+  transform-origin: top;
+  animation: tl-draw 0.7s cubic-bezier(0.3, 0.7, 0.3, 1) calc(var(--d, 0ms) + 120ms) backwards;
+}
+@keyframes tl-flow {
+  from {
+    transform: translateY(-120%);
+    opacity: 0.9;
+  }
+  to {
+    transform: translateY(260%);
+    opacity: 0;
+  }
+}
+.tl-flow {
+  opacity: 0;
+  background: linear-gradient(to bottom, transparent, color-mix(in oklab, var(--surface) 85%, transparent), transparent);
+  animation: tl-flow 1.5s ease-in-out calc(var(--d, 0ms) + 650ms) backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pager-track,
+  .pager-pill {
+    transition: none;
+  }
+  .tl-line {
+    animation: none;
+  }
+  .tl-flow {
+    display: none;
+  }
+}
+
 /* ---------- Settings ---------- */
 
 /* Settings is set in a rounded geometric face (Plus Jakarta Sans, already shipped for the glass themes), whatever the theme. */

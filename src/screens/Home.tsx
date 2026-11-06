@@ -31,6 +31,8 @@ import { SuggestionList } from '../ui/SuggestionList'
 import { TxList } from '../ui/TxList'
 import { UpcomingCard } from '../ui/UpcomingCard'
 import { WalletPanel } from '../ui/WalletPanel'
+import { HomePager } from '../ui/HomePager'
+import { Timeline } from '../ui/Timeline'
 
 type Ledger = ReturnType<typeof useLedger>
 
@@ -162,123 +164,130 @@ export const Home = memo(function Home({
   return (
     <div className="pb-4">
       <HomeHeader today={today} goals={ledger.goals} onOpenGoals={onOpenGoals} />
-      <MonthSwitcher month={month} currentMonth={currentMonth} onChange={onMonth} activeMonths={activeMonths} />
+      <HomePager
+        overview={
+          <>
+            <MonthSwitcher month={month} currentMonth={currentMonth} onChange={onMonth} activeMonths={activeMonths} />
 
-      {isCurrent && <BackupNudge transactionCount={txs.length} />}
-      {isCurrent && <DueCard ledger={ledger} today={today} />}
-      {isCurrent && logNudge && <LogNudge onAdd={onAdd} />}
+            {isCurrent && <BackupNudge transactionCount={txs.length} />}
+            {isCurrent && <DueCard ledger={ledger} today={today} />}
+            {isCurrent && logNudge && <LogNudge onAdd={onAdd} />}
 
-      <SpendingOverview
-        monthName={name}
-        isCurrent={isCurrent}
-        totalMinor={total}
-        deltaPct={delta}
-        partial={comparison.partial}
-        prevName={prevName}
-        dailyAverageMinor={Math.round(total / elapsedDays / 100) * 100}
-        expenseCount={expenseCount}
-        budgetMinor={budgetMinor}
-        currency={currency}
-        periods={
-          isCurrent
-            ? [
-                { id: 'today', label: 'Today', amountMinor: recentlySpent.todayMinor, from: todayKey, to: todayKey },
-                { id: 'yesterday', label: 'Yesterday', amountMinor: recentlySpent.yesterdayMinor, from: yesterdayKey, to: yesterdayKey },
-                { id: 'last7', label: 'Last 7 days', amountMinor: recentlySpent.last7Minor, from: weekStartKey, to: todayKey },
-              ]
-            : []
+            <SpendingOverview
+              monthName={name}
+              isCurrent={isCurrent}
+              totalMinor={total}
+              deltaPct={delta}
+              partial={comparison.partial}
+              prevName={prevName}
+              dailyAverageMinor={Math.round(total / elapsedDays / 100) * 100}
+              expenseCount={expenseCount}
+              budgetMinor={budgetMinor}
+              currency={currency}
+              periods={
+                isCurrent
+                  ? [
+                      { id: 'today', label: 'Today', amountMinor: recentlySpent.todayMinor, from: todayKey, to: todayKey },
+                      { id: 'yesterday', label: 'Yesterday', amountMinor: recentlySpent.yesterdayMinor, from: yesterdayKey, to: yesterdayKey },
+                      { id: 'last7', label: 'Last 7 days', amountMinor: recentlySpent.last7Minor, from: weekStartKey, to: todayKey },
+                    ]
+                  : []
+              }
+              privacy={display.privacy}
+              onTogglePrivacy={() => setDisplay({ privacy: !display.privacy })}
+              onPickPeriod={onPickPeriod}
+              monthKey={month}
+              onPrevMonth={() => onMonth(shiftMonth(month, -1))}
+              onNextMonth={isCurrent ? undefined : () => onMonth(shiftMonth(month, 1))}
+              ahead={isCurrent ? <PlanAhead ledger={ledger} today={today} /> : null}
+            />
+
+            <WalletPanel
+              monthName={name}
+              receivedMinor={received}
+              currency={currency}
+              balanceMinor={ledger.estimatedBalanceMinor}
+              balanceSet={ledger.balanceSet}
+              accountLines={ledger.accounts.map((a) => ({ id: a.id, name: a.name, estimatedMinor: ledger.balances.get(a.id)?.estimatedMinor ?? 0 }))}
+              shown={balanceShown}
+              onToggle={onToggleBalance}
+              onSetBalance={onOpenSettings}
+            />
+
+            {isCurrent && <UpcomingCard ledger={ledger} today={today} onOpen={onOpenUpcoming} />}
+
+            {isCurrent && suggestions.length > 0 && (
+              <section aria-labelledby="suggest-h" className="mt-8">
+                <h2 id="suggest-h" className="px-1 text-xl font-bold tracking-tight">
+                  Suggested for now
+                </h2>
+                <p className="mb-3 mt-0.5 px-1 text-[0.9375rem] text-ink-2">Your usual ones around this time. Tap + to add one now, or tap the tile to check it first.</p>
+                <SuggestionList
+                  items={suggestions}
+                  categoryById={categoryById}
+                  currency={currency}
+                  onPick={onSuggestion}
+                  onQuickAdd={onQuickAddSuggestion}
+                  tone="page"
+                  variant="tile"
+                />
+              </section>
+            )}
+
+            {/* Below the suggestions, so the first things after the numbers are the ones you can act on. */}
+            {budgetMinor === null && <BudgetPrompt onSetBudget={onOpenSettings} />}
+
+            {total > 0 && (
+              <>
+                <section aria-labelledby="daily-h" className="mt-8">
+                  <h2 id="daily-h" className="mb-3 px-1 text-xl font-bold tracking-tight">
+                    Day by day
+                  </h2>
+                  <div className={`${card} p-4`}>
+                    {/* Keyed by the month, so each month's columns rise afresh and a day chosen in one does not carry to the next. */}
+                    <DayChart
+                      key={month}
+                      txs={monthTxs}
+                      categoryById={categoryById}
+                      monthKey={month}
+                      lastDay={isCurrent ? today.getDate() : null}
+                      currency={currency}
+                      budgetMinor={budgetMinor}
+                      onPickDay={(date) => onPickPeriod({ from: date, to: date })}
+                    />
+                  </div>
+                </section>
+
+                <section aria-labelledby="recent-h" className="mt-8">
+                  <div className="mb-1 flex items-center justify-between px-1">
+                    <h2 id="recent-h" className="text-xl font-bold tracking-tight">
+                      Recent transactions
+                    </h2>
+                    <button type="button" onClick={onSeeAll} className="min-h-11 px-2 font-medium underline underline-offset-2">
+                      See all
+                    </button>
+                  </div>
+                  <TxList rows={recent} categoryById={categoryById} accountById={ledger.accountById} currency={currency} showDate onEdit={onEdit} />
+                </section>
+
+                <section aria-labelledby="cats-h" className="mt-8">
+                  <h2 id="cats-h" className="mb-1 px-1 text-xl font-bold tracking-tight">
+                    Where it went
+                  </h2>
+                  <div className="px-1">
+                    <CategoryBars totals={categoryTotals} categoryById={categoryById} currency={currency} limit={5} onPick={onPickCategory} />
+                  </div>
+                </section>
+
+                {onOpenInsights && <InsightCard totals={categoryTotals} totalMinor={total} categoryById={categoryById} monthName={name} onOpen={onOpenInsights} onOpenAi={onOpenAi} />}
+              </>
+            )}
+
+            <GoalsSummary goals={ledger.goals} currency={currency} today={today} onOpen={onOpenGoals} />
+          </>
         }
-        privacy={display.privacy}
-        onTogglePrivacy={() => setDisplay({ privacy: !display.privacy })}
-        onPickPeriod={onPickPeriod}
-        monthKey={month}
-        onPrevMonth={() => onMonth(shiftMonth(month, -1))}
-        onNextMonth={isCurrent ? undefined : () => onMonth(shiftMonth(month, 1))}
-        ahead={isCurrent ? <PlanAhead ledger={ledger} today={today} /> : null}
+        timeline={<Timeline expenses={expenses} categoryById={categoryById} currency={currency} today={today} onPickDay={(date) => onPickPeriod({ from: date, to: date })} />}
       />
-
-      <WalletPanel
-        monthName={name}
-        receivedMinor={received}
-        currency={currency}
-        balanceMinor={ledger.estimatedBalanceMinor}
-        balanceSet={ledger.balanceSet}
-        accountLines={ledger.accounts.map((a) => ({ id: a.id, name: a.name, estimatedMinor: ledger.balances.get(a.id)?.estimatedMinor ?? 0 }))}
-        shown={balanceShown}
-        onToggle={onToggleBalance}
-        onSetBalance={onOpenSettings}
-      />
-
-      {isCurrent && <UpcomingCard ledger={ledger} today={today} onOpen={onOpenUpcoming} />}
-
-      {isCurrent && suggestions.length > 0 && (
-        <section aria-labelledby="suggest-h" className="mt-8">
-          <h2 id="suggest-h" className="px-1 text-xl font-bold tracking-tight">
-            Suggested for now
-          </h2>
-          <p className="mb-3 mt-0.5 px-1 text-[0.9375rem] text-ink-2">Your usual ones around this time. Tap + to add one now, or tap the tile to check it first.</p>
-          <SuggestionList
-            items={suggestions}
-            categoryById={categoryById}
-            currency={currency}
-            onPick={onSuggestion}
-            onQuickAdd={onQuickAddSuggestion}
-            tone="page"
-            variant="tile"
-          />
-        </section>
-      )}
-
-      {/* Below the suggestions, so the first things after the numbers are the ones you can act on. */}
-      {budgetMinor === null && <BudgetPrompt onSetBudget={onOpenSettings} />}
-
-      {total > 0 && (
-        <>
-          <section aria-labelledby="daily-h" className="mt-8">
-            <h2 id="daily-h" className="mb-3 px-1 text-xl font-bold tracking-tight">
-              Day by day
-            </h2>
-            <div className={`${card} p-4`}>
-              {/* Keyed by the month, so each month's columns rise afresh and a day chosen in one does not carry to the next. */}
-              <DayChart
-                key={month}
-                txs={monthTxs}
-                categoryById={categoryById}
-                monthKey={month}
-                lastDay={isCurrent ? today.getDate() : null}
-                currency={currency}
-                budgetMinor={budgetMinor}
-                onPickDay={(date) => onPickPeriod({ from: date, to: date })}
-              />
-            </div>
-          </section>
-
-          <section aria-labelledby="recent-h" className="mt-8">
-            <div className="mb-1 flex items-center justify-between px-1">
-              <h2 id="recent-h" className="text-xl font-bold tracking-tight">
-                Recent transactions
-              </h2>
-              <button type="button" onClick={onSeeAll} className="min-h-11 px-2 font-medium underline underline-offset-2">
-                See all
-              </button>
-            </div>
-            <TxList rows={recent} categoryById={categoryById} accountById={ledger.accountById} currency={currency} showDate onEdit={onEdit} />
-          </section>
-
-          <section aria-labelledby="cats-h" className="mt-8">
-            <h2 id="cats-h" className="mb-1 px-1 text-xl font-bold tracking-tight">
-              Where it went
-            </h2>
-            <div className="px-1">
-              <CategoryBars totals={categoryTotals} categoryById={categoryById} currency={currency} limit={5} onPick={onPickCategory} />
-            </div>
-          </section>
-
-          {onOpenInsights && <InsightCard totals={categoryTotals} totalMinor={total} categoryById={categoryById} monthName={name} onOpen={onOpenInsights} onOpenAi={onOpenAi} />}
-        </>
-      )}
-
-      <GoalsSummary goals={ledger.goals} currency={currency} today={today} onOpen={onOpenGoals} />
     </div>
   )
 })
