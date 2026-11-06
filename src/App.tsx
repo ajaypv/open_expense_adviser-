@@ -10,6 +10,7 @@ import { useNearby } from './data/useNearby'
 import { useToday } from './data/useToday'
 import { formatMoney, localDateString } from './db/money'
 import {
+  addPerson,
   addTransaction,
   categoryIdByName,
   purgeTransaction,
@@ -251,13 +252,13 @@ function Shell() {
 
   // The input bar reads the latest data through refs, so its handler keeps the same identity and the
   // bar doesn't re-render every time a transaction is added.
-  const dataRef = useRef({ txs: ledger.txs, categoryById: ledger.categoryById })
-  dataRef.current = { txs: ledger.txs, categoryById: ledger.categoryById }
+  const dataRef = useRef({ txs: ledger.txs, categoryById: ledger.categoryById, people: ledger.people })
+  dataRef.current = { txs: ledger.txs, categoryById: ledger.categoryById, people: ledger.people }
   const currency = ledger.currency
 
   const logFromChat = useCallback(
     async (text: string): Promise<boolean> => {
-      const entries = parseMany(text)
+      const entries = parseMany(text, new Date(), dataRef.current.people)
       if (entries.length === 0) {
         toast({ message: 'I couldn’t find an amount. Try “450 lunch at Cafe”.' })
         return false
@@ -273,13 +274,16 @@ function Shell() {
         const categoryId = learned ?? (await categoryIdByName(parsed.categoryName))
         lastName = categoryById.get(categoryId)?.name ?? parsed.categoryName
         lastCategoryId = categoryId
+        // Money sent to someone ("@Shweta 500"): they are remembered, and the payment is marked not received yet.
+        const sentTo = parsed.person ? await addPerson(parsed.person.name) : undefined
         const id = await addTransaction({
           kind: parsed.kind,
           amountMinor: parsed.amountMinor,
           currency: parsed.currency ?? currency,
           categoryId,
-          merchant: parsed.merchant,
-          note: '',
+          merchant: sentTo ? sentTo.name : parsed.merchant,
+          note: parsed.note ?? '',
+          ...(sentTo ? { personId: sentTo.id, delivery: 'sent' as const } : {}),
           date: parsed.date,
           // What was typed ("by upi") wins; otherwise how you usually pay for this name.
           paymentMethod: parsed.paymentMethod || learnedPaymentMethod(parsed.merchant, parsed.kind, txs),
@@ -300,11 +304,11 @@ function Shell() {
         const money = formatMoney(only.amountMinor, only.currency ?? currency)
         const when = describeDay(only.date)
         toast({
-          message: (only.kind === 'income' ? `Received ${money}` : `Added ${money} to ${lastName}`) + (when ? `, ${when}` : ''),
+          message: (only.kind === 'income' ? `Received ${money}` : only.person ? `Sent ${money} to ${only.person.name}` : `Added ${money} to ${lastName}`) + (when ? `, ${when}` : ''),
           actionLabel: 'Undo',
           onAction: undo,
           // A guess that fell through to Other is the one most worth correcting, and the correction is what gets learned.
-          ...(only.kind === 'expense' && lastName === 'Other'
+          ...(only.kind === 'expense' && !only.person && lastName === 'Other'
             ? {
                 secondaryLabel: 'Change',
                 onSecondary: () => {
@@ -314,7 +318,7 @@ function Shell() {
               }
             : {}),
           // Where the money went: the category's own icon and colour, or an arrow in for money received.
-          icon: only.kind === 'income' ? 'arrowDown' : spendIcon(only.merchant, lastName),
+          icon: only.kind === 'income' ? 'arrowDown' : only.person ? 'person' : spendIcon(only.merchant, lastName),
           color: only.kind === 'income' ? 'var(--good-text)' : categoryById.get(lastCategoryId)?.color,
         })
       }
@@ -502,7 +506,7 @@ function Shell() {
               />
             </section>
           )}
-          <ChatBar key={draft.n} initialText={draft.text} onSubmit={logFromChat} onOpenForm={openAddDefault} />
+          <ChatBar key={draft.n} initialText={draft.text} onSubmit={logFromChat} onOpenForm={openAddDefault} people={ledger.people} />
         </div>
         <BottomNav current={tab} onSelect={go} onSwipe={swipeBar} />
       </div>

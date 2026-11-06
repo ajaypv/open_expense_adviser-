@@ -1,6 +1,8 @@
 import { localDateString, MAX_AMOUNT_MINOR, toMinor } from '../db/money'
+import type { Person } from '../db/schema'
 import { INCOME_CATEGORY, type DefaultCategoryName } from '../db/defaultCategories'
 import { CATEGORY_KEYWORDS, FILLER_WORDS, INCOME_FILLER_WORDS, PAYMENT_WORDS, type PaymentMethod } from './keywords'
+import { extractPerson } from './mention'
 
 export interface ParsedExpense {
   /** 'income' when the text describes money received ("salary 80k", "received 500 from Rahul"). */
@@ -12,6 +14,10 @@ export interface ParsedExpense {
   paymentMethod: PaymentMethod
   /** Only set when the text named one ("$5", "12 usd", "₹99"); otherwise it is the person's main currency. */
   currency?: string
+  /** Set when the text named a person the money went to ("@Shweta 500", "500 to Shweta"); the merchant is then their name. `id` is there when they are already known. */
+  person?: { name: string; id?: number }
+  /** For a payment to a person, the words left over ("lunch"), kept as a note. */
+  note?: string
 }
 
 const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
@@ -222,8 +228,10 @@ export function guessCategoryName(name: string): DefaultCategoryName {
 
 type Piece = { parsed: ParsedExpense; explicitDate: boolean }
 
-function parseOne(text: string, today: Date): Piece | null {
-  const { date, rest, explicit } = extractDate(text.trim(), today)
+function parseOne(text: string, today: Date, people: Person[] = []): Piece | null {
+  // A person named in the line ("@Shweta") is taken out first, so their name is not read as a date, a word or a merchant.
+  const mention = extractPerson(text, people)
+  const { date, rest, explicit } = extractDate((mention ? mention.rest : text).trim(), today)
   const amount = findAmount(rest)
   if (!amount) return null
   const remaining = `${rest.slice(0, amount.from)} ${rest.slice(amount.to)}`
@@ -248,11 +256,16 @@ function parseOne(text: string, today: Date): Piece | null {
   // "2 coffees" and "3x coffee" are a count, not part of the name; "7 eleven" and "2 coffee" are left alone.
   if (words.length > 1 && (/^x\d{1,2}$|^\d{1,2}x$/.test(words[0]) || (/^\d{1,2}$/.test(words[0]) && /[^s]s$/.test(words[1])))) words.shift()
 
-  const merchant = titleCase(words.join(' ').replace(/[^\w&'. -]/g, '').trim())
+  const merchant = mention ? mention.name : titleCase(words.join(' ').replace(/[^\w&'. -]/g, '').trim())
   const categoryName: DefaultCategoryName = kind === 'income' ? INCOME_CATEGORY : guessCategoryName(words.join(' '))
 
   const parsed: ParsedExpense = { kind, amountMinor: amount.minor, merchant, categoryName, date, paymentMethod }
   if (amount.currency) parsed.currency = amount.currency
+  // Money sent to someone; money from them is just received, under their name.
+  if (mention && kind === 'expense') {
+    parsed.person = { name: mention.name, ...(mention.person ? { id: mention.person.id } : {}) }
+    if (words.length > 0) parsed.note = words.join(' ')
+  }
   return { parsed, explicitDate: explicit }
 }
 
@@ -260,8 +273,8 @@ function parseOne(text: string, today: Date): Piece | null {
  * Offline fallback for "spent 450 on swiggy yesterday", "18k rent", "coffee 120", "2 lakh rent".
  * Returns null when no amount is found. The AI agent replaces this when a key is set.
  */
-export function parseExpense(text: string, today = new Date()): ParsedExpense | null {
-  return parseOne(text, today)?.parsed ?? null
+export function parseExpense(text: string, today = new Date(), people: Person[] = []): ParsedExpense | null {
+  return parseOne(text, today, people)?.parsed ?? null
 }
 
 /**
@@ -275,17 +288,17 @@ const SEPARATOR = /[;\n]+|,(?!\d)/
  * 340"). If any piece has no amount the text is treated as a single entry instead, so a stray comma can't
  * lose anything. A date typed at the end ("..., lunch 340 yesterday") covers every entry that named none.
  */
-export function parseMany(text: string, today = new Date()): ParsedExpense[] {
+export function parseMany(text: string, today = new Date(), people: Person[] = []): ParsedExpense[] {
   const pieces = text
     .split(SEPARATOR)
     .map((p) => p.trim())
     .filter(Boolean)
     .flatMap((p) => {
       const parts = p.split(/\s+and\s+/i)
-      return parts.length > 1 && parts.every((part) => parseOne(part, today)) ? parts : [p]
+      return parts.length > 1 && parts.every((part) => parseOne(part, today, people)) ? parts : [p]
     })
   if (pieces.length > 1) {
-    const parsed = pieces.map((p) => parseOne(p, today))
+    const parsed = pieces.map((p) => parseOne(p, today, people))
     if (parsed.every((p): p is Piece => p !== null)) {
       const last = parsed[parsed.length - 1]
       const named = parsed.filter((p) => p.explicitDate)
@@ -293,7 +306,7 @@ export function parseMany(text: string, today = new Date()): ParsedExpense[] {
       return parsed.map((p) => p.parsed)
     }
   }
-  const single = parseExpense(text, today)
+  const single = parseExpense(text, today, people)
   return single ? [single] : []
 }
 
