@@ -49,7 +49,7 @@ export function CategoryDonut({ totals, categoryById, currency, limit = 6, onPic
 
   const rows: Row[] = totals.slice(0, limit).map((t) => {
     const cat = categoryById.get(t.categoryId)
-    return { key: String(t.categoryId), categoryId: t.categoryId, name: cat?.name ?? 'No category', color: cat?.color ?? 'var(--other)', minor: t.totalMinor }
+    return { key: t.key ?? String(t.categoryId), categoryId: t.categoryId, name: t.name ?? cat?.name ?? 'No category', color: t.color ?? cat?.color ?? 'var(--other)', minor: t.totalMinor }
   })
   const restMinor = totals.slice(limit).reduce((a, t) => a + t.totalMinor, 0)
   if (restMinor > 0) rows.push({ key: 'rest', categoryId: null, name: 'Everything else', color: 'var(--other)', minor: restMinor })

@@ -3,7 +3,7 @@ import { formatMoney } from '../db/money'
 import type { Category } from '../db/schema'
 import type { CategoryTotal } from '../insights/aggregates'
 import { categoryIcon } from '../ui/categoryIcon'
-import { Icon } from '../ui/Icon'
+import { Icon, type IconName } from '../ui/Icon'
 import { useCountWhen, useSeen } from '../ui/motion'
 import { packBubbles } from './bubblePack'
 import { formatShare } from './share'
@@ -28,6 +28,7 @@ interface Row {
   categoryId: number | null
   name: string
   color: string
+  icon: IconName
   minor: number
 }
 
@@ -53,9 +54,10 @@ export function CategoryBubbles({ totals, categoryById, currency, limit = 8, onP
   const restMinor = totals.slice(limit).reduce((a, t) => a + t.totalMinor, 0)
   const rows: Row[] = shown.map((t) => {
     const cat = categoryById.get(t.categoryId)
-    return { key: String(t.categoryId), categoryId: t.categoryId, name: cat?.name ?? 'No category', color: cat?.color ?? 'var(--other)', minor: t.totalMinor }
+    const name = t.name ?? cat?.name ?? 'No category'
+    return { key: t.key ?? String(t.categoryId), categoryId: t.categoryId, name, color: t.color ?? cat?.color ?? 'var(--other)', icon: t.icon ?? categoryIcon(name), minor: t.totalMinor }
   })
-  if (restMinor > 0) rows.push({ key: 'rest', categoryId: null, name: 'Everything else', color: 'var(--other)', minor: restMinor })
+  if (restMinor > 0) rows.push({ key: 'rest', categoryId: null, name: 'Everything else', color: 'var(--other)', icon: 'tag', minor: restMinor })
 
   const { bubbles, height } = packBubbles(rows.map((r) => ({ key: r.key, value: r.minor })))
   const place = new Map(bubbles.map((b, rank) => [b.key, { ...b, rank }]))
@@ -89,8 +91,8 @@ export function CategoryBubbles({ totals, categoryById, currency, limit = 8, onP
               <span aria-hidden="true" className="bubble-wedge" />
               <span aria-hidden="true" className="bubble-arc" />
               <span className="bubble-text">
-                <span aria-hidden="true" data-icon={categoryIcon(row.name)} className="bubble-icon">
-                  <Icon name={categoryIcon(row.name)} size={24} />
+                <span aria-hidden="true" data-icon={row.icon} className="bubble-icon">
+                  <Icon name={row.icon} size={24} />
                 </span>
                 {showName && <span className="bubble-name">{row.name}</span>}
                 <BubbleShare share={share} play={seen} delayMs={(rankOf.get(row.key) ?? 0) * 70 + 250} />

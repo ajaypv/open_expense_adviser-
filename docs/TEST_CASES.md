@@ -204,6 +204,9 @@ I checked that the tests can fail by planting ten bugs one at a time. All ten we
 | TL-11 | Today's ring | Look at today's date | A thin ring gives out a ping now and then, small enough to stay in its own column: nothing is cut off on the left, and the card beside it does not cover it; with reduced motion it does not move | Auto: `Timeline.flow`, `HomePager.flow`; Device |
 | TL-12 | Reduced motion | Turn on reduce motion, open the timeline | The whole line is drawn and every date lit at once; no bead, no ping, no spring; the pages swap without sliding | Auto: `useLineScroll.flow`, `Timeline.flow` |
 | BIL-4 | Nothing to split | A month with no bills | The section is not shown | Auto: `Insights.bills.flow` |
+| BIL-5 | Bills divided in the charts | Insights, Where it went, in a month with an EMI, recharges and electricity as well as other categories | In Bubbles, Donut and List the one Bills and utilities bubble, segment or bar is replaced by EMIs, Recharges, Utilities (and Insurance, Other bills where there are some), each with its own icon, share and amount, in shades of the Bills colour; the line under the heading says bills are divided | Auto: `billSplit.test`, `Insights.bills.flow`; Device |
+| BIL-6 | Tapping a part | Tap the EMIs bubble | Activity opens on the category most of it was filed under | Auto: `Insights.bills.flow` |
+| BIL-7 | Nothing to divide | A month where bills are only one thing (say only electricity) | Bills and utilities stays as one bubble, as before | Auto: `Insights.bills.flow`, `billSplit.test` |
 | SUG-6 | Today's entries last | Log a merchant, reopen the form | It shows "Added earlier today" and sits last | Auto: `suggestions.test` |
 | SUG-7 | Placement | Settings → Suggestions → Home / Off | Moves to Home or disappears everywhere, including the form | Auto: `settings.flow`, `AddSheet.test` |
 | SUG-8 | Swipe row | Swipe the row above the bar | It scrolls smoothly, snapping to each chip | Device |

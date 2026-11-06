@@ -1,5 +1,6 @@
 import { localDateString, parseLocalDate } from '../db/money'
 import type { Transaction } from '../db/schema'
+import type { IconName } from '../ui/Icon'
 
 /** YYYY-MM */
 export type MonthKey = string
@@ -34,8 +35,14 @@ export function totalThroughDay(txs: Transaction[], key: MonthKey, day: number):
 }
 
 export interface CategoryTotal {
+  /** The category it is of; for a part of one (see splitCategoryTotals), the category most of it was filed under. */
   categoryId: number
   totalMinor: number
+  /** Set only on a part that stands for something other than a whole category, such as the EMIs inside Bills and utilities. */
+  key?: string
+  name?: string
+  color?: string
+  icon?: IconName
 }
 
 export function byCategory(monthTxs: Transaction[]): CategoryTotal[] {

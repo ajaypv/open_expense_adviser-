@@ -28,7 +28,7 @@ import {
   topMerchants,
   type MonthKey,
 } from '../insights/aggregates'
-import { splitBills } from '../insights/billSplit'
+import { splitBills, splitCategoryTotals } from '../insights/billSplit'
 import { placesIn } from '../insights/places'
 import { regularPayments } from '../insights/regular'
 import { detectRecurring } from '../insights/recurring'
@@ -121,7 +121,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
   const {
     monthTxs, total, prevTxs, hasPrevious, cats, elapsed, cmp, projected, merchants, weekdays, peakDay, changes, biggest,
     savings, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats, spots, hasAnyPlace,
-    regular, looksRegular, balanceCheck, billSplit,
+    regular, looksRegular, balanceCheck, billSplit, catParts,
   } = useMemo(() => {
     const prevKey = shiftMonth(month, -1)
     const monthTxs = inMonth(txs, month)
@@ -174,11 +174,13 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
       regular && balanceSet ? forecast(estimatedBalanceMinor, upcomingPayments(recurring, todayKey, 30, moneyIn), todayKey) : null
 
     const billSplit = splitBills(monthTxs, categoryById, recurring)
+    // What the category charts draw: bills divided into what they were for, where there is more than one part.
+    const catParts = splitCategoryTotals(monthTxs, categoryById, recurring)
 
     return {
       monthTxs, total, prevTxs, hasPrevious, cats, elapsed, cmp, projected, merchants, weekdays, peakDay, changes, biggest,
       savings, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats, spots, hasAnyPlace,
-      regular, looksRegular, balanceCheck, billSplit,
+      regular, looksRegular, balanceCheck, billSplit, catParts,
     }
   }, [txs, income, month, today, isCurrent, categoryBudgets, categoryById, recurring, rates, currency, balanceSet, estimatedBalanceMinor])
 
@@ -481,7 +483,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
           <Section
             id="cats-h"
             title="Where it went"
-            intro={`Where your ${name} spending went, biggest first.${onPickCategory ? ' Tap one to see those expenses.' : ''}`}
+            intro={`Where your ${name} spending went, biggest first.${catParts.some((t) => t.key) ? ' Bills are divided into what they were for.' : ''}${onPickCategory ? ' Tap one to see those expenses.' : ''}`}
           >
             <div role="group" aria-label="How to show the categories" className="mt-3 flex gap-1 rounded-full bg-surface-2 p-1">
               {(
@@ -504,11 +506,11 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
             </div>
             <div className="mt-3">
               {categoryView === 'bubbles' ? (
-                <CategoryBubbles totals={cats} categoryById={categoryById} currency={currency} onPick={onPickCategory} />
+                <CategoryBubbles totals={catParts} categoryById={categoryById} currency={currency} onPick={onPickCategory} />
               ) : categoryView === 'donut' ? (
-                <CategoryDonut totals={cats} categoryById={categoryById} currency={currency} onPick={onPickCategory} />
+                <CategoryDonut totals={catParts} categoryById={categoryById} currency={currency} onPick={onPickCategory} />
               ) : (
-                <CategoryBars totals={cats} categoryById={categoryById} currency={currency} onPick={onPickCategory} />
+                <CategoryBars totals={catParts} categoryById={categoryById} currency={currency} onPick={onPickCategory} />
               )}
             </div>
           </Section>

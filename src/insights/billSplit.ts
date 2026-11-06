@@ -1,4 +1,6 @@
 import type { Category, Recurring, Transaction } from '../db/schema'
+import { byCategory, type CategoryTotal } from './aggregates'
+import type { IconName } from '../ui/Icon'
 import { nameIcon } from '../ui/categoryIcon'
 import { tagOf } from './upcoming'
 
@@ -30,6 +32,29 @@ export interface BillSplit {
   parts: BillPart[]
 }
 
+/** The parts as a chart names them: short, since each is a bubble, a segment or a bar. */
+export const BILL_SHORT: Record<BillKind, string> = {
+  emi: 'EMIs',
+  recharge: 'Recharges',
+  utilities: 'Utilities',
+  insurance: 'Insurance',
+  bills: 'Other bills',
+}
+
+export const BILL_ICON: Record<BillKind, IconName> = { emi: 'emi', recharge: 'recharge', utilities: 'bolt', insurance: 'heart', bills: 'receipt' }
+
+/**
+ * Each part is a shade of the colour of the Bills and utilities category, so that together they read as that category, divided,
+ * and apart from every other category. The names and percentages say which is which; the shade only backs them up.
+ */
+export const BILL_SHADE: Record<BillKind, string> = {
+  insurance: 'color-mix(in oklab, var(--s5) 55%, var(--ink))',
+  emi: 'color-mix(in oklab, var(--s5) 78%, var(--ink))',
+  recharge: 'var(--s5)',
+  bills: 'color-mix(in oklab, var(--s5) 74%, var(--surface))',
+  utilities: 'color-mix(in oklab, var(--s5) 52%, var(--surface))',
+}
+
 const UTILITY_WORDS = /\b(electric|power|water|gas|cylinder|lpg|internet|wifi|broadband|fibre|fiber|fibernet|bescom|bwssb|utilit)/
 const INSURANCE_WORDS = /\b(insurance|lic)\b/
 const BILL_CATEGORY = /\b(bill|utilit)/
@@ -55,12 +80,52 @@ export function billKindOf(tx: Pick<Transaction, 'merchant' | 'note'>, categoryN
   return 'bills'
 }
 
+/** A payment added from a regular one carries its name, so the type it was set up as is found by that name. */
+function ruleTagsByName(recurring: Recurring[]): Map<string, Recurring['tag']> {
+  const tagByName = new Map<string, Recurring['tag']>()
+  for (const r of recurring) if (r.kind === 'expense' && r.merchant) tagByName.set(r.merchant.trim().toLowerCase(), tagOf(r))
+  return tagByName
+}
+
+/**
+ * The month's spending by category, with what went on bills divided into what it was for: EMIs, recharges, utilities, insurance
+ * and other bills each stand in the place of the one Bills and utilities total. An EMI or a recharge counts as one wherever it was
+ * filed, so those come out of the category they were in. It is left as it is, by category alone, when there is nothing to divide
+ * (fewer than two of the parts). A part opens the category most of it was filed under.
+ */
+export function splitCategoryTotals(monthTxs: Transaction[], categoryById: Map<number, Category>, recurring: Recurring[]): CategoryTotal[] {
+  const tagByName = ruleTagsByName(recurring)
+  const rest: Transaction[] = []
+  const parts = new Map<BillKind, { minor: number; byCategory: Map<number, number> }>()
+  for (const t of monthTxs) {
+    const tag = t.source === 'recurring' ? tagByName.get(t.merchant.trim().toLowerCase()) : undefined
+    const kind = billKindOf(t, categoryById.get(t.categoryId)?.name, tag)
+    if (!kind) {
+      rest.push(t)
+      continue
+    }
+    const p = parts.get(kind) ?? { minor: 0, byCategory: new Map<number, number>() }
+    p.minor += t.amountMinor
+    p.byCategory.set(t.categoryId, (p.byCategory.get(t.categoryId) ?? 0) + t.amountMinor)
+    parts.set(kind, p)
+  }
+  if (parts.size < 2) return byCategory(monthTxs)
+
+  const split: CategoryTotal[] = [...parts].map(([kind, p]) => ({
+    categoryId: [...p.byCategory].sort((a, b) => b[1] - a[1])[0][0],
+    totalMinor: p.minor,
+    key: `bill-${kind}`,
+    name: BILL_SHORT[kind],
+    color: BILL_SHADE[kind],
+    icon: BILL_ICON[kind],
+  }))
+  return [...byCategory(rest), ...split].sort((a, b) => b.totalMinor - a.totalMinor)
+}
+
 /** How the month's spending on bills, recharges and EMIs divides, biggest part first. Null when none was spent. */
 export function splitBills(monthTxs: Transaction[], categoryById: Map<number, Category>, recurring: Recurring[]): BillSplit | null {
   const spentMinor = monthTxs.reduce((a, t) => a + t.amountMinor, 0)
-  // A payment added from a regular one carries its name, so the type is found by that name.
-  const tagByName = new Map<string, Recurring['tag']>()
-  for (const r of recurring) if (r.kind === 'expense' && r.merchant) tagByName.set(r.merchant.trim().toLowerCase(), tagOf(r))
+  const tagByName = ruleTagsByName(recurring)
 
   const sums = new Map<BillKind, { totalMinor: number; count: number }>()
   for (const t of monthTxs) {

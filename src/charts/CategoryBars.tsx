@@ -23,9 +23,9 @@ export function CategoryBars({ totals, categoryById, currency, limit, onPick }: 
   const rows: BarRow[] = shown.map((t) => {
     const cat = categoryById.get(t.categoryId)
     return {
-      key: String(t.categoryId),
-      label: cat?.name ?? 'No category',
-      color: cat?.color ?? 'var(--other)',
+      key: t.key ?? String(t.categoryId),
+      label: t.name ?? cat?.name ?? 'No category',
+      color: t.color ?? cat?.color ?? 'var(--other)',
       valueMinor: t.totalMinor,
       detail: share(t.totalMinor),
       onPick: onPick ? () => onPick(t.categoryId) : undefined,
