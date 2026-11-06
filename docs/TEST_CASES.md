@@ -236,6 +236,8 @@ I checked that the tests can fail by planting ten bugs one at a time. All ten we
 | HOM-14 | Updates at once | Log an expense | Today and Last 7 days change straight away | Auto: `app.flow` |
 | HOM-15 | Only for now | Switch to a past month | The strip is gone, because these are measured from today | Auto: `Home.test` |
 | HOM-16 | Fits | View at 360 px with large amounts | Figures stay on one line (shortened, such as ₹1.2L) and never overlap | Device |
+| HOM-17 | Swipe the bottom bar | On Home, swipe left along the bottom bar, then right | Left shows the Timeline and right shows the Overview, the same as the tabs at the top; a swipe towards a page that is not there changes nothing; the tab under the finger is not pressed | Auto: `BottomNav.swipe.flow`, `HomePager.flow`, `homeTimeline.flow`; Device |
+| HOM-18 | Swipe from another screen | On Insights, Activity or Settings, swipe the bottom bar left, then right | Home opens on the Timeline (left) or the Overview (right); the bar never swipes to Activity, Insights or Settings, which are for tapping; Home opened any other way starts on the Overview | Auto: `homeTimeline.flow`, `HomePager.flow` |
 
 ## 7. Month picker
 

@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import '../test/dom'
 import { readFileSync } from 'node:fs'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { Profiler } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { HomePager } from './HomePager'
+import { openHomeOn, showHomeView, takeWaitingHomeView } from './homeView'
 
 /** A touch (or mouse) pointer event with the fields the pager reads. */
 function pointer(type: 'pointerdown' | 'pointermove' | 'pointerup' | 'pointercancel', x: number, y: number, pointerType = 'touch') {
@@ -284,5 +285,68 @@ describe('HomePager: motion', () => {
   it('leaves the page out of view not laid out or drawn at all, and nothing in it animating', () => {
     expect(css).toMatch(/\.pager-panel\[data-rest='true'\] \{[^}]*content-visibility: hidden/)
     expect(css).toMatch(/\.pager-panel\[data-rest='true'\] \* \{\s*animation-play-state: paused/)
+  })
+})
+
+describe('HomePager: asked from the bottom bar', () => {
+  it('moves to the timeline and back when the bar is swiped, as a tap on the tabs would', () => {
+    setup()
+    act(() => showHomeView('timeline'))
+    expect(tab('Timeline')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('timeline')).toBeInTheDocument()
+    expect(track().style.transform).toBe(at(1))
+    act(() => showHomeView('overview'))
+    expect(tab('Overview')).toHaveAttribute('aria-pressed', 'true')
+    expect(track().style.transform).toBe(at(0))
+  })
+
+  it('stays put when asked for the page it is already on', () => {
+    setup()
+    act(() => showHomeView('overview'))
+    expect(tab('Overview')).toHaveAttribute('aria-pressed', 'true')
+    expect(panel('overview')).toHaveAttribute('data-rest', 'false')
+  })
+
+  it('opens on the timeline, already built and in place, when Home was opened by a swipe towards it', () => {
+    openHomeOn('timeline')
+    setup()
+    expect(tab('Timeline')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('timeline')).toBeInTheDocument()
+    expect(track().style.transform).toBe(at(1))
+    expect(pill().style.transform).toBe('translate3d(100%, 0, 0)')
+  })
+
+  it('opens on the overview, as always, when the swipe was towards it or there was none', () => {
+    openHomeOn('overview')
+    setup()
+    expect(tab('Overview')).toHaveAttribute('aria-pressed', 'true')
+    cleanup()
+    setup()
+    expect(tab('Overview')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('uses a request only once, so the next visit to Home starts on the overview again', () => {
+    openHomeOn('timeline')
+    setup()
+    cleanup()
+    setup()
+    expect(tab('Overview')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('forgets a request that is no longer fresh, so a late-built pager does not jump to it', () => {
+    vi.useFakeTimers()
+    try {
+      openHomeOn('timeline')
+      vi.advanceTimersByTime(5000)
+      expect(takeWaitingHomeView()).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('stops listening when it goes away', () => {
+    setup()
+    cleanup()
+    expect(() => act(() => showHomeView('timeline'))).not.toThrow()
   })
 })

@@ -37,6 +37,7 @@ import { AddSheet } from './ui/AddSheet'
 import { useBackClose } from './ui/backStack'
 import { spendIcon } from './ui/categoryIcon'
 import { BottomNav, TABS, type Tab } from './ui/BottomNav'
+import { openHomeOn, showHomeView } from './ui/homeView'
 import { ChatBar } from './ui/ChatBar'
 import { GoalMoneySheet, GoalSheet } from './ui/GoalSheets'
 import { GoalsOverview } from './ui/GoalsOverview'
@@ -232,6 +233,18 @@ function Shell() {
     if (!document.startViewTransition) return update()
     document.startViewTransition({ update, types: [direction] } as unknown as () => void)
   }, [])
+
+  // Swiping along the bottom bar moves between Home's two pages: left for the timeline, right for the overview. From another
+  // screen it opens Home on that page. It never goes to Activity, Insights or Settings; those are for tapping.
+  const swipeBar = useCallback(
+    (direction: 'left' | 'right') => {
+      const page = direction === 'left' ? 'timeline' : 'overview'
+      if (tabRef.current === 'home') return showHomeView(page)
+      openHomeOn(page)
+      go('home')
+    },
+    [go],
+  )
 
   // On any tab but Home, the phone's back button goes to Home rather than out of the app.
   useBackClose(tab !== 'home', () => go('home'))
@@ -491,7 +504,7 @@ function Shell() {
           )}
           <ChatBar key={draft.n} initialText={draft.text} onSubmit={logFromChat} onOpenForm={openAddDefault} />
         </div>
-        <BottomNav current={tab} onSelect={go} />
+        <BottomNav current={tab} onSelect={go} onSwipe={swipeBar} />
       </div>
 
       <AddSheet

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
+import { onHomeViewRequest, takeWaitingHomeView } from './homeView'
 
 export type HomeView = 'overview' | 'timeline'
 
@@ -73,8 +74,9 @@ interface Props {
  * component only redraws when a drag starts and when it ends, not at every move of the finger.
  */
 export function HomePager({ overview, timeline }: Props) {
-  const [view, setView] = useState<HomeView>('overview')
-  const [built, setBuilt] = useState(false)
+  // Home opens on the overview, unless the bottom bar was just swiped from another screen towards the timeline.
+  const [view, setView] = useState<HomeView>(() => takeWaitingHomeView() ?? 'overview')
+  const [built, setBuilt] = useState(view === 'timeline')
   const [dragging, setDragging] = useState(false)
   // True while the slide plays, when both pages must keep their height.
   const [moving, setMoving] = useState(false)
@@ -101,6 +103,13 @@ export function HomePager({ overview, timeline }: Props) {
     window.clearTimeout(timer.current)
     timer.current = window.setTimeout(() => setMoving(false), MOVE_MS + 60)
   }
+
+  // Swiping the bottom bar asks for a page from outside; the latest `go` is kept in a ref so the listener is set up once.
+  const goLatest = useRef(go)
+  useEffect(() => {
+    goLatest.current = go
+  })
+  useEffect(() => onHomeViewRequest((next) => goLatest.current(next)), [])
 
   /** Puts the pages and the marker where a drag of `dx` pixels has them, with no redraw. */
   function follow(width: number, dx: number) {

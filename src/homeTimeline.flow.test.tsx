@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import './test/dom'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -80,5 +80,62 @@ describe('Home: the timeline', () => {
     await user.click(await screen.findByRole('button', { name: 'Yesterday, ₹300, 1 expense' }))
     await user.click(screen.getByRole('button', { name: 'See yesterday’s expenses' }))
     expect(await screen.findByRole('heading', { name: 'Activity' })).toBeInTheDocument()
+  })
+})
+
+/** A finger down on the bottom bar at (0, 0) and lifted at (dx, 0). */
+function swipeBar(dx: number) {
+  const bar = screen.getByRole('navigation', { name: 'Main' })
+  for (const [type, x] of [['pointerdown', 0], ['pointerup', dx]] as const) {
+    const e = new MouseEvent(type, { bubbles: true, clientX: x, clientY: 0 })
+    Object.defineProperty(e, 'pointerType', { value: 'touch' })
+    fireEvent(bar, e)
+  }
+}
+const pressed = (name: string) => view().getByRole('button', { name }).getAttribute('aria-pressed')
+
+describe('Home: swiping the bottom bar', () => {
+  it('moves from the overview to the timeline on a swipe left, and back on a swipe right', async () => {
+    await open()
+    swipeBar(-90)
+    expect(pressed('Timeline')).toBe('true')
+    expect(await screen.findByRole('list', { name: 'Spending, day by day' })).toBeInTheDocument()
+    swipeBar(90)
+    expect(pressed('Overview')).toBe('true')
+  })
+
+  it('stays on the page it is on when swiped the way there is no page', async () => {
+    await open()
+    swipeBar(90)
+    expect(pressed('Overview')).toBe('true')
+    swipeBar(-90)
+    swipeBar(-90)
+    expect(pressed('Timeline')).toBe('true')
+  })
+
+  it('opens Home on the timeline from another screen, and on the overview for a swipe right', async () => {
+    const user = await open()
+    await user.click(screen.getByRole('button', { name: 'Insights' }))
+    await screen.findByRole('heading', { name: /Insights/i })
+    swipeBar(-90)
+    await waitFor(() => expect(screen.getByRole('group', { name: 'Home view' })).toBeInTheDocument())
+    expect(pressed('Timeline')).toBe('true')
+    expect(screen.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
+
+    await user.click(screen.getByRole('button', { name: 'Insights' }))
+    swipeBar(90)
+    await waitFor(() => expect(screen.getByRole('group', { name: 'Home view' })).toBeInTheDocument())
+    expect(pressed('Overview')).toBe('true')
+  })
+
+  it('never goes to Activity, Insights or Settings by swiping', async () => {
+    await open()
+    swipeBar(-90)
+    swipeBar(-90)
+    swipeBar(90)
+    expect(screen.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
+    for (const name of ['Activity', 'Insights', 'Settings']) {
+      expect(screen.getByRole('button', { name })).not.toHaveAttribute('aria-current')
+    }
   })
 })
