@@ -4,7 +4,7 @@ import { useDisplay } from '../data/display'
 import type { useLedger } from '../data/useLedger'
 import { categoryIdByName, addTransaction, purgeTransaction } from '../db/repo'
 import { formatMoney, localDateString, parseLocalDate, toMinor } from '../db/money'
-import { cardLog, cardSummaries, isCard, type CardSummary } from '../insights/cards'
+import { cardLog, cardSpend, cardSummaries, isCard, type CardSummary } from '../insights/cards'
 import { Dialog } from './Dialog'
 import { Icon } from './Icon'
 import { useToast } from './toast'
@@ -89,6 +89,46 @@ function Standing({ summary, currency }: { summary: CardSummary; currency: strin
       <p className="mt-1 text-[0.9375rem] text-ink-2 tabular-nums">
         {`${summary.account.statementDay ? 'This statement' : 'This month'}, ${shortDay(cycle.from)} to ${shortDay(cycle.to)}: ${money(cycle.chargedMinor)} charged${cycle.paidMinor > 0 ? `, ${money(cycle.paidMinor)} paid` : ''}`}
       </p>
+    </section>
+  )
+}
+
+/**
+ * What was spent on the card this week and this month, and week by week. Only charges count: paying the bill moves money from your
+ * bank, and that money was already counted as spending when you spent it, so it is never added a second time.
+ */
+function Spending({ summary, ledger, today }: { summary: CardSummary; ledger: Ledger; today: Date }) {
+  const money = (m: number) => formatMoney(m, ledger.currency)
+  const spend = useMemo(() => cardSpend([summary.account], ledger.txs, ledger.accounts, today), [summary.account, ledger.txs, ledger.accounts, today])
+  const most = Math.max(1, ...spend.weeks.map((w) => w.spentMinor))
+  const tiles = [
+    { label: 'This week', value: spend.weekMinor },
+    { label: 'This month', value: spend.monthMinor },
+    { label: 'Last month', value: spend.lastMonthMinor },
+  ]
+  return (
+    <section aria-label={`${summary.account.name} spending`} className="mt-6">
+      <h3 className="mb-2 px-1 text-lg font-semibold">Spent on this card</h3>
+      <div className="grid grid-cols-3 gap-2">
+        {tiles.map((t) => (
+          <div key={t.label} role="group" aria-label={`${t.label}: ${money(t.value)}`} className="min-h-14 min-w-0 rounded-2xl bg-surface-2 px-3 py-2">
+            <span className="block text-[0.8125rem] font-medium text-ink-2">{t.label}</span>
+            <span className="mt-0.5 block truncate text-base font-semibold tabular-nums">{money(t.value)}</span>
+          </div>
+        ))}
+      </div>
+      <ul aria-label="Spent by week" className="mt-3 space-y-2 px-1">
+        {spend.weeks.map((w, i) => (
+          <li key={w.from} data-week={w.from} className="flex items-center gap-3 text-[0.9375rem]">
+            <span className="w-24 shrink-0 text-ink-2">{i === 0 ? 'This week' : i === 1 ? 'Last week' : `${shortDay(w.from)} to ${shortDay(w.to)}`}</span>
+            <span aria-hidden="true" className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-2">
+              <span className="block h-full rounded-full bg-[var(--accent)]" style={{ width: `${(w.spentMinor / most) * 100}%` }} />
+            </span>
+            <span className="w-20 shrink-0 text-right font-medium tabular-nums">{money(w.spentMinor)}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 px-1 text-sm text-ink-2">Paying the bill is not counted here, or as spending: that money was already counted when you spent it.</p>
     </section>
   )
 }
@@ -237,6 +277,7 @@ export function CardsSheet({ open, onClose, ledger, today, onEdit }: Props) {
           )}
 
           <Standing summary={summary} currency={ledger.currency} />
+          <Spending summary={summary} ledger={ledger} today={today} />
           <PayBill key={summary.account.id} summary={summary} ledger={ledger} today={today} onDone={() => {}} />
 
           <section aria-label={`${summary.account.name} log`} className="mt-6">
@@ -257,6 +298,7 @@ export function CardsSheet({ open, onClose, ledger, today, onEdit }: Props) {
                       {g.entries.map((e) => (
                         <li key={e.tx.id} data-entry={e.kind}>
                           <TxRow tx={e.tx} category={ledger.categoryById.get(e.tx.categoryId)} currency={ledger.currency} accountById={ledger.accountById} showDate onClick={edit} />
+                          {e.kind === 'payment' && <p className="-mt-1 pb-2 pl-[4.5rem] pr-4 text-sm text-ink-2">Bill payment. Not spending, it was counted when you spent it.</p>}
                         </li>
                       ))}
                     </ul>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Account, Transaction } from '../db/schema'
 import { balancesByAccount } from './accounts'
-import { cardEntries, cardLog, cardSummaries, cardSummary, cycleOf, isCard, nextDueDate, onCardAccount } from './cards'
+import { cardEntries, cardLog, cardSpend, cardSummaries, cardSummary, cycleOf, isCard, nextDueDate, onCardAccount } from './cards'
 
 const main: Account = { id: 1, name: 'Main', openingMinor: null }
 const hdfc: Account = { id: 2, name: 'HDFC card', openingMinor: -100_000, type: 'credit', creditLimitMinor: 500_000, statementDay: 15, dueDay: 3 }
@@ -217,5 +217,55 @@ describe('onCardAccount', () => {
     expect(onCardAccount({ accountId: 1 }, accounts)).toBe(false)
     expect(onCardAccount({}, accounts)).toBe(false)
     expect(onCardAccount({}, [hdfc, main])).toBe(true)
+  })
+})
+
+describe('cardSpend', () => {
+  // Today is Fri 6 Nov 2026, so this week is Mon 2 Nov to Sun 8 Nov.
+  const rows = [
+    tx({ accountId: 2, amountMinor: 50_000, date: '2026-11-05' }), // this week
+    tx({ accountId: 2, amountMinor: 20_000, date: '2026-11-02' }), // this week, the Monday
+    tx({ accountId: 2, amountMinor: 30_000, date: '2026-11-01' }), // last week, this month
+    tx({ accountId: 2, amountMinor: 70_000, date: '2026-10-20' }), // last month
+    tx({ accountId: 2, amountMinor: 90_000, date: '2026-08-01' }), // before any week shown
+    tx({ accountId: 2, amountMinor: 10_000, date: '2026-11-09' }), // after today
+    tx({ accountId: 1, amountMinor: 99_000, date: '2026-11-05' }), // another account
+    tx({ kind: 'transfer', accountId: 1, toAccountId: 2, amountMinor: 300_000, date: '2026-11-04' }), // paying the bill
+    tx({ kind: 'income', accountId: 2, amountMinor: 5_000, date: '2026-11-04' }), // a refund
+  ]
+  const spend = () => cardSpend([hdfc], rows, accounts, today)
+
+  it('adds up what was charged this week (from Monday), this month so far, and last month', () => {
+    const s = spend()
+    expect(s.weekMinor).toBe(70_000)
+    expect(s.monthMinor).toBe(100_000)
+    expect(s.lastMonthMinor).toBe(70_000)
+  })
+
+  it('does not count paying the bill, a refund, a day to come, or another account', () => {
+    // The 3,00,000 bill payment, the refund and the other account's 99,000 would make this larger if they were counted.
+    expect(spend().monthMinor).toBe(100_000)
+  })
+
+  it('lists the last six weeks, this one first, with nothing in a week as zero', () => {
+    const { weeks } = spend()
+    expect(weeks).toHaveLength(6)
+    expect(weeks[0]).toEqual({ from: '2026-11-02', to: '2026-11-08', spentMinor: 70_000 })
+    expect(weeks[1]).toEqual({ from: '2026-10-26', to: '2026-11-01', spentMinor: 30_000 })
+    expect(weeks[2]).toEqual({ from: '2026-10-19', to: '2026-10-25', spentMinor: 70_000 }) // the 20 Oct charge
+    expect(weeks[3].spentMinor).toBe(0)
+    expect(weeks[5].from).toBe('2026-09-28')
+  })
+
+  it('counts a Sunday in the week that ends on it', () => {
+    const s = cardSpend([hdfc], [tx({ accountId: 2, amountMinor: 1_000, date: '2026-11-08' })], accounts, new Date(2026, 10, 8))
+    expect(s.weeks[0]).toMatchObject({ from: '2026-11-02', spentMinor: 1_000 })
+  })
+
+  it('adds up several cards, and is zero with none', () => {
+    const amex: Account = { id: 3, name: 'Amex', openingMinor: null, type: 'credit' }
+    const both = cardSpend([hdfc, amex], [...rows, tx({ accountId: 3, amountMinor: 5_000, date: '2026-11-03' })], [...accounts, amex], today)
+    expect(both.weekMinor).toBe(75_000)
+    expect(cardSpend([], rows, accounts, today)).toMatchObject({ weekMinor: 0, monthMinor: 0, lastMonthMinor: 0 })
   })
 })

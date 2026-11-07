@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useDisplay } from '../data/display'
 import type { useLedger } from '../data/useLedger'
 import { formatMoney, parseLocalDate } from '../db/money'
-import { cardSummaries } from '../insights/cards'
+import { cardSpend, cardSummaries } from '../insights/cards'
 import { Icon } from './Icon'
 
 type Ledger = ReturnType<typeof useLedger>
@@ -17,6 +17,10 @@ const shortDay = (date: string) => (dayFormat ??= new Intl.DateTimeFormat(undefi
 export function CardsCard({ ledger, today, onOpen }: { ledger: Ledger; today: Date; onOpen: () => void }) {
   useDisplay() // amounts are masked or regrouped by display settings, so redraw when they change
   const summaries = useMemo(() => cardSummaries(ledger.accounts, ledger.txs, ledger.balances, today), [ledger.accounts, ledger.txs, ledger.balances, today])
+  const spend = useMemo(
+    () => cardSpend(summaries.map((s) => s.account), ledger.txs, ledger.accounts, today),
+    [summaries, ledger.txs, ledger.accounts, today],
+  )
   if (summaries.length === 0) return null
 
   const owed = summaries.reduce((a, s) => a + Math.max(0, s.owedMinor), 0)
@@ -27,7 +31,7 @@ export function CardsCard({ ledger, today, onOpen }: { ledger: Ledger; today: Da
     <button
       type="button"
       onClick={onOpen}
-      aria-label={`Credit cards: you owe ${formatMoney(owed, ledger.currency)}${next ? `, ${next.account.name} bill due ${shortDay(next.due!.date)}` : ''}. Open`}
+      aria-label={`Credit cards: you owe ${formatMoney(owed, ledger.currency)}${next ? `, ${next.account.name} bill due ${shortDay(next.due!.date)}` : ''}. Spent on ${summaries.length === 1 ? 'it' : 'them'}: ${formatMoney(spend.weekMinor, ledger.currency)} this week, ${formatMoney(spend.monthMinor, ledger.currency)} this month. Open`}
       className="mt-3 flex min-h-[4.5rem] w-full items-center gap-3 rounded-3xl bg-surface px-4 py-3 text-left shadow-[0_0_0_1px_var(--ring)] active:bg-surface-2"
     >
       <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2">
@@ -42,6 +46,7 @@ export function CardsCard({ ledger, today, onOpen }: { ledger: Ledger; today: Da
             {`${summaries.length > 1 ? `${next.account.name}: ` : ''}due ${shortDay(next.due!.date)}`}
           </span>
         )}
+        <span className="mt-0.5 block text-sm tabular-nums text-ink-2">{`Spent ${formatMoney(spend.weekMinor, ledger.currency)} this week, ${formatMoney(spend.monthMinor, ledger.currency)} this month`}</span>
       </span>
       <span aria-hidden="true" className="shrink-0 text-ink-2">
         <Icon name="chevRight" size={20} />

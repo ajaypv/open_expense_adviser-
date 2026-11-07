@@ -156,6 +156,52 @@ describe('Credit cards: the log', () => {
   })
 })
 
+describe('Credit cards: what was spent on the card', () => {
+  it('says what was spent this week and this month, leaving the bill payment out', async () => {
+    const card = await seedCard()
+    await add({ amountMinor: 40_000, merchant: 'Cafe', accountId: card, date: '2026-11-01' }) // last week, this month
+    await add({ amountMinor: 70_000, merchant: 'Old', accountId: card, date: '2026-10-20' }) // last month
+    mount()
+    const spending = await screen.findByRole('region', { name: 'HDFC card spending' })
+    expect(within(spending).getByRole('group', { name: 'This week: ₹2,500' })).toBeInTheDocument()
+    expect(within(spending).getByRole('group', { name: 'This month: ₹2,900' })).toBeInTheDocument()
+    expect(within(spending).getByRole('group', { name: 'Last month: ₹700' })).toBeInTheDocument()
+    expect(spending).toHaveTextContent('Paying the bill is not counted here')
+  })
+
+  it('lists the weeks one by one, this one first', async () => {
+    const card = await seedCard()
+    await add({ amountMinor: 40_000, accountId: card, date: '2026-11-01' })
+    mount()
+    const weeks = await screen.findByRole('list', { name: 'Spent by week' })
+    const items = [...weeks.querySelectorAll('li')]
+    expect(items).toHaveLength(6)
+    expect(items[0]).toHaveTextContent('This week')
+    expect(items[0]).toHaveTextContent('₹2,500')
+    expect(items[1]).toHaveTextContent('Last week')
+    expect(items[1]).toHaveTextContent('₹400')
+    expect(items[2]).toHaveTextContent('₹0')
+  })
+
+  it('shows only the card in view', async () => {
+    await seedCard()
+    const other = await addCreditCard('Amex')
+    await add({ amountMinor: 12_300, accountId: other, date: '2026-11-04' })
+    const { user } = mount()
+    await user.click(await screen.findByRole('button', { name: 'Amex' }))
+    expect(await screen.findByRole('group', { name: 'This week: ₹123' })).toBeInTheDocument()
+  })
+
+  it('says on the payment in the log that it is not spending', async () => {
+    await seedCard()
+    mount()
+    const log = await screen.findByRole('region', { name: 'HDFC card log' })
+    const payment = log.querySelector('[data-entry="payment"]') as HTMLElement
+    expect(payment).toHaveTextContent('Bill payment. Not spending')
+    expect(log.querySelector('[data-entry="charge"]')).not.toHaveTextContent('Bill payment')
+  })
+})
+
 describe('Credit cards: more than one', () => {
   it('shows the one owed most first, and switches to another from its name', async () => {
     await seedCard()
@@ -268,6 +314,16 @@ describe('The card on Home', () => {
     const button = await screen.findByRole('button', { name: /Credit cards: you owe ₹3,000/ })
     expect(button).toHaveTextContent('2 credit cards')
     expect(button).toHaveTextContent('Amex: due')
+  })
+
+  it('says what was spent on the cards this week and this month', async () => {
+    const card = await seedCard()
+    await addCreditCard('Amex')
+    await add({ amountMinor: 40_000, accountId: card, date: '2026-11-01' })
+    render(<Card onOpen={() => {}} />)
+    const button = await screen.findByRole('button', { name: /Credit cards: you owe/ })
+    expect(button).toHaveTextContent('Spent ₹2,500 this week, ₹2,900 this month')
+    expect(button).toHaveAccessibleName(/Spent on them: ₹2,500 this week, ₹2,900 this month/)
   })
 
   it('says nothing is owed when the cards are paid off', async () => {

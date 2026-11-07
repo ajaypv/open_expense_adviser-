@@ -99,6 +99,47 @@ export function cardSummary(card: Account, txs: Transaction[], accounts: Account
   }
 }
 
+/** What was spent on one or more cards: by the calendar week (Monday to Sunday) and month so far, and the last few weeks one by one. */
+export interface CardSpend {
+  /** This week, Monday to today. */
+  weekMinor: number
+  /** This calendar month so far, and the whole of the one before. */
+  monthMinor: number
+  lastMonthMinor: number
+  /** The last weeks, the current one first; a week with nothing on the card is there with zero. */
+  weeks: { from: string; to: string; spentMinor: number }[]
+}
+
+/** How many weeks `cardSpend` lists one by one. */
+export const SPEND_WEEKS = 6
+
+/**
+ * What was spent on the given cards, which is only what was charged to them. Paying the bill (a transfer from the bank) and refunds
+ * are left out, since the money was counted as spending the day it was charged: adding the payment would count it twice.
+ */
+export function cardSpend(cards: Account[], txs: Transaction[], accounts: Account[], today: Date): CardSpend {
+  const day = (offset: number) => localDateString(new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset))
+  const sinceMonday = (today.getDay() + 6) % 7
+  const todayKey = day(0)
+  const monthStart = `${todayKey.slice(0, 7)}-01`
+  const lastMonthStart = localDateString(new Date(today.getFullYear(), today.getMonth() - 1, 1))
+  const weeks = Array.from({ length: SPEND_WEEKS }, (_, i) => ({ from: day(-sinceMonday - 7 * i), to: day(-sinceMonday - 7 * i + 6), spentMinor: 0 }))
+  const spend: CardSpend = { weekMinor: 0, monthMinor: 0, lastMonthMinor: 0, weeks }
+  for (const card of cards) {
+    for (const e of cardEntries(card, txs, accounts)) {
+      if (e.kind !== 'charge') continue
+      const { date } = e.tx
+      if (date > todayKey) continue
+      if (date >= monthStart) spend.monthMinor += e.owedMinor
+      else if (date >= lastMonthStart) spend.lastMonthMinor += e.owedMinor
+      const week = weeks.find((w) => date >= w.from && date <= w.to)
+      if (week) week.spentMinor += e.owedMinor
+    }
+  }
+  spend.weekMinor = weeks[0].spentMinor
+  return spend
+}
+
 /** A summary for each card that is not archived, the one that is owed most first. */
 export function cardSummaries(accounts: Account[], txs: Transaction[], balances: Map<number, AccountBalance>, today: Date): CardSummary[] {
   return accounts
