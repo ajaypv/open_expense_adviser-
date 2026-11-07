@@ -7,15 +7,10 @@ interface Props {
   spentMinor: number
   limitMinor: number
   currency: string
-  /**
-   * 'bar' (the default) draws a bar. 'text' draws none: something else on the page shows the level (the water around the card on
-   * Home), and the meter is kept for the words and for a screen reader.
-   */
-  variant?: 'bar' | 'text'
 }
 
 /** Budget progress. The state is always stated in words and an icon, never by color alone. */
-export function Meter({ spentMinor, limitMinor, currency, variant = 'bar' }: Props) {
+export function Meter({ spentMinor, limitMinor, currency }: Props) {
   const intro = useIntro()
   const ratio = spentMinor / limitMinor
   const { over, close, fill } = budgetTone(ratio)
@@ -42,15 +37,13 @@ export function Meter({ spentMinor, limitMinor, currency, variant = 'bar' }: Pro
         aria-valuemax={limitMinor / 100}
         aria-valuenow={Math.min(spentMinor, limitMinor) / 100}
         aria-valuetext={status}
-        className={variant === 'text' ? 'sr-only' : 'mt-2 h-2.5 overflow-hidden rounded-full'}
-        style={variant === 'text' ? undefined : { background: BUDGET_SKY }}
+        className="mt-2 h-2.5 overflow-hidden rounded-full"
+        style={{ background: BUDGET_SKY }}
       >
-        {variant === 'bar' && (
-          <div
-            className={`${intro ? 'bar-reveal ' : ''}h-full rounded-full transition-[width] duration-300`}
-            style={{ width: `${Math.min(ratio, 1) * 100}%`, background: fill }}
-          />
-        )}
+        <div
+          className={`${intro ? 'bar-reveal ' : ''}h-full rounded-full transition-[width] duration-300`}
+          style={{ width: `${Math.min(ratio, 1) * 100}%`, background: fill }}
+        />
       </div>
       <p className={`mt-2 flex items-center gap-1.5 ${over ? 'font-semibold text-critical' : close ? 'font-medium text-ink' : 'text-ink-2'}`}>
         {(over || close) && (

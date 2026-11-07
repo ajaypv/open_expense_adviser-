@@ -1,12 +1,9 @@
-import { budgetTone } from '../charts/budgetTone'
 import { Meter } from '../charts/Meter'
 import { formatMoney } from '../db/money'
-import { useRef, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { AnimatedMoney } from './AnimatedMoney'
 import { Icon } from './Icon'
 import { useSwipe } from './useSwipe'
-import { WaterBorder } from './Water'
-import { WaterDrops } from './WaterDrops'
 
 export interface PeriodTile {
   id: string
@@ -69,9 +66,6 @@ export function SpendingOverview({
   ahead,
 }: Props) {
   const against = `${partial ? 'the same days in ' : ''}${prevName}`
-  // The drops hang from the big number, in the colour of the budget's state (blue, amber, red), and drip faster once it is passed.
-  const numberRef = useRef<HTMLParagraphElement>(null)
-  const tone = budgetMinor !== null ? budgetTone(totalMinor / budgetMinor) : null
   const swipe = useSwipe({ onRight: onPrevMonth, onLeft: onNextMonth })
 
   // Which way the month just moved, so the figures can slide in from that side. Worked out as the month changes.
@@ -81,9 +75,7 @@ export function SpendingOverview({
   }
 
   return (
-    <section aria-label="Summary" {...swipe} className="relative mt-3 touch-pan-y rounded-[24px] bg-surface p-5 shadow-[0_0_0_1px_var(--ring)]">
-      {/* The budget, drawn on the card's own outline. */}
-      {budgetMinor !== null && <WaterBorder ratio={totalMinor / budgetMinor} />}
+    <section aria-label="Summary" {...swipe} className="relative mt-3 touch-pan-y rounded-3xl bg-surface p-5 shadow-[0_0_0_1px_var(--ring)]">
       <button
         type="button"
         aria-pressed={privacy}
@@ -104,7 +96,7 @@ export function SpendingOverview({
       ) : (
         <>
           <p className="text-ink-2">{isCurrent ? `Spent so far in ${monthName}` : `Spent in ${monthName}`}</p>
-          <p ref={numberRef} className="mt-1 w-fit whitespace-nowrap text-[clamp(2.25rem,10vw,2.5rem)] font-extrabold leading-none tracking-[-0.03em] tabular-nums">
+          <p className="mt-1 whitespace-nowrap text-[clamp(2.25rem,10vw,2.5rem)] font-extrabold leading-none tracking-[-0.03em] tabular-nums">
             <AnimatedMoney minor={totalMinor} currency={currency} id="hero" />
           </p>
           {deltaPct !== null && (
@@ -142,7 +134,7 @@ export function SpendingOverview({
 
       {budgetMinor !== null && (
         <div className="mt-4 border-t border-line pt-4">
-          <Meter spentMinor={totalMinor} limitMinor={budgetMinor} currency={currency} variant="text" />
+          <Meter spentMinor={totalMinor} limitMinor={budgetMinor} currency={currency} />
         </div>
       )}
 
@@ -180,8 +172,6 @@ export function SpendingOverview({
 
       {ahead}
       </div>
-      {/* After the figure it hangs from, so that is there to measure by the time this first looks. */}
-      {totalMinor > 0 && <WaterDrops anchor={numberRef} color={tone?.fill} fast={tone?.over} />}
     </section>
   )
 }
