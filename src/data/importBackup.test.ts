@@ -421,3 +421,56 @@ describe('payments to people in a backup', () => {
     expect(row.delivery).toBe('sent')
   })
 })
+
+describe('credit cards in a backup', () => {
+  const card = { id: 5, name: 'HDFC card', openingMinor: -100_000, type: 'credit', creditLimitMinor: 500_000, statementDay: 15, dueDay: 3 }
+
+  it('brings a card back as a card, with its limit and days, and a payment of its bill linked to it', async () => {
+    const { db, parseBackup, importBackup } = await load()
+    const parsed = parseBackup(
+      backupText({
+        accounts: [{ id: 1, name: 'Main', openingMinor: null }, card],
+        transactions: [tx({ accountId: 5, merchant: 'Croma' }), tx({ kind: 'transfer', accountId: 1, toAccountId: 5, merchant: '', createdAt: 3000, amountMinor: 20_000 })],
+      }),
+    )
+    if (!parsed.ok) throw new Error(parsed.error)
+    await importBackup(parsed.backup, 'merge')
+    const stored = (await db.accounts.toArray()).find((a) => a.name === 'HDFC card')!
+    expect(stored).toMatchObject({ type: 'credit', creditLimitMinor: 500_000, statementDay: 15, dueDay: 3, openingMinor: -100_000 })
+    const rows = await db.transactions.toArray()
+    expect(rows.find((r) => r.merchant === 'Croma')?.accountId).toBe(stored.id)
+    expect(rows.find((r) => r.kind === 'transfer')?.toAccountId).toBe(stored.id)
+  })
+
+  it('leaves an ordinary account without any card fields', async () => {
+    const { db, parseBackup, importBackup } = await load()
+    const parsed = parseBackup(backupText({ accounts: [{ id: 7, name: 'Savings', openingMinor: 5 }] }))
+    if (!parsed.ok) throw new Error(parsed.error)
+    await importBackup(parsed.backup, 'merge')
+    const saved = (await db.accounts.toArray()).find((a) => a.name === 'Savings')!
+    expect(saved.type).toBeUndefined()
+    expect('statementDay' in saved).toBe(false)
+  })
+
+  it('fills in what a card here lacks, and keeps what it has', async () => {
+    const { db, parseBackup, importBackup, addCreditCard } = await load()
+    await addCreditCard('HDFC card', { dueDay: 9 })
+    const parsed = parseBackup(backupText({ accounts: [card] }))
+    if (!parsed.ok) throw new Error(parsed.error)
+    await importBackup(parsed.backup, 'merge')
+    const saved = (await db.accounts.toArray()).find((a) => a.name === 'HDFC card')!
+    expect(saved).toMatchObject({ dueDay: 9, creditLimitMinor: 500_000, statementDay: 15 })
+    expect((await db.accounts.toArray()).filter((a) => a.name === 'HDFC card')).toHaveLength(1)
+  })
+
+  it('refuses a day outside 1 to 28, and a type it does not know', async () => {
+    const { parseBackup } = await load()
+    expect(parseBackup(backupText({ accounts: [{ ...card, dueDay: 31 }] })).ok).toBe(false)
+    expect(parseBackup(backupText({ accounts: [{ ...card, type: 'debit' }] })).ok).toBe(false)
+  })
+
+  it('still reads a file from before there were cards', async () => {
+    const { parseBackup } = await load()
+    expect(parseBackup(backupText({ accounts: [{ id: 1, name: 'Main', openingMinor: null }] })).ok).toBe(true)
+  })
+})

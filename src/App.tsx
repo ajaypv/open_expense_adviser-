@@ -41,6 +41,7 @@ import { BottomNav, TABS, type Tab } from './ui/BottomNav'
 import { openHomeOn, showHomeView } from './ui/homeView'
 import { ChatBar } from './ui/ChatBar'
 import { GoalMoneySheet, GoalSheet } from './ui/GoalSheets'
+import { CardsSheet } from './ui/CardsSheet'
 import { GoalsOverview } from './ui/GoalsOverview'
 import { RuleSheet } from './ui/RuleSheet'
 import { AiSheet } from './ui/AiSheet'
@@ -107,6 +108,7 @@ function Shell() {
   monthRef.current = month
   const [sheet, setSheet] = useState<Sheet>({ open: false, editing: null, prefill: null, startKind: 'expense' })
   const [goalsOpen, setGoalsOpen] = useState(false)
+  const [cardsOpen, setCardsOpen] = useState(false)
   const [goalSheet, setGoalSheet] = useState<GoalSheetState>({ open: false, goal: null, n: 0 })
   // Upcoming payments are a sheet, and adding or changing one is a second sheet on top of it.
   const [upcomingOpen, setUpcomingOpen] = useState(false)
@@ -378,6 +380,8 @@ function Shell() {
   const editGoal = useCallback((goal: Goal) => setGoalSheet((s) => ({ open: true, goal, n: s.n + 1 })), [])
   const openGoals = useCallback(() => setGoalsOpen(true), [])
   const closeGoals = useCallback(() => setGoalsOpen(false), [])
+  const openCards = useCallback(() => setCardsOpen(true), [])
+  const closeCards = useCallback(() => setCardsOpen(false), [])
   const closeGoalSheet = useCallback(() => setGoalSheet((s) => ({ ...s, open: false })), [])
   const goalMoney = useCallback((goal: Goal) => setMoneySheet((s) => ({ open: true, goal, n: s.n + 1 })), [])
   const closeMoneySheet = useCallback(() => setMoneySheet((s) => ({ ...s, open: false })), [])
@@ -457,6 +461,7 @@ function Shell() {
             logNudge={logNudge}
             onAdd={openAddDefault}
             onOpenGoals={openGoals}
+            onOpenCards={openCards}
             onOpenUpcoming={openUpcoming}
             onPickPeriod={pickPeriod}
             onOpenInsights={openInsights}
@@ -524,6 +529,8 @@ function Shell() {
         startKind={sheet.startKind}
         onClose={closeSheet}
       />
+
+      <CardsSheet open={cardsOpen} onClose={closeCards} ledger={ledger} today={today} onEdit={openEdit} />
 
       <GoalsOverview
         open={goalsOpen}

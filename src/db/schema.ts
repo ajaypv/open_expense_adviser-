@@ -59,6 +59,17 @@ export interface Account {
   /** What it held before any logged transaction. null until the user says. */
   openingMinor: number | null
   archived?: boolean
+  /**
+   * 'credit' for a credit card: what is spent on it is owed, not gone, until the bill is paid, so it is kept out of the cash balance
+   * and its "balance" is minus what is owed. Missing for cash, bank and the rest.
+   */
+  type?: 'credit'
+  /** A card's credit limit. */
+  creditLimitMinor?: number
+  /** The day of the month (1 to 28) a card's statement closes. */
+  statementDay?: number
+  /** The day of the month (1 to 28) a card's bill falls due. */
+  dueDay?: number
 }
 
 /** A transaction that repeats, such as rent or a subscription. */

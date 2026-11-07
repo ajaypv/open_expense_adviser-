@@ -1,6 +1,7 @@
 import { INCOME_CATEGORY } from '../db/defaultCategories'
 import type { Account, Budget, Category, Person, Recurring, Transaction } from '../db/schema'
 import { balancesByAccount } from '../insights/accounts'
+import { isCard } from '../insights/cards'
 import { personStats } from '../insights/people'
 
 /**
@@ -56,7 +57,10 @@ export function buildLedger(raw: RawData) {
   const balances = balancesByAccount(txs, accounts)
   let estimated = 0
   let net = 0
-  for (const b of balances.values()) {
+  // Cash and bank only: what is spent on a credit card is owed, not gone, until the bill is paid, so a card is not part of the balance.
+  for (const a of accounts) {
+    const b = balances.get(a.id)
+    if (!b || isCard(a)) continue
     estimated += b.estimatedMinor
     net += b.netMinor
   }
@@ -92,8 +96,10 @@ export function buildLedger(raw: RawData) {
     /** The people themselves, in the same order. */
     people: stats.map((s) => s.person),
     /** True once the user has told the app a balance for any account; otherwise the estimate starts from zero. */
-    balanceSet: accounts.some((a) => a.openingMinor !== null),
-    /** Opening balances + everything received - everything sent, across all accounts. */
+    balanceSet: accounts.some((a) => !isCard(a) && a.openingMinor !== null),
+    /** The credit cards, which are accounts of their own kept out of the balance. */
+    cards: accounts.filter(isCard),
+    /** Opening balances + everything received - everything sent, across the cash and bank accounts (not credit cards). */
     estimatedBalanceMinor: estimated,
     /** Received minus sent over all time, across all accounts. */
     netMinor: net,

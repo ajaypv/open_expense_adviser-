@@ -79,7 +79,19 @@ const backupSchema = z.object({
     .array(z.object({ categoryId: z.number().int().nullable(), monthlyLimitMinor: amount, currency: currencyCode.default('INR') }))
     .default([]),
   accounts: z
-    .array(z.object({ id: z.number().int(), name: z.string().min(1), openingMinor: z.number().int().nullable().default(null), archived: z.boolean().optional() }))
+    .array(
+      z.object({
+        id: z.number().int(),
+        name: z.string().min(1),
+        openingMinor: z.number().int().nullable().default(null),
+        archived: z.boolean().optional(),
+        /** Credit cards, added later; older files have none. */
+        type: z.literal('credit').optional(),
+        creditLimitMinor: amount.optional(),
+        statementDay: z.number().int().min(1).max(28).optional(),
+        dueDay: z.number().int().min(1).max(28).optional(),
+      }),
+    )
     .default([]),
   recurring: z.array(recurringSchema).default([]),
   /** Added after version 2 shipped; older files simply have none. */
@@ -92,6 +104,17 @@ const backupSchema = z.object({
 })
 
 export type Backup = z.infer<typeof backupSchema>
+
+/** What makes an account a credit card, from a backup's line for it: nothing for any other account, and only what the file has. */
+function cardFields(a: Backup['accounts'][number]) {
+  if (a.type !== 'credit') return {}
+  return {
+    type: 'credit' as const,
+    ...(a.creditLimitMinor !== undefined ? { creditLimitMinor: a.creditLimitMinor } : {}),
+    ...(a.statementDay !== undefined ? { statementDay: a.statementDay } : {}),
+    ...(a.dueDay !== undefined ? { dueDay: a.dueDay } : {}),
+  }
+}
 
 export type ParseResult = { ok: true; backup: Backup } | { ok: false; error: string }
 
@@ -217,9 +240,15 @@ export async function importBackup(backup: Backup, mode: 'merge' | 'replace'): P
         if (a.openingMinor !== null && (mode === 'replace' || found.openingMinor === null)) {
           await db.accounts.update(found.id, { openingMinor: a.openingMinor })
         }
+        // A card that is here already keeps what it has; what it lacks (a limit, a day) is filled in from the file.
+        if (a.type === 'credit' && found.type === 'credit') {
+          const missing = Object.fromEntries(Object.entries(cardFields(a)).filter(([key]) => key !== 'type' && found[key as keyof typeof found] === undefined))
+          if (Object.keys(missing).length > 0) await db.accounts.update(found.id, missing)
+        }
       } else {
-        const id = (await db.accounts.add({ name: a.name, openingMinor: a.openingMinor, archived: a.archived } as never)) as number
-        localAccounts.push({ id, name: a.name, openingMinor: a.openingMinor, archived: a.archived })
+        const card = cardFields(a)
+        const id = (await db.accounts.add({ name: a.name, openingMinor: a.openingMinor, archived: a.archived, ...card } as never)) as number
+        localAccounts.push({ id, name: a.name, openingMinor: a.openingMinor, archived: a.archived, ...card })
         accId.set(a.id, id)
       }
     }

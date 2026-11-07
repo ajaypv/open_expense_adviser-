@@ -1,5 +1,5 @@
 import { isValidCurrency, localDateString, MAX_AMOUNT_MINOR, parseLocalDate } from './money'
-import { db, type Goal, type Person, type Recurring, type Transaction } from './schema'
+import { db, type Account, type Goal, type Person, type Recurring, type Transaction } from './schema'
 
 const DEFAULT_CURRENCY = 'INR'
 
@@ -114,6 +114,58 @@ export async function addAccount(name: string, openingMinor: number | null = nul
   const clean = name.trim()
   if (!clean) throw new Error('Give the account a name')
   return db.accounts.add({ name: clean, openingMinor } as never) as Promise<number>
+}
+
+/** What a credit card has besides a name. A limit or a day of null (or left out) is none. */
+export interface CardDetails {
+  creditLimitMinor?: number | null
+  statementDay?: number | null
+  dueDay?: number | null
+}
+
+const cleanDay = (day: number | null | undefined, what: string): number | undefined => {
+  if (day === null || day === undefined) return undefined
+  if (!Number.isInteger(day) || day < 1 || day > 28) throw new Error(`Choose a ${what} from 1 to 28`)
+  return day
+}
+
+const cleanLimit = (limit: number | null | undefined): number | undefined => {
+  if (limit === null || limit === undefined) return undefined
+  assertValidAmount(limit)
+  return limit
+}
+
+/**
+ * A credit card: an account whose balance is what is owed (so what is spent on it adds to that, and a bill paid from your bank
+ * takes it down), kept out of the cash balance. `owedMinor` is what was owed before anything logged, if you say.
+ */
+export async function addCreditCard(name: string, details: CardDetails = {}, owedMinor: number | null = null): Promise<number> {
+  const clean = name.trim()
+  if (!clean) throw new Error('Give the card a name')
+  if (owedMinor !== null && (!Number.isSafeInteger(owedMinor) || owedMinor < 0)) throw new Error('What you owe can’t be negative')
+  const limit = cleanLimit(details.creditLimitMinor)
+  const statementDay = cleanDay(details.statementDay, 'statement day')
+  const dueDay = cleanDay(details.dueDay, 'due day')
+  const card = {
+    name: clean,
+    openingMinor: owedMinor === null ? null : -owedMinor,
+    type: 'credit' as const,
+    ...(limit !== undefined ? { creditLimitMinor: limit } : {}),
+    ...(statementDay !== undefined ? { statementDay } : {}),
+    ...(dueDay !== undefined ? { dueDay } : {}),
+  }
+  return db.accounts.add(card as never) as Promise<number>
+}
+
+/** Change a card's limit and days. Only what is named changes; null takes one away. */
+export async function updateCardDetails(id: number, details: CardDetails): Promise<void> {
+  const card: Account | undefined = await db.accounts.get(id)
+  if (!card || card.type !== 'credit') throw new Error('That is not a credit card')
+  const changes: Record<string, number | undefined> = {}
+  if ('creditLimitMinor' in details) changes.creditLimitMinor = cleanLimit(details.creditLimitMinor)
+  if ('statementDay' in details) changes.statementDay = cleanDay(details.statementDay, 'statement day')
+  if ('dueDay' in details) changes.dueDay = cleanDay(details.dueDay, 'due day')
+  await db.accounts.update(id, changes)
 }
 
 export async function renameAccount(id: number, name: string): Promise<void> {

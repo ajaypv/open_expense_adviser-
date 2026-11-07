@@ -16,11 +16,13 @@ import {
   sum,
   type MonthKey,
 } from '../insights/aggregates'
+import { isCard } from '../insights/cards'
 import { newestFirst } from '../insights/order'
 import { ScreenSkeleton } from '../ui/ScreenSkeleton'
 import type { Suggestion } from '../insights/suggestions'
 import { BackupNudge, DueCard, LogNudge } from '../ui/HomeCards'
 import { BudgetPrompt } from '../ui/BudgetPrompt'
+import { CardsCard } from '../ui/CardsCard'
 import { GoalsSummary } from '../ui/GoalsSummary'
 import { InsightCard } from '../ui/InsightCard'
 import { SpendingOverview } from '../ui/SpendingOverview'
@@ -62,6 +64,8 @@ interface Props {
   onOpenGoals: () => void
   /** Opens the upcoming payments: loans, auto-payments, subscriptions and salary. */
   onOpenUpcoming: () => void
+  /** Opens the credit cards, from the card that shows what is owed. */
+  onOpenCards?: () => void
   /** Opens Activity on what was spent in a period, from the Today, Yesterday and Last 7 days figures. */
   onPickPeriod: (range: { from: string; to: string }) => void
   /** Opens the Insights screen, from the card that points to it. */
@@ -93,6 +97,7 @@ export const Home = memo(function Home({
   onAdd,
   onOpenGoals,
   onOpenUpcoming,
+  onOpenCards,
   onPickPeriod,
   onOpenInsights,
   onOpenAi,
@@ -210,11 +215,13 @@ export const Home = memo(function Home({
               currency={currency}
               balanceMinor={ledger.estimatedBalanceMinor}
               balanceSet={ledger.balanceSet}
-              accountLines={ledger.accounts.map((a) => ({ id: a.id, name: a.name, estimatedMinor: ledger.balances.get(a.id)?.estimatedMinor ?? 0 }))}
+              accountLines={ledger.accounts.filter((a) => !isCard(a)).map((a) => ({ id: a.id, name: a.name, estimatedMinor: ledger.balances.get(a.id)?.estimatedMinor ?? 0 }))}
               shown={balanceShown}
               onToggle={onToggleBalance}
               onSetBalance={onOpenSettings}
             />
+
+            {onOpenCards && <CardsCard ledger={ledger} today={today} onOpen={onOpenCards} />}
 
             {isCurrent && <UpcomingCard ledger={ledger} today={today} onOpen={onOpenUpcoming} />}
 

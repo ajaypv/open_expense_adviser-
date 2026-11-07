@@ -3,6 +3,7 @@ import { useDisplay } from '../../data/display'
 import { useToday } from '../../data/useToday'
 import { formatMoney } from '../../db/money'
 import { balanceTrail, SOURCE_LABELS } from '../../insights/balanceTrail'
+import { onCardAccount } from '../../insights/cards'
 import { card, type Ledger } from './parts'
 
 let enteredFormat: Intl.DateTimeFormat | undefined
@@ -22,7 +23,8 @@ export function BalanceTrail({ ledger, now }: { ledger: Ledger; now?: number }) 
   const today = useToday()
   const at = now ?? today.getTime()
   const { currency, categoryById } = ledger
-  const trail = useMemo(() => balanceTrail(ledger.txs, at), [ledger.txs, at])
+  // What is spent on a credit card is owed, not taken from the balance, so it is not part of this story.
+  const trail = useMemo(() => balanceTrail(ledger.txs.filter((t) => !onCardAccount(t, ledger.accounts)), at), [ledger.txs, ledger.accounts, at])
   const signed = (minor: number) => `${minor < 0 ? '−' : '+'}${formatMoney(Math.abs(minor), currency)}`
 
   return (

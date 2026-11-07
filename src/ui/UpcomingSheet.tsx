@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { useLedger } from '../data/useLedger'
+import { isCard } from '../insights/cards'
 import { formatMoney, localDateString } from '../db/money'
 import type { Recurring } from '../db/schema'
 import { monthLabel } from '../insights/aggregates'
@@ -59,7 +60,10 @@ export function UpcomingSheet({ open, onClose, ledger, today, onAdd, onEdit }: P
   const overall = forecast(ledger.estimatedBalanceMinor, items, todayKey)
   const overallShort = shortfallPhrase(overall, currency, today)
   const accountChecks = useMemo(
-    () => forecastByAccount(items, ledger.accounts, ledger.balances, todayKey).filter((a) => ledger.accounts.find((x) => x.id === a.accountId)?.openingMinor != null),
+    () => forecastByAccount(items, ledger.accounts, ledger.balances, todayKey).filter((a) => {
+        const account = ledger.accounts.find((x) => x.id === a.accountId)
+        return account !== undefined && !isCard(account) && account.openingMinor != null
+      }),
     [items, ledger.accounts, ledger.balances, todayKey],
   )
   const anyAccountShort = accountChecks.some((a) => a.forecast.shortfallMinor > 0)
