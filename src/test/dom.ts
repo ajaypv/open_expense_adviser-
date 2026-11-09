@@ -86,3 +86,6 @@ if (typeof Blob.prototype.text !== 'function') {
     })
   }
 }
+
+// jsdom has no canvas or WebGL: say so quietly (null, as a browser without it does) instead of logging "not implemented".
+HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext

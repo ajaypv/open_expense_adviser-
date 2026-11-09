@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { formatMoney } from '../db/money'
 import type { Spot } from '../insights/places'
+import { PlacesGlobe } from './PlacesGlobe'
 
 interface Props {
   spots: Spot[]
@@ -29,6 +30,9 @@ export function PlacesMap({ spots, currency, monthName }: Props) {
   const [shown, setShown] = useState(remembered)
   const [offline, setOffline] = useState(false)
   const box = useRef<HTMLDivElement>(null)
+  // The place picked in the list, which the globe turns to face.
+  const [picked, setPicked] = useState<string | null>(null)
+  const pickedKey = spots.some((s) => s.key === picked) ? picked : null
 
   useEffect(() => {
     if (!shown) return
@@ -62,16 +66,26 @@ export function PlacesMap({ spots, currency, monthName }: Props) {
     <div className="mt-3">
       <ul aria-label={`Places in ${monthName}`} className="divide-y divide-line rounded-3xl bg-surface px-4 shadow-[0_0_0_1px_var(--ring)]">
         {spots.slice(0, 5).map((s) => (
-          <li key={s.key} className="flex items-center gap-3 py-3">
-            <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: s.color }} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{s.name}</p>
-              <p className="text-sm text-ink-2">{`${s.count} ${s.count === 1 ? 'time' : 'times'}`}</p>
-            </div>
-            <span className="shrink-0 font-semibold tabular-nums">{formatMoney(s.totalMinor, currency)}</span>
+          <li key={s.key}>
+            <button
+              type="button"
+              aria-pressed={s.key === pickedKey}
+              aria-label={`${s.name}, ${s.count} ${s.count === 1 ? 'time' : 'times'}, ${formatMoney(s.totalMinor, currency)}. Show on the globe`}
+              onClick={() => setPicked(s.key === pickedKey ? null : s.key)}
+              className="flex min-h-14 w-full items-center gap-3 py-3 text-left"
+            >
+              <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: s.color }} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium">{s.name}</span>
+                <span className="block text-sm text-ink-2">{`${s.count} ${s.count === 1 ? 'time' : 'times'}`}</span>
+              </span>
+              <span className="shrink-0 font-semibold tabular-nums">{formatMoney(s.totalMinor, currency)}</span>
+            </button>
           </li>
         ))}
       </ul>
+
+      <PlacesGlobe spots={spots} currency={currency} focusKey={pickedKey} />
 
       {shown ? (
         // A stacking context of its own, so the map's panes never climb over the tab bar or a sheet.

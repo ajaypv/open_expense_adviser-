@@ -750,6 +750,10 @@ The map at the bottom of Insights.
 | MAP-5 | Offline | Turn the connection off and press Show map | "The map needs an internet connection." instead of a grey box; the list still works | Auto: `PlacesMap.flow` |
 | MAP-6 | Empty states | Look at a month with nothing recorded; look when no place has ever been recorded | "No places were recorded in October."; or an explanation of the setting with an Open settings button | Auto: `Insights.places.flow` |
 | MAP-7 | Names are text | Give an entry a name such as <img src=x onerror=alert(1)> and open its pin | It is shown as written, never run | Auto: `leafletMap` |
+| MAP-8 | The globe | Open Insights, Where you spent, with places recorded | A globe with a dot at each place (every place, not just the five listed), bigger where more was spent and in the category colour, starts turned to the biggest place and turns slowly by itself; it is drawn on the phone, so nothing is loaded and no request is made; it follows the light or dark theme | Auto: `PlacesGlobe.flow`; look by eye in both themes |
+| MAP-9 | Turning the globe | Drag a finger sideways on the globe; drag down the page over it | Sideways turns it (to the right moves the surface right) and the turning stops by itself; up and down still scrolls the page; reduced motion stops the slow turning but dragging still works | Auto: `PlacesGlobe.flow`; look by eye |
+| MAP-10 | Find a place on the globe | Tap a place in the list, then tap it again | The globe swings round the short way to that place, its dot grows and its name, how many times and the total are written under the globe; tapping again lets go and the globe turns by itself again | Auto: `PlacesGlobe.flow` |
+| MAP-11 | No WebGL | Open Insights where WebGL is switched off | No globe and no gap or error; the list and Show map work as before | Auto: `PlacesGlobe.flow` |
 
 ## Swiping between months
 

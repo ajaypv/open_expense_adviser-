@@ -644,7 +644,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
           <Section
             id="where-h"
             title="Where you spent"
-            intro={spots.length > 0 ? `Where your ${name} spending was recorded. Tap a pin to see what was spent there.` : undefined}
+            intro={spots.length > 0 ? `Where your ${name} spending was recorded, on a globe you can turn. Tap a place to find it, or open the map.` : undefined}
           >
             {spots.length > 0 ? (
               <PlacesMap spots={spots} currency={currency} monthName={name} />
