@@ -1,5 +1,6 @@
 import type { WidgetData } from './data'
-import { isAndroidApp, publishToAndroid } from './native'
+import { isAndroidApp, publishTimelineToAndroid, publishToAndroid } from './native'
+import type { TimelineWidgetData } from './timelineData'
 import { snapshotUrl, WIDGET_CACHE } from './snapshot'
 
 /**
@@ -21,4 +22,9 @@ export async function publishWidgetData(data: WidgetData): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+/** Leaves the Timeline widget its days. Only the Android app has one, so this is quiet and false everywhere else. */
+export async function publishTimelineData(data: TimelineWidgetData): Promise<boolean> {
+  return isAndroidApp() ? publishTimelineToAndroid(data) : false
 }

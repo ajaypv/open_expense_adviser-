@@ -4,10 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Category, Transaction } from '../db/schema'
 import { makeLedger } from '../test/ledger'
 
-vi.mock('./publish', () => ({ publishWidgetData: vi.fn().mockResolvedValue(true) }))
+vi.mock('./publish', () => ({ publishWidgetData: vi.fn().mockResolvedValue(true), publishTimelineData: vi.fn().mockResolvedValue(true) }))
 
-import { publishWidgetData } from './publish'
-import { useWidgetSnapshot, WIDGET_DELAY_MS, widgetDataFor } from './useWidgetSnapshot'
+import { publishTimelineData, publishWidgetData } from './publish'
+import { timelineWidgetFor, updateWidgetNow, useWidgetSnapshot, WIDGET_DELAY_MS, widgetDataFor } from './useWidgetSnapshot'
 
 const EDGE_WINDOWS = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0'
 const PHONE = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36'
@@ -23,10 +23,12 @@ function ledgerWith(expenses: Transaction[], over: Record<string, unknown> = {})
 }
 
 const publish = vi.mocked(publishWidgetData)
+const publishTimeline = vi.mocked(publishTimelineData)
 
 beforeEach(() => {
   vi.useFakeTimers()
   publish.mockClear()
+  publishTimeline.mockClear()
 })
 afterEach(() => {
   vi.useRealTimers()
@@ -43,6 +45,26 @@ describe('widgetDataFor', () => {
   })
 })
 
+describe('timelineWidgetFor', () => {
+  it('works out the last days from the ledger, in the amounts the app shows', () => {
+    const today = new Date()
+    const data = timelineWidgetFor(ledgerWith([tx(1, new Date(today.getFullYear(), today.getMonth(), today.getDate()).toLocaleDateString('en-CA'), 450)]), today)
+    expect(data.rows[0].amount).toBe('₹450')
+    expect(data.rows[0].text).toMatch(/^Today/)
+  })
+})
+
+describe('updateWidgetNow', () => {
+  it('leaves both widgets their figures, and says whether the Spending one got them', async () => {
+    vi.useRealTimers()
+    expect(await updateWidgetNow(ledgerWith([tx(1, `${month}-01`, 450)]))).toBe(true)
+    expect(publish).toHaveBeenCalledOnce()
+    expect(publishTimeline).toHaveBeenCalledOnce()
+    publish.mockResolvedValueOnce(false)
+    expect(await updateWidgetNow(ledgerWith([tx(1, `${month}-01`, 450)]))).toBe(false)
+  })
+})
+
 describe('useWidgetSnapshot', () => {
   it('leaves the figures for the widget a moment after the ledger loads, where a widget can exist', () => {
     edge()
@@ -51,6 +73,7 @@ describe('useWidgetSnapshot', () => {
     vi.advanceTimersByTime(WIDGET_DELAY_MS)
     expect(publish).toHaveBeenCalledOnce()
     expect(publish.mock.calls[0][0]).toMatchObject({ spent: '₹450' })
+    expect(publishTimeline).toHaveBeenCalledOnce()
   })
 
   it('does nothing on a phone, where there is no widget to keep up to date', () => {

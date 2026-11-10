@@ -2,6 +2,7 @@ package com.expensetracker.app;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -21,5 +22,24 @@ public class WidgetBridgePlugin extends Plugin {
         edit.apply();
         SpendingWidgetProvider.refreshAll(context);
         call.resolve();
+    }
+
+    /** The Timeline widget's days, as the JSON text the app worked out (src/widget/timelineData.ts). */
+    @PluginMethod
+    public void setTimeline(PluginCall call) {
+        Context context = getContext();
+        context.getSharedPreferences(TimelineWidgetProvider.PREFS, Context.MODE_PRIVATE).edit().putString(TimelineWidgetProvider.KEY, call.getString("json", "")).apply();
+        TimelineWidgetProvider.refreshAll(context);
+        call.resolve();
+    }
+
+    /** The page of the app a widget was touched to open, once; empty when the app was opened some other way. */
+    @PluginMethod
+    public void takeLaunchView(PluginCall call) {
+        JSObject result = new JSObject();
+        String view = MainActivity.launchView;
+        MainActivity.launchView = null;
+        result.put("view", view == null ? "" : view);
+        call.resolve(result);
     }
 }

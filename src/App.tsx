@@ -29,6 +29,7 @@ import { usePayments } from './payments/usePayments'
 import { suggest, type Suggestion } from './insights/suggestions'
 import type { SettingsPage } from './screens/Settings'
 import { handleNativeBack } from './native/back'
+import { useWidgetLaunch } from './widget/useWidgetLaunch'
 import { useWidgetSnapshot } from './widget/useWidgetSnapshot'
 import { usePwa } from './pwa/usePwa'
 import { APP_VERSION } from './pwa/version'
@@ -254,6 +255,9 @@ function Shell() {
     },
     [go],
   )
+
+  // A touch on the Timeline widget on the Android home screen opens Home on its timeline.
+  useWidgetLaunch(useCallback(() => swipeBar('left'), [swipeBar]))
 
   // On any tab but Home, the phone's back button goes to Home rather than out of the app.
   useBackClose(tab !== 'home', () => go('home'))

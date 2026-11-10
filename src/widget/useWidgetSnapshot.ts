@@ -4,7 +4,8 @@ import type { useLedger } from '../data/useLedger'
 import { formatMoney, localDateString } from '../db/money'
 import { buildAiSummary } from '../insights/ai'
 import { buildWidgetData, type WidgetData } from './data'
-import { publishWidgetData } from './publish'
+import { publishTimelineData, publishWidgetData } from './publish'
+import { buildTimelineWidgetData, type TimelineWidgetData } from './timelineData'
 import { widgetsSupported } from './support'
 
 type Ledger = ReturnType<typeof useLedger>
@@ -23,8 +24,16 @@ export function widgetDataFor(ledger: Ledger, now: Date): WidgetData {
   return buildWidgetData(summary, money, now)
 }
 
-/** Works out the widget's data and leaves it for the widget now. */
-export const updateWidgetNow = (ledger: Ledger, now: Date = new Date()) => publishWidgetData(widgetDataFor(ledger, now))
+/** The Timeline widget's last days, in the amounts the app shows (hidden ones stay hidden). */
+export function timelineWidgetFor(ledger: Ledger, now: Date): TimelineWidgetData {
+  return buildTimelineWidgetData(ledger.expenses, (minor) => formatMoney(minor, ledger.currency), now)
+}
+
+/** Works out the widgets' data and leaves it for them now. Returns whether the Spending widget got its figures. */
+export async function updateWidgetNow(ledger: Ledger, now: Date = new Date()): Promise<boolean> {
+  const [spending] = await Promise.all([publishWidgetData(widgetDataFor(ledger, now)), publishTimelineData(timelineWidgetFor(ledger, now))])
+  return spending
+}
 
 /**
  * Keeps the widget's figures current: whenever what they come from changes (or amounts are hidden or shown), the data is

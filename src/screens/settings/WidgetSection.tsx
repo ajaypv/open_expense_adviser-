@@ -24,12 +24,13 @@ export function WidgetSection({ ledger }: { ledger: Ledger }) {
     <Group id="widget-h" title="Widget" status={<Status on={supported}>{supported ? 'Available here' : 'Not on this device'}</Status>}>
       <div className={`${card} space-y-3 p-4`}>
         <p>Shows what you have spent this month, where the month is heading and the next payment that leaves on its own.</p>
+        {android && <p>There is a second widget, Timeline, with the last few days: what was spent on each, with a bar as long as the day. Touching it opens the Timeline.</p>}
         {supported ? (
           <>
             {android ? (
               <ol className="list-decimal space-y-1 pl-5 text-ink-2">
                 <li>Touch and hold an empty spot on your home screen, then choose Widgets.</li>
-                <li>Find Expense Tracker, then touch and drag Spending onto the screen.</li>
+                <li>Find Expense Tracker, then touch and drag Spending or Timeline onto the screen.</li>
               </ol>
             ) : (
               <ol className="list-decimal space-y-1 pl-5 text-ink-2">

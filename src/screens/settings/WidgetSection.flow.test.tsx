@@ -106,7 +106,12 @@ describe('Settings: the widget, in the Android app', () => {
     const steps = screen.getAllByRole('listitem')
     expect(steps).toHaveLength(2)
     expect(steps[0]).toHaveTextContent('Touch and hold an empty spot on your home screen, then choose Widgets')
-    expect(steps[1]).toHaveTextContent('drag Spending onto the screen')
+    expect(steps[1]).toHaveTextContent('drag Spending or Timeline onto the screen')
+  })
+
+  it('says there is a Timeline widget too, in the Android app only', () => {
+    mountApp()
+    expect(screen.getByText(/second widget, Timeline, with the last few days/)).toBeInTheDocument()
   })
 
   it('does not tell anyone to use Edge or the Widgets Board', () => {

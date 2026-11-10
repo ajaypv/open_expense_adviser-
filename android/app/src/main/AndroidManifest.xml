@@ -37,6 +37,19 @@
                 android:resource="@xml/spending_widget_info" />
         </receiver>
 
+        <!-- The Timeline widget for the home screen: the last few days; its days come from the app (WidgetBridgePlugin) and a touch opens the app on its Timeline. -->
+        <receiver
+            android:name=".TimelineWidgetProvider"
+            android:label="@string/widget_timeline_label"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/timeline_widget_info" />
+        </receiver>
+
         <!-- Payment pop-ups are switched off in this build: the Notification access entry
              (PaymentNotificationListener, permission BIND_NOTIFICATION_LISTENER_SERVICE) and the
              PaymentActionReceiver are left out because Google Play Protect blocks installing an app
