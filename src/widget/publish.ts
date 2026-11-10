@@ -1,4 +1,5 @@
 import type { WidgetData } from './data'
+import type { AndroidSpendingData } from './spendingArc'
 import { isAndroidApp, publishTimelineToAndroid, publishToAndroid } from './native'
 import type { TimelineWidgetData } from './timelineData'
 import { snapshotUrl, WIDGET_CACHE } from './snapshot'
@@ -9,7 +10,7 @@ import { snapshotUrl, WIDGET_CACHE } from './snapshot'
  * cache or no worker (an ordinary tab, a browser without them). Returns whether it was left. This is the page's half; the
  * worker's is in sw.ts, which is why the shared names are in snapshot.ts and not here: the worker has no use for the page's types.
  */
-export async function publishWidgetData(data: WidgetData): Promise<boolean> {
+export async function publishWidgetData(data: WidgetData | AndroidSpendingData): Promise<boolean> {
   // Inside the Android app the widget is on the home screen and is handed its figures directly.
   if (isAndroidApp()) return publishToAndroid(data)
   if (typeof caches === 'undefined') return false

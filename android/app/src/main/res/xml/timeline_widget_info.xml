@@ -3,6 +3,7 @@
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_timeline_description"
     android:initialLayout="@layout/widget_timeline"
+    android:previewLayout="@layout/widget_timeline_preview"
     android:minWidth="250dp"
     android:minHeight="180dp"
     android:minResizeWidth="200dp"

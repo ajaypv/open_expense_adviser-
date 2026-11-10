@@ -15,12 +15,34 @@ export interface TimelineWidgetRow {
   color: string
 }
 
+/** One day of the Timeline widget's chart, a column. */
+export interface TimelineWidgetColumn {
+  /** The weekday, short: "Mon". */
+  label: string
+  /** How big the day is against the biggest shown, 0 to 1: the height of its column. */
+  share: number
+  /** The colour of the column, as #rrggbb. */
+  color: string
+  /** The column of today, which the widget marks. */
+  today: boolean
+}
+
+/** One fact about the days shown, for the widget's third page: "Busiest day" over "Mon 9 Nov · ₹1,360". */
+export interface TimelineWidgetFact {
+  label: string
+  value: string
+}
+
 /** What the Timeline widget shows. Everything is written out here, as the app writes it; the widget only lays it out. */
 export interface TimelineWidgetData {
   /** "Last 6 days · ₹7,450". */
   title: string
   /** The days, newest first, the quiet ones too. Empty when there is no spending yet. */
   rows: TimelineWidgetRow[]
+  /** The same days as columns, the oldest on the left, for the second page. */
+  chart: TimelineWidgetColumn[]
+  /** A few facts about them, for the third page. */
+  facts: TimelineWidgetFact[]
   /** When this was worked out: the widget only changes when the app is opened, and says so. */
   updated: string
 }
@@ -45,6 +67,7 @@ export function heatColor(share: number): string {
 let dayFormat: Intl.DateTimeFormat | undefined
 let timeFormat: Intl.DateTimeFormat | undefined
 let shortFormat: Intl.DateTimeFormat | undefined
+let weekdayFormat: Intl.DateTimeFormat | undefined
 
 const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`
 
@@ -55,7 +78,7 @@ export function buildTimelineWidgetData(expenses: Transaction[], money: (minor: 
   const updated = `Updated ${day}, ${time}`
 
   const tl = buildTimeline(expenses, now, TIMELINE_WIDGET_DAYS)
-  if (tl.days.length === 0) return { title: 'Timeline', rows: [], updated }
+  if (tl.days.length === 0) return { title: 'Timeline', rows: [], chart: [], facts: [], updated }
 
   const rows = tl.days.map((d): TimelineWidgetRow => {
     const label = d.daysAgo === 0 ? 'Today' : d.daysAgo === 1 ? 'Yesterday' : (dayFormat ??= new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' })).format(parseLocalDate(d.date))
@@ -71,5 +94,20 @@ export function buildTimelineWidgetData(expenses: Transaction[], money: (minor: 
 
   const total = tl.days.reduce((a, d) => a + d.totalMinor, 0)
   const title = tl.days.length === 1 ? `Today · ${money(total)}` : `Last ${tl.days.length} days · ${money(total)}`
-  return { title, rows, updated }
+
+  // The columns run the way a chart does, the oldest on the left.
+  const chart = [...tl.days].reverse().map((d): TimelineWidgetColumn => {
+    const share = tl.maxMinor > 0 ? d.totalMinor / tl.maxMinor : 0
+    return { label: (weekdayFormat ??= new Intl.DateTimeFormat(undefined, { weekday: 'short' })).format(parseLocalDate(d.date)), share, color: heatColor(share), today: d.daysAgo === 0 }
+  })
+
+  const quiet = tl.days.filter((d) => d.totalMinor === 0).length
+  const busiest = tl.days.reduce((a, d) => (d.totalMinor > a.totalMinor ? d : a), tl.days[0])
+  const facts: TimelineWidgetFact[] = []
+  if (total > 0) {
+    facts.push({ label: 'Busiest day', value: `${(dayFormat ??= new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' })).format(parseLocalDate(busiest.date))} · ${money(busiest.totalMinor)}` })
+    facts.push({ label: 'On average', value: `${money(Math.round(total / tl.days.length / 100) * 100)} a day` })
+  }
+  facts.push({ label: 'Quiet days', value: `${quiet} of ${tl.days.length}` })
+  return { title, rows, chart, facts, updated }
 }

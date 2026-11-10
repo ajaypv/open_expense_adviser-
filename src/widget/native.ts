@@ -1,10 +1,11 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
 import type { WidgetData } from './data'
+import type { AndroidSpendingData } from './spendingArc'
 import type { TimelineWidgetData } from './timelineData'
 
 /** The part of the Android app that draws the home-screen widget (android/.../WidgetBridgePlugin.java). */
 interface WidgetBridge {
-  setSnapshot(data: WidgetData): Promise<void>
+  setSnapshot(data: WidgetData | AndroidSpendingData): Promise<void>
   /** The Timeline widget's days, as JSON text. */
   setTimeline(data: { json: string }): Promise<void>
   /** The page of the app a widget was touched to open, once; empty when the app was opened some other way. */
@@ -23,7 +24,7 @@ export function isAndroidApp(): boolean {
 }
 
 /** Hands the widget its figures and has the home screen redraw it. Returns whether that worked; false anywhere but the Android app. */
-export async function publishToAndroid(data: WidgetData): Promise<boolean> {
+export async function publishToAndroid(data: WidgetData | AndroidSpendingData): Promise<boolean> {
   if (!isAndroidApp()) return false
   try {
     await bridge.setSnapshot(data)

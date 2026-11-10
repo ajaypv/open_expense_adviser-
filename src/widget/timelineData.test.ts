@@ -100,6 +100,8 @@ describe('buildTimelineWidgetData', () => {
   it('has no rows, and a plain title, when nothing has been spent yet', () => {
     const data = buildTimelineWidgetData([], money, today)
     expect(data.rows).toEqual([])
+    expect(data.chart).toEqual([])
+    expect(data.facts).toEqual([])
     expect(data.title).toBe('Timeline')
   })
 
@@ -114,5 +116,52 @@ describe('buildTimelineWidgetData', () => {
   it('has a share of zero for every day when none had anything', () => {
     const data = buildTimelineWidgetData([tx(1, '2026-11-08', 0)], money, today)
     expect(data.rows.every((r) => r.share === 0)).toBe(true)
+  })
+})
+
+describe('the Timeline widget’s chart', () => {
+  const expenses = [tx(1, '2026-11-10', 450), tx(2, '2026-11-10', 230), tx(3, '2026-11-09', 1360), tx(4, '2026-11-07', 680)]
+
+  it('has a column for each day, the oldest on the left, like a chart', () => {
+    const { chart, rows } = buildTimelineWidgetData(expenses, money, today)
+    expect(chart).toHaveLength(rows.length)
+    expect(chart.map((c) => c.label.slice(0, 3))).toEqual(['Sat', 'Sun', 'Mon', 'Tue'])
+  })
+
+  it('sizes and colours each column as its day is, against the biggest', () => {
+    const { chart } = buildTimelineWidgetData(expenses, money, today)
+    expect(chart.map((c) => c.share)).toEqual([0.5, 0, 1, 0.5])
+    expect(chart[2].color).toBe(heatColor(1))
+    expect(chart[1].color).toBe(heatColor(0))
+  })
+
+  it('marks the column of today, and no other', () => {
+    const { chart } = buildTimelineWidgetData(expenses, money, today)
+    expect(chart.filter((c) => c.today)).toHaveLength(1)
+    expect(chart.at(-1)!.today).toBe(true)
+  })
+})
+
+describe('the Timeline widget’s facts', () => {
+  const expenses = [tx(1, '2026-11-10', 450), tx(2, '2026-11-10', 230), tx(3, '2026-11-09', 1360), tx(4, '2026-11-07', 680)]
+  const facts = (list = expenses) => Object.fromEntries(buildTimelineWidgetData(list, money, today).facts.map((f) => [f.label, f.value]))
+
+  it('names the busiest day and what it came to', () => {
+    expect(facts()['Busiest day']).toMatch(/Mon/)
+    expect(facts()['Busiest day']).toMatch(/9/)
+    expect(facts()['Busiest day']).toMatch(/₹1360$/)
+  })
+
+  it('gives what an average day came to, over every day shown', () => {
+    // ₹2,720 over 4 days is ₹680.
+    expect(facts()['On average']).toBe('₹680 a day')
+  })
+
+  it('counts the quiet days', () => {
+    expect(facts()['Quiet days']).toBe('1 of 4')
+  })
+
+  it('has only the quiet days to say when nothing was spent in them', () => {
+    expect(facts([tx(1, '2026-11-07', 0)])).toEqual({ 'Quiet days': '4 of 4' })
   })
 })

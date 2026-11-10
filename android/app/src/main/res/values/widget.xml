@@ -3,11 +3,17 @@
     <string name="widget_label">Spending</string>
     <string name="widget_description">This month’s spending, where it is heading, and the next payment that leaves on its own.</string>
     <string name="widget_empty">Open the app to load this month</string>
+    <string name="widget_arc_caption">Day by day</string>
+    <string name="widget_ahead_label">Coming up</string>
+    <string name="widget_ahead_none">Nothing is due to leave on its own soon.</string>
     <string name="widget_timeline_label">Timeline</string>
     <string name="widget_timeline_description">The last few days, day by day: what was spent on each, with a bar as long as the day, in colours from cool to warm. Touch it to open the Timeline.</string>
     <string name="widget_timeline_none">No spending to show yet. Add an expense and it appears here.</string>
 
     <color name="widget_background">#F7F7F8</color>
+    <color name="widget_background_top">#FFFFFF</color>
+    <color name="widget_background_bottom">#ECEEF3</color>
+    <color name="widget_edge">#1A000000</color>
     <color name="widget_text">#17181A</color>
     <color name="widget_text_secondary">#5B5E66</color>
     <color name="widget_good">#1B8A55</color>

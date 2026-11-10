@@ -5,6 +5,8 @@ import { formatMoney, localDateString } from '../db/money'
 import { buildAiSummary } from '../insights/ai'
 import { buildWidgetData, type WidgetData } from './data'
 import { publishTimelineData, publishWidgetData } from './publish'
+import { isAndroidApp } from './native'
+import { buildSpendingArc, type AndroidSpendingData } from './spendingArc'
 import { buildTimelineWidgetData, type TimelineWidgetData } from './timelineData'
 import { widgetsSupported } from './support'
 
@@ -29,10 +31,18 @@ export function timelineWidgetFor(ledger: Ledger, now: Date): TimelineWidgetData
   return buildTimelineWidgetData(ledger.expenses, (minor) => formatMoney(minor, ledger.currency), now)
 }
 
+/** The Android Spending widget's data: the Windows widget's words, and the month's day bars for its second page. */
+export function androidSpendingFor(ledger: Ledger, now: Date): AndroidSpendingData {
+  const money = (minor: number) => formatMoney(minor, ledger.currency)
+  return { ...widgetDataFor(ledger, now), arc: buildSpendingArc(ledger.expenses, localDateString(now).slice(0, 7), now, ledger.budgetMinor, money) }
+}
+
 /** Works out the widgets' data and leaves it for them now. Returns whether the Spending widget got its figures. */
 export async function updateWidgetNow(ledger: Ledger, now: Date = new Date()): Promise<boolean> {
-  const [spending] = await Promise.all([publishWidgetData(widgetDataFor(ledger, now)), publishTimelineData(timelineWidgetFor(ledger, now))])
-  return spending
+  // The Android widgets have more to show than the Windows one, and are handed it too; Windows gets what it always did.
+  const spending = isAndroidApp() ? androidSpendingFor(ledger, now) : widgetDataFor(ledger, now)
+  const [published] = await Promise.all([publishWidgetData(spending), publishTimelineData(timelineWidgetFor(ledger, now))])
+  return published
 }
 
 /**

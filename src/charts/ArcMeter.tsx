@@ -3,13 +3,14 @@ import { AnimatedMoney } from '../ui/AnimatedMoney'
 import { Icon } from '../ui/Icon'
 import { useIntro } from '../ui/motion'
 import { BUDGET_SKY, budgetStatus, budgetTone } from './budgetTone'
+import { dayColor, dayRatio, dayReach } from './dayBars'
+
+export { dayColor, dayRatio, dayReach }
 
 // The half circle: its centre, and how far the bars run from the inner edge of the ring to the outer one.
 const CENTRE = { x: 150, y: 156 }
 const INNER = 104
 const OUTER = 146
-/** The shortest a bar is (a day with nothing spent, or a day still to come), as a share of the ring's depth. */
-const SHORTEST = 0.4
 
 interface Props {
   spentMinor: number
@@ -23,24 +24,6 @@ interface Props {
   dailyMinor: number[]
   /** The day of the month it is, for the month in progress (the bars after it are days still to come); null for a month that is over. */
   todayDay: number | null
-}
-
-/** How a day's spending compares with its share of the budget (1 is exactly the share). */
-export function dayRatio(spentMinor: number, limitMinor: number, days: number): number {
-  const share = limitMinor / Math.max(days, 1)
-  return share > 0 ? spentMinor / share : 0
-}
-
-/** Green for a quiet day, through amber as the day's share of the budget is used, to red beyond it (fully red from half as much again). */
-export function dayColor(ratio: number): string {
-  const r = Math.max(0, ratio)
-  if (r <= 1) return `color-mix(in oklab, var(--warn-ui) ${Math.round(r * 100)}%, var(--good-text))`
-  return `color-mix(in oklab, var(--critical) ${Math.round(Math.min((r - 1) / 0.5, 1) * 100)}%, var(--warn-ui))`
-}
-
-/** How far a bar reaches across the ring, as a share of its depth: short when little is spent, the whole depth at a day's share and beyond. */
-export function dayReach(ratio: number): number {
-  return SHORTEST + (1 - SHORTEST) * Math.min(Math.max(ratio, 0), 1)
 }
 
 /** The two ends of bar `i` of `count`, along the radius at its place on the half circle (the first day on the left, the last on the right). */

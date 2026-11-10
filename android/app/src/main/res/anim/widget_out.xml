@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A page of a widget leaving: it lifts away and fades out. -->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@android:anim/accelerate_interpolator">
+    <alpha
+        android:duration="360"
+        android:fromAlpha="1.0"
+        android:toAlpha="0.0" />
+    <translate
+        android:duration="360"
+        android:fromYDelta="0%"
+        android:toYDelta="-28%" />
+</set>

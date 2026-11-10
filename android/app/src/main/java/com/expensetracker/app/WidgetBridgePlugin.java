@@ -1,7 +1,6 @@
 package com.expensetracker.app;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -17,9 +16,8 @@ public class WidgetBridgePlugin extends Plugin {
     @PluginMethod
     public void setSnapshot(PluginCall call) {
         Context context = getContext();
-        SharedPreferences.Editor edit = context.getSharedPreferences(SpendingWidgetProvider.PREFS, Context.MODE_PRIVATE).edit();
-        for (String key : SpendingWidgetProvider.KEYS) edit.putString(key, call.getString(key, ""));
-        edit.apply();
+        // The whole snapshot is kept as the JSON the app sent: its words and figures, and the month's day bars.
+        context.getSharedPreferences(SpendingWidgetProvider.PREFS, Context.MODE_PRIVATE).edit().putString(SpendingWidgetProvider.KEY, call.getData().toString()).apply();
         SpendingWidgetProvider.refreshAll(context);
         call.resolve();
     }
