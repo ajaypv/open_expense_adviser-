@@ -14,6 +14,8 @@ const base = {
   prevName: 'October',
   dailyAverageMinor: 279_400,
   expenseCount: 7,
+  dailyMinor: Array.from({ length: 30 }, () => 0),
+  todayDay: 10 as number | null,
   budgetMinor: null as number | null,
   currency: 'INR',
   periods: [] as never[],

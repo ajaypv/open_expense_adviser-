@@ -25,6 +25,10 @@ interface Props {
   prevName: string
   dailyAverageMinor: number
   expenseCount: number
+  /** What was spent on each day of the month, in order (index 0 is day 1): one bar of the budget meter for each. */
+  dailyMinor: number[]
+  /** The day of the month it is, for the month in progress; null for a month that is over. */
+  todayDay: number | null
   budgetMinor: number | null
   currency: string
   periods: PeriodTile[]
@@ -54,6 +58,8 @@ export function SpendingOverview({
   prevName,
   dailyAverageMinor,
   expenseCount,
+  dailyMinor,
+  todayDay,
   budgetMinor,
   currency,
   periods,
@@ -95,6 +101,8 @@ export function SpendingOverview({
         <ArcMeter
           spentMinor={totalMinor}
           limitMinor={budgetMinor}
+          dailyMinor={dailyMinor}
+          todayDay={todayDay}
           currency={currency}
           heading={isCurrent ? `Spent so far in ${monthName}` : `Spent in ${monthName}`}
           emptyHeading={`Nothing spent in ${monthName} yet.`}

@@ -12,6 +12,8 @@ const base = {
   prevName: 'September',
   dailyAverageMinor: 2_400,
   expenseCount: 2,
+  dailyMinor: Array.from({ length: 31 }, (_, i) => (i === 27 ? 50_000 : i === 26 ? 18_000 : 0)),
+  todayDay: 28 as number | null,
   budgetMinor: null as number | null,
   currency: 'INR',
   periods: [
@@ -94,10 +96,16 @@ describe('SpendingOverview: today, yesterday and the week, kept small', () => {
     const html = render({ budgetMinor: 3_000_000 })
     expect(html.indexOf('role="meter"')).toBeLessThan(html.indexOf('Daily average'))
     expect(html.indexOf('role="meter"')).toBeLessThan(html.indexOf('aria-label="Recent spending"'))
-    // The figure is the one in the middle of the meter, and is said only once.
-    expect(html.indexOf('Spent so far in October')).toBeGreaterThan(html.indexOf('role="meter"'))
+    // What the figure is of is said once, just above the meter, and ahead of the facts under it.
+    expect(html.indexOf('Spent so far in October')).toBeLessThan(html.indexOf('role="meter"'))
+    expect(html.indexOf('Spent so far in October')).toBeLessThan(html.indexOf('Daily average'))
     expect(html.match(/Spent so far in October/g)).toHaveLength(1)
     expect(html.match(/₹680/g)?.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('draws one bar for each day of the month in the meter', () => {
+    const html = render({ budgetMinor: 3_000_000 })
+    expect(html.match(/<line /g)).toHaveLength(31)
   })
 
   it('keeps the plain headline when there is no budget, and no meter', () => {
