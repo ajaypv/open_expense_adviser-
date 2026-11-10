@@ -1,3 +1,13 @@
+import { formatMoney } from '../db/money'
+
+/** The state of a budget in words, which every meter states next to its colour. */
+export function budgetStatus(spentMinor: number, limitMinor: number, currency: string): string {
+  const { over, close } = budgetTone(spentMinor / limitMinor)
+  if (over) return `Over budget by ${formatMoney(spentMinor - limitMinor, currency)}`
+  if (close) return `Close to the limit, ${formatMoney(limitMinor - spentMinor, currency)} left`
+  return `${formatMoney(limitMinor - spentMinor, currency)} left`
+}
+
 /** The colour of the part of a budget meter that is not used. */
 export const BUDGET_SKY = 'color-mix(in oklab, var(--accent) 16%, var(--surface))'
 

@@ -1,7 +1,7 @@
 import { formatMoney } from '../db/money'
 import { Icon } from '../ui/Icon'
 import { useIntro } from '../ui/motion'
-import { BUDGET_SKY, budgetTone } from './budgetTone'
+import { BUDGET_SKY, budgetStatus, budgetTone } from './budgetTone'
 
 interface Props {
   spentMinor: number
@@ -15,11 +15,7 @@ export function Meter({ spentMinor, limitMinor, currency }: Props) {
   const ratio = spentMinor / limitMinor
   const { over, close, fill } = budgetTone(ratio)
 
-  const status = over
-    ? `Over budget by ${formatMoney(spentMinor - limitMinor, currency)}`
-    : close
-      ? `Close to the limit, ${formatMoney(limitMinor - spentMinor, currency)} left`
-      : `${formatMoney(limitMinor - spentMinor, currency)} left`
+  const status = budgetStatus(spentMinor, limitMinor, currency)
 
   return (
     <div>
