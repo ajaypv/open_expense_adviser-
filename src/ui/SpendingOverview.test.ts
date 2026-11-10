@@ -90,10 +90,34 @@ describe('SpendingOverview: today, yesterday and the week, kept small', () => {
     expect(html).toContain('aria-label="Recent spending"')
   })
 
-  it('keeps the budget progress up under the headline once there is one, since that answers "am I okay?"', () => {
+  it('makes the budget the headline once there is one, as a half circle with the figure in it, since that answers "am I okay?"', () => {
     const html = render({ budgetMinor: 3_000_000 })
+    expect(html.indexOf('role="meter"')).toBeLessThan(html.indexOf('Daily average'))
     expect(html.indexOf('role="meter"')).toBeLessThan(html.indexOf('aria-label="Recent spending"'))
-    expect(html.indexOf('role="meter"')).toBeGreaterThan(html.indexOf('Daily average'))
+    // The figure is the one in the middle of the meter, and is said only once.
+    expect(html.indexOf('Spent so far in October')).toBeGreaterThan(html.indexOf('role="meter"'))
+    expect(html.match(/Spent so far in October/g)).toHaveLength(1)
+    expect(html.match(/₹680/g)?.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('keeps the plain headline when there is no budget, and no meter', () => {
+    const html = render()
+    expect(html).not.toContain('role="meter"')
+    expect(html).toContain('text-[clamp(2.25rem,10vw,2.5rem)]')
+  })
+
+  it('says nothing was spent inside the meter when there is a budget but no spending', () => {
+    const html = render({ budgetMinor: 3_000_000, totalMinor: 0, expenseCount: 0 })
+    expect(html).toContain('role="meter"')
+    expect(text(html)).toContain('Nothing spent in October yet.')
+    expect(text(html)).toContain('₹30,000 left')
+    expect(html).not.toContain('Daily average')
+  })
+
+  it('shows the comparison with the month before under the meter, centred', () => {
+    const html = render({ budgetMinor: 3_000_000, deltaPct: 12 })
+    expect(text(html)).toContain('12% more than September')
+    expect(html).toMatch(/justify-center[^"]*"[^>]*><span[^>]*>.*12% more/)
   })
 
   it('has no day tiles for a month that is over', () => {

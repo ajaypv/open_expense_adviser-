@@ -1,4 +1,4 @@
-import { Meter } from '../charts/Meter'
+import { ArcMeter } from '../charts/ArcMeter'
 import { formatMoney } from '../db/money'
 import { useState, type ReactNode } from 'react'
 import { AnimatedMoney } from './AnimatedMoney'
@@ -91,51 +91,58 @@ export function SpendingOverview({
         data-month={monthKey}
         className={shown.dir === 'next' ? 'month-slide-from-right' : shown.dir === 'prev' ? 'month-slide-from-left' : undefined}
       >
-      {totalMinor === 0 ? (
-        <p className="pr-10 text-2xl font-semibold tracking-tight">{`Nothing spent in ${monthName} yet.`}</p>
-      ) : (
+      {budgetMinor !== null && (
+        <ArcMeter
+          spentMinor={totalMinor}
+          limitMinor={budgetMinor}
+          currency={currency}
+          heading={isCurrent ? `Spent so far in ${monthName}` : `Spent in ${monthName}`}
+          emptyHeading={`Nothing spent in ${monthName} yet.`}
+        />
+      )}
+
+      {budgetMinor === null && totalMinor === 0 && <p className="pr-10 text-2xl font-semibold tracking-tight">{`Nothing spent in ${monthName} yet.`}</p>}
+
+      {budgetMinor === null && totalMinor > 0 && (
         <>
           <p className="text-ink-2">{isCurrent ? `Spent so far in ${monthName}` : `Spent in ${monthName}`}</p>
           <p className="mt-1 whitespace-nowrap text-[clamp(2.25rem,10vw,2.5rem)] font-extrabold leading-none tracking-[-0.03em] tabular-nums">
             <AnimatedMoney minor={totalMinor} currency={currency} id="hero" />
           </p>
-          {deltaPct !== null && (
-            <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-ink-2">
-              {deltaPct === 0 ? (
-                <>{`The same as ${against}.`}</>
-              ) : (
-                <>
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full bg-surface-2 py-1 pl-2 pr-2.5 font-medium ${
-                      deltaPct > 0 ? 'text-critical' : 'text-good'
-                    }`}
-                  >
-                    <Icon name={deltaPct > 0 ? 'arrowUp' : 'arrowDown'} size={16} />
-                    {`${Math.abs(deltaPct)}% ${deltaPct > 0 ? 'more' : 'less'}`}
-                  </span>
-                  {`than ${against}`}
-                </>
-              )}
-            </p>
-          )}
-
-          <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-line pt-4">
-            <div className="min-w-0">
-              <dt className="text-sm text-ink-2">Daily average</dt>
-              <dd className="mt-0.5 truncate text-xl font-bold tabular-nums">{formatMoney(dailyAverageMinor, currency)}</dd>
-            </div>
-            <div className="min-w-0">
-              <dt className="text-sm text-ink-2">Expenses logged</dt>
-              <dd className="mt-0.5 text-xl font-bold tabular-nums">{expenseCount}</dd>
-            </div>
-          </dl>
         </>
       )}
 
-      {budgetMinor !== null && (
-        <div className="mt-4 border-t border-line pt-4">
-          <Meter spentMinor={totalMinor} limitMinor={budgetMinor} currency={currency} />
-        </div>
+      {totalMinor > 0 && deltaPct !== null && (
+        <p className={`mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-ink-2 ${budgetMinor !== null ? 'justify-center' : ''}`}>
+          {deltaPct === 0 ? (
+            <>{`The same as ${against}.`}</>
+          ) : (
+            <>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full bg-surface-2 py-1 pl-2 pr-2.5 font-medium ${
+                  deltaPct > 0 ? 'text-critical' : 'text-good'
+                }`}
+              >
+                <Icon name={deltaPct > 0 ? 'arrowUp' : 'arrowDown'} size={16} />
+                {`${Math.abs(deltaPct)}% ${deltaPct > 0 ? 'more' : 'less'}`}
+              </span>
+              {`than ${against}`}
+            </>
+          )}
+        </p>
+      )}
+
+      {totalMinor > 0 && (
+        <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-line pt-4">
+          <div className="min-w-0">
+            <dt className="text-sm text-ink-2">Daily average</dt>
+            <dd className="mt-0.5 truncate text-xl font-bold tabular-nums">{formatMoney(dailyAverageMinor, currency)}</dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-sm text-ink-2">Expenses logged</dt>
+            <dd className="mt-0.5 text-xl font-bold tabular-nums">{expenseCount}</dd>
+          </div>
+        </dl>
       )}
 
       {periods.length > 0 && (
