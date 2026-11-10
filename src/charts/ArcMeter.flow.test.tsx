@@ -106,12 +106,12 @@ describe('ArcMeter', () => {
     expect(meter().querySelector('[data-today]')).toBeNull()
   })
 
-  it('says how much is used, and what is spent, in the middle, and explains the bars', () => {
+  it('says how much is used, and what is spent, in the middle, with no note explaining the bars', () => {
     view(month({ 1: 500_000 }), 30, 500_000, 2_000_000)
     expect(screen.getByText('25%')).toBeInTheDocument()
     expect(screen.getByText('Spent so far in November')).toBeInTheDocument()
     expect(meter()).toHaveTextContent('of ₹20,000')
-    expect(screen.getByText(/One bar for each day/)).toBeInTheDocument()
+    expect(screen.queryByText(/One bar for each day/)).toBeNull()
   })
 
   it('says it louder the closer the budget gets: a warning near the limit, and bold red over it', () => {

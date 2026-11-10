@@ -131,7 +131,6 @@ export function ArcMeter({ spentMinor, limitMinor, currency, heading, emptyHeadi
         )}
         {status}
       </p>
-      <p className="mt-1 text-center text-[0.8125rem] leading-snug text-ink-2">One bar for each day. Green is a quiet day; red is more than a day’s share of the budget.</p>
     </div>
   )
 }
