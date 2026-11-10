@@ -81,7 +81,7 @@ npm run android:debug   # ...then build a debug APK: android/app/build/outputs/a
 
 In the app, reminders are set with the phone so they arrive with the app closed, contacts open the phone's own picker, and Android's back button closes what is open before it leaves the app.
 
-After you pay in PhonePe, Google Pay, CRED, Paytm or BHIM (and, if you choose, from a bank's messages), a pop-up offers to add the payment: "Add ₹250 to Swiggy?". It reads only the notifications of the apps you choose, on the phone, once you allow Notification access in Settings; nothing is sent anywhere.
+Payment pop-ups ("Add ₹250 to Swiggy?" after you pay in PhonePe, Google Pay and the like) are written but switched off in this build, because they need Notification access and Google Play Protect blocks installing an app that asks for it from outside the Play Store. See `src/payments/enabled.ts` to bring them back.
 
 It has a Spending widget for the home screen (touch and hold the home screen, choose Widgets): the same figures as the Windows widget, left for it by the app whenever they change.
 

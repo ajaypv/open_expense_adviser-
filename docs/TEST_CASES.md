@@ -834,6 +834,8 @@ These are for the Android app (the APK), not the browser. The phone itself does 
 
 ## Payment pop-ups (Android app)
 
+> Switched off in version 1.2.1 (`PAYMENT_POPUPS_ENABLED` is false and the notification listener is not in the manifest): Play Protect blocks installing an app that asks for Notification access from outside the Play Store. The cases below apply again once it is switched back on.
+
 After you pay in a payment app, the Android app offers to add the payment. The wording of real notifications differs between apps and versions, so each of these needs a look on a real phone with a real payment; the parser is checked on typical wordings only.
 
 | ID | Case | Steps | Expected | Checked by |

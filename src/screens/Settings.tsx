@@ -17,6 +17,7 @@ import { LocationSection } from './settings/LocationSection'
 import { type Ledger } from './settings/parts'
 import { PeopleSection } from './settings/PeopleSection'
 import { RecurringSection } from './settings/RecurringSection'
+import { PAYMENT_POPUPS_ENABLED } from '../payments/enabled'
 import { PaymentsSection } from './settings/PaymentsSection'
 import { RemindersSection } from './settings/RemindersSection'
 import { SecuritySection } from './settings/SecuritySection'
@@ -107,7 +108,7 @@ export const Settings = memo(function Settings({ ledger, theme, onTheme, palette
           <>
             <RecurringSection ledger={ledger} onOpenUpcoming={onOpenUpcoming} />
             <RemindersSection />
-            <PaymentsSection />
+            {PAYMENT_POPUPS_ENABLED && <PaymentsSection />}
             <WidgetSection ledger={ledger} />
           </>
         )}
