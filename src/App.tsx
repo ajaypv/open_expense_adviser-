@@ -22,7 +22,10 @@ import type { Goal, Recurring, Transaction } from './db/schema'
 import { monthOf, type MonthKey } from './insights/aggregates'
 import { monthRange } from './insights/filters'
 import { learnedCategoryId, learnedPaymentMethod } from './ingest/learn'
-import { describeDay, parseMany } from './ingest/localParser'
+import { describeDay, parseMany, type ParsedExpense } from './ingest/localParser'
+import { paymentEntry } from './payments/entry'
+import type { PendingPayment } from './payments/native'
+import { usePayments } from './payments/usePayments'
 import { suggest, type Suggestion } from './insights/suggestions'
 import type { SettingsPage } from './screens/Settings'
 import { handleNativeBack } from './native/back'
@@ -261,13 +264,9 @@ function Shell() {
   dataRef.current = { txs: ledger.txs, categoryById: ledger.categoryById, people: ledger.people }
   const currency = ledger.currency
 
-  const logFromChat = useCallback(
-    async (text: string): Promise<boolean> => {
-      const entries = parseMany(text, new Date(), dataRef.current.people)
-      if (entries.length === 0) {
-        toast({ message: 'I couldn’t find an amount. Try “450 lunch at Cafe”.' })
-        return false
-      }
+  // Adds what was read (from typed text, or from a payment pop-up): saves each, remembers who was paid, and says what was added.
+  const logEntries = useCallback(
+    async (entries: ParsedExpense[]): Promise<boolean> => {
       const { txs, categoryById } = dataRef.current
       const ids: number[] = []
       let sent = 0
@@ -332,6 +331,18 @@ function Shell() {
     [currency, toast],
   )
 
+  const logFromChat = useCallback(
+    async (text: string): Promise<boolean> => {
+      const entries = parseMany(text, new Date(), dataRef.current.people)
+      if (entries.length === 0) {
+        toast({ message: 'I couldn’t find an amount. Try “450 lunch at Cafe”.' })
+        return false
+      }
+      return logEntries(entries)
+    },
+    [logEntries, toast],
+  )
+
   // Stable handlers: the screens and the chat bar are memoized and skip renders they don't need.
   const openAdd = useCallback(
     (kind: Transaction['kind'] = 'expense') => setSheet({ open: true, editing: null, prefill: null, startKind: kind }),
@@ -377,6 +388,22 @@ function Shell() {
     },
     [currency, toast],
   )
+  // A payment pop-up was touched: open the add form with the payment filled in, in the category you gave that name before.
+  const openPayment = useCallback(async (payment: PendingPayment) => {
+    const entry = paymentEntry(payment)
+    if (!entry) return
+    const { txs, categoryById } = dataRef.current
+    const learned = entry.kind === 'expense' ? learnedCategoryId(entry.merchant, txs, categoryById) : null
+    const categoryId = learned ?? (await categoryIdByName(entry.categoryName))
+    setSheet({
+      open: true,
+      editing: null,
+      startKind: entry.kind,
+      prefill: { key: `payment-${payment.id}`, kind: entry.kind, merchant: entry.merchant, amountMinor: entry.amountMinor, categoryId, paymentMethod: entry.paymentMethod, reason: '', count: 0 },
+    })
+  }, [])
+  // After you pay in a payment app, the Android app offers to add it; what you answered there is put in here.
+  usePayments(logEntries, openPayment)
   const closeSheet = useCallback(() => setSheet((s) => ({ ...s, open: false })), [])
 
   const newGoal = useCallback(() => setGoalSheet((s) => ({ open: true, goal: null, n: s.n + 1 })), [])

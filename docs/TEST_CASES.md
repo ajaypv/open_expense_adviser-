@@ -831,3 +831,22 @@ These are for the Android app (the APK), not the browser. The phone itself does 
 | AND-8 | Contacts | Settings, People, Add from contacts (or the contact button when sending money) | The phone’s own contact list opens, one contact is chosen, and its name and number are added; the app is never given the rest of the list and asks for no contacts permission | Auto: `contacts.native.test`; Device |
 | AND-9 | Updates | Settings, App update | It shows the version and says a new version arrives as a new download, with no Check for updates button; no “new version is ready” or install banner ever shows | Auto: `UpdateCard.native.flow`, `usePwa.native.flow` |
 | AND-10 | New version replaces old pages | Install a newer APK over an older one | The newer pages show at once; no old pages are kept by a leftover service worker | Auto: `retire.test`, `usePwa.native.flow`; Device |
+
+## Payment pop-ups (Android app)
+
+After you pay in a payment app, the Android app offers to add the payment. The wording of real notifications differs between apps and versions, so each of these needs a look on a real phone with a real payment; the parser is checked on typical wordings only.
+
+| ID | Case | Steps | Expected | Checked by |
+|---|---|---|---|---|
+| PAY-1 | Turn it on | Settings, Automatic, Payment pop-ups, Turn on notification access, switch Expense Tracker on in the phone’s list, come back | On Android 13 and later it first says it is a restricted setting: App info, the three dots, Allow restricted settings, then again. Back in the app it says Notification access is on and the section says On; PhonePe, Google Pay, CRED, Paytm and BHIM are switched on, Bank messages is off | Auto: `PaymentsSection.flow`; Device |
+| PAY-2 | The pop-up | Pay someone in PhonePe or Google Pay | Within a moment a banner appears over what is on screen: Add ₹250 to Swiggy?, from the app’s name, with an Add button | Auto: `PaymentParserTest` (the reading); Device |
+| PAY-3 | Add | Press Add on the pop-up, then open the app | The pop-up becomes Saved ₹250 and goes away; in the app the payment is added with the name, a category guessed from it (or the one you chose for that name before), paid online, the note via PhonePe, and the day it was paid; the toast says what was added and has Undo. With the app already open it shows within about ten seconds | Auto: `app.payments.flow`, `usePayments.flow`, `entry.test`; Device |
+| PAY-4 | Check it first | Touch the pop-up instead of Add | The app opens on the add form with the amount, name and category filled in; Save adds it, closing the form adds nothing | Auto: `app.payments.flow`; Device |
+| PAY-5 | Swipe it away | Swipe the pop-up away | Nothing is added, now or later | Device |
+| PAY-6 | One payment seen twice | Pay in PhonePe with Bank messages on, so the bank sends a debit message for the same amount | One pop-up, not two (the same amount within three minutes counts as the same payment) | Device |
+| PAY-7 | Money received | Have someone pay you in Google Pay | The pop-up says Add ₹500 received from Ravi?; Add makes it income | Auto: `PaymentParserTest`, `app.payments.flow`; Device |
+| PAY-8 | Not a finished payment | A failed payment, a pending one, a request for money, a bill reminder, an offer | No pop-up for any of them | Auto: `PaymentParserTest` |
+| PAY-9 | Choosing the apps | Switch PhonePe off, then pay in it; switch Bank messages on | No pop-up for PhonePe. With Bank messages on, only messages that read like a bank’s (an account, a card, UPI) count, and nothing from other messages is kept | Auto: `PaymentsSection.flow`, `PaymentParserTest`; Device |
+| PAY-10 | Could not be read | A payment app’s notification with an amount that is worded in a way the app does not know | Settings says how many notifications could not be read and shows their text and the app; Clear removes them. None is ever kept from the messages app | Auto: `PaymentsSection.flow`; Device |
+| PAY-11 | Taking the permission away | Turn Notification access off in the phone’s Settings | The section says it is off and no more pop-ups appear | Auto: `PaymentsSection.flow`; Device |
+| PAY-12 | In a browser | Open Settings, Automatic in a browser | Payment pop-ups says Not on this device and why, with nothing to switch | Auto: `PaymentsSection.flow` |

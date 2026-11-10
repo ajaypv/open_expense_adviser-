@@ -81,6 +81,8 @@ npm run android:debug   # ...then build a debug APK: android/app/build/outputs/a
 
 In the app, reminders are set with the phone so they arrive with the app closed, contacts open the phone's own picker, and Android's back button closes what is open before it leaves the app.
 
+After you pay in PhonePe, Google Pay, CRED, Paytm or BHIM (and, if you choose, from a bank's messages), a pop-up offers to add the payment: "Add ₹250 to Swiggy?". It reads only the notifications of the apps you choose, on the phone, once you allow Notification access in Settings; nothing is sent anywhere.
+
 It has a Spending widget for the home screen (touch and hold the home screen, choose Widgets): the same figures as the Windows widget, left for it by the app whenever they change.
 
 The app keeps its data in its own storage on the phone, separate from the browser version, so move data across with Settings > export and import. Keep signing keys (`*.jks`, `keystore.properties`) out of git; `.gitignore` already skips them.

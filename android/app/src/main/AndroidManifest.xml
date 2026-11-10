@@ -37,6 +37,22 @@
                 android:resource="@xml/spending_widget_info" />
         </receiver>
 
+        <!-- Offers to add a payment after you pay: reads the notifications of the payment apps you choose, once you allow it under Notification access. -->
+        <service
+            android:name=".PaymentNotificationListener"
+            android:exported="true"
+            android:label="@string/payment_listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- The Add button on that pop-up, and swiping it away. -->
+        <receiver
+            android:name=".PaymentActionReceiver"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

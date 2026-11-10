@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="payment_listener_label">Expense Tracker: payments</string>
+    <string name="payment_channel_name">Payments to add</string>
+    <string name="payment_channel_description">A pop-up after you pay in a payment app, offering to add the payment.</string>
+</resources>
