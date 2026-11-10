@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         // Plugins written in this app are registered before the bridge starts.
         registerPlugin(WidgetBridgePlugin.class);
+        registerPlugin(ContactPickerPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

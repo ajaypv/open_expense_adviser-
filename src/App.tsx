@@ -25,6 +25,7 @@ import { learnedCategoryId, learnedPaymentMethod } from './ingest/learn'
 import { describeDay, parseMany } from './ingest/localParser'
 import { suggest, type Suggestion } from './insights/suggestions'
 import type { SettingsPage } from './screens/Settings'
+import { handleNativeBack } from './native/back'
 import { useWidgetSnapshot } from './widget/useWidgetSnapshot'
 import { usePwa } from './pwa/usePwa'
 import { APP_VERSION } from './pwa/version'
@@ -86,6 +87,8 @@ type GoalSheetState = { open: boolean; goal: Goal | null; n: number }
 
 function Shell() {
   const pwa = usePwa()
+  // Inside the Android app, the phone's back button closes what is open before it leaves the app.
+  useEffect(() => handleNativeBack(), [])
   const ledger = useLedger()
   // Where the app has a widget (the Windows Widgets Board, the home screen of the Android app), keep its figures current. Nothing in a phone browser.
   useWidgetSnapshot(ledger)

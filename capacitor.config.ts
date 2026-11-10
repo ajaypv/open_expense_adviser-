@@ -7,8 +7,15 @@ const config: CapacitorConfig = {
   appName: 'Expense Tracker',
   webDir: 'dist',
   android: {
-    // The page is served over https://localhost, so IndexedDB and the service worker behave as in a browser.
+    // The page is served over https://localhost, so IndexedDB behaves as in a browser.
     backgroundColor: '#121314',
+  },
+  plugins: {
+    LocalNotifications: {
+      // The small shape in the status bar (android/.../drawable/ic_stat_notify.xml) and its colour, the blue of the app icon.
+      smallIcon: 'ic_stat_notify',
+      iconColor: '#3B86E8',
+    },
   },
 }
 

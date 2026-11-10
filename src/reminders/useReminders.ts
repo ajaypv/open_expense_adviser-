@@ -11,7 +11,9 @@ import {
   shouldNotifyLog,
   strongestAlert,
 } from './logic'
-import { notify, setBadge } from './notify'
+import { isNativeApp } from '../native/platform'
+import { nativePermission, reminderTimes, setLogReminders } from './native'
+import { notify, onPermissionChange, setBadge } from './notify'
 import { getReminderState, saveReminderState, useReminderPrefs } from './store'
 
 type Ledger = ReturnType<typeof useLedger>
@@ -24,7 +26,8 @@ function loggedOn(txs: Ledger['txs'], today: string): boolean {
 /**
  * Keeps the reminders going while the app is open: the "log today" nudge, budget alerts as spending
  * crosses 80% and 100%, and the number on the app icon. Returns whether to show the nudge in the app.
- * The same rules run in the service worker for when the app is closed (Android only).
+ * The same rules run in the service worker for when the app is closed (Android only). Inside the Android app the phone itself
+ * is asked to show the daily reminder at the chosen time, on each of the next days, which it does with the app closed.
  */
 export function useReminders(ledger: Ledger, onMessage: (text: string) => void): { logNudge: boolean; dueCount: number } {
   const prefs = useReminderPrefs()
@@ -47,9 +50,21 @@ export function useReminders(ledger: Ledger, onMessage: (text: string) => void):
   const logNudge = prefs.loaded && logReminderDue(now, prefs, logged)
   const dueCount = dueRules(ledger.recurring, today).length
 
-  // System notification for the nudge, once a day.
+  // In the Android app: the next days' reminders, set with the phone. Planned again whenever the app is opened, something is logged
+  // (which takes back today's), the time or the switch changes, or the person allows notifications.
+  const [answered, setAnswered] = useState(0)
+  useEffect(() => onPermissionChange(() => setAnswered((n) => n + 1)), [])
   useEffect(() => {
-    if (!prefs.loaded || ledger.loading || !shouldNotifyLog(now, today, prefs, logged, { lastLogNudge: null, budgetAlerts: [] })) return
+    if (!isNativeApp() || !prefs.loaded || ledger.loading) return
+    void (async () => {
+      const allowed = (await nativePermission()) === 'granted'
+      await setLogReminders(prefs.logReminder && allowed ? reminderTimes(new Date(), prefs.logTime, logged) : [])
+    })()
+  }, [prefs.loaded, prefs.logReminder, prefs.logTime, ledger.loading, today, logged, answered])
+
+  // System notification for the nudge, once a day. (In the Android app the one set above does this.)
+  useEffect(() => {
+    if (isNativeApp() || !prefs.loaded || ledger.loading || !shouldNotifyLog(now, today, prefs, logged, { lastLogNudge: null, budgetAlerts: [] })) return
     void (async () => {
       const state = await getReminderState()
       if (!shouldNotifyLog(now, today, prefs, logged, state)) return

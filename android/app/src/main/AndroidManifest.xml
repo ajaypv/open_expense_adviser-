@@ -51,4 +51,10 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Where you were when you spent, only when you turn that on in Settings (the phone asks first). -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <!-- Reminders also need the notification, boot and alarm permissions, which the notifications plugin adds itself. -->
+
 </manifest>

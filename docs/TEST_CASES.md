@@ -814,3 +814,20 @@ A credit card is an account of its own: what is spent on it is owed, not gone, u
 | CRD-10 | Spent on the card | Open the cards and look under Spent on this card | This week (Monday to today), This month and Last month, and the last six weeks one by one, each as what was charged to that card; paying the bill, refunds and other accounts are not in them, and these are the card spending the month totals already hold, so nothing is counted twice | Auto: `CardsSheet.flow`, `cards.test` (insights) |
 | CRD-11 | Spent on the card, on Home | Look at the card on Home | Under what is owed it says what was spent on the cards this week and this month, all cards together | Auto: `CardsSheet.flow` |
 | CRD-12 | Bill payment in the log | Look at a payment in a card log | It says it is a bill payment and not spending, since it was counted when you spent it | Auto: `CardsSheet.flow` |
+
+## Android app
+
+These are for the Android app (the APK), not the browser. The phone itself does the work in each, so each needs a look on a real phone.
+
+| ID | Case | Steps | Expected | Checked by |
+|---|---|---|---|---|
+| AND-1 | Daily reminder | Settings, Reminders, switch Remind me to log on, allow notifications, pick a time a minute or two ahead, close the app | A notification Log today’s spending arrives at that time with the app closed, with a small ring icon in the status bar; it comes again each day | Auto: `native.test`, `useReminders.native.flow` (the plan); Device |
+| AND-2 | Reminder taken back once logged | With the reminder on, add an expense today, then leave the app | No reminder arrives for today; tomorrow’s still does | Auto: `useReminders.native.flow`; Device |
+| AND-3 | Allowing notifications | On Android 13 or later, tap Allow notifications in Settings | The phone’s own prompt appears; after Allow the reminder is set at once without reopening the app; after Don’t allow Settings says they are blocked | Auto: `notify.native`, `useReminders.native.flow`; Device |
+| AND-4 | Budget alerts | Spend past 80% of a budget with notifications allowed | A notification arrives, and a second alert for the same budget replaces it instead of piling up | Auto: `native.test`; Device |
+| AND-5 | Places | Settings, Privacy, turn on recording location, then add an expense | The phone asks to share location; after Allow the place is saved and shows in Insights, Where you spent | Device |
+| AND-6 | App icon and start-up screen | Look at the home screen and open the app | The app icon is the donut, not the default robot-style one, in the phone’s icon shape; the start-up screen is the dark app colour with the icon | Device |
+| AND-7 | Back button | Open a sheet or another tab, press the phone’s back button; repeat until nothing is open, then press back once more | Each press closes the most recent thing; with nothing open, back leaves the app (it does not close the app from a sheet) | Auto: `back.test`; Device |
+| AND-8 | Contacts | Settings, People, Add from contacts (or the contact button when sending money) | The phone’s own contact list opens, one contact is chosen, and its name and number are added; the app is never given the rest of the list and asks for no contacts permission | Auto: `contacts.native.test`; Device |
+| AND-9 | Updates | Settings, App update | It shows the version and says a new version arrives as a new download, with no Check for updates button; no “new version is ready” or install banner ever shows | Auto: `UpdateCard.native.flow`, `usePwa.native.flow` |
+| AND-10 | New version replaces old pages | Install a newer APK over an older one | The newer pages show at once; no old pages are kept by a leftover service worker | Auto: `retire.test`, `usePwa.native.flow`; Device |

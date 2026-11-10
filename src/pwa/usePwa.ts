@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { registerSW } from 'virtual:pwa-register'
+import { isNativeApp } from '../native/platform'
 import { checkForUpdate } from './checkForUpdate'
+import { retireServiceWorker } from './retire'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -15,6 +17,12 @@ export function usePwa() {
   const registration = useRef<ServiceWorkerRegistration | undefined>(undefined)
 
   useEffect(() => {
+    // Inside the Android app the pages come with the app and updates come as a new app, so no worker is kept, and one an earlier
+    // version left is removed (it could show old pages instead of the new ones).
+    if (isNativeApp()) {
+      void retireServiceWorker()
+      return
+    }
     const update = registerSW({
       onNeedRefresh: () => setUpdateReady(true),
       onOfflineReady: () => setOfflineReady(true),

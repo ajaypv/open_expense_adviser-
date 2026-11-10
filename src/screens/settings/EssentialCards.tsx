@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { backUpNow } from '../../data/backupNow'
 import { describeAge, getLastBackup } from '../../data/backupState'
+import { isNativeApp } from '../../native/platform'
 import type { UpdateCheck } from '../../pwa/checkForUpdate'
 import { APP_VERSION } from '../../pwa/version'
 import { Icon, type IconName } from '../../ui/Icon'
@@ -75,6 +76,19 @@ export function UpdateCard({ updateReady, onApplyUpdate, onCheckUpdate, onShowWh
   async function check() {
     setUpdate('checking')
     setUpdate(await onCheckUpdate())
+  }
+
+  // The Android app is updated by installing a newer app, not from inside the page, so there is nothing to check here.
+  if (isNativeApp()) {
+    return (
+      <section aria-label="App update" className={`${card} p-4`}>
+        <CardHead icon="arrowUp" title="App update" detail={`Version ${APP_VERSION}`} />
+        <p className="mt-3 text-sm text-ink-2">A new version of this app arrives as a new download. Install it over this one and your data stays on this phone.</p>
+        <button type="button" onClick={onShowWhatsNew} className="mt-1 min-h-11 w-full rounded-full text-sm font-medium underline underline-offset-2">
+          What’s new in this version
+        </button>
+      </section>
+    )
   }
 
   return (

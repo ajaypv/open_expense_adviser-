@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { notificationPermission, requestNotificationPermission, schedulePeriodicReminder, type Permission } from '../../reminders/notify'
+import { useEffect, useState } from 'react'
+import { currentPermission, notificationPermission, requestNotificationPermission, schedulePeriodicReminder, type Permission } from '../../reminders/notify'
 import { setReminderPrefs, useReminderPrefs } from '../../reminders/store'
 import { TimeField } from '../../ui/TimeField'
 import { useToast } from '../../ui/toast'
@@ -18,6 +18,14 @@ export function RemindersSection() {
   const prefs = useReminderPrefs()
   const [permission, setPermission] = useState<Permission>(() => notificationPermission())
   const [scheduled, setScheduled] = useState<boolean | null>(null)
+  // In the Android app the phone has to be asked what it allows; in a browser the answer above is already right.
+  useEffect(() => {
+    let current = true
+    void currentPermission().then((p) => current && setPermission(p))
+    return () => {
+      current = false
+    }
+  }, [])
   const any = prefs.logReminder || prefs.budgetAlerts
 
   async function allow() {

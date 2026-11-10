@@ -1,4 +1,7 @@
-/** Thin wrappers over the Notifications, Badging and Periodic Sync APIs, each safe to call anywhere. */
+import { isNativeApp } from '../native/platform'
+import { nativePermission, requestNativePermission, showNow } from './native'
+
+/** Thin wrappers over the Notifications, Badging and Periodic Sync APIs, each safe to call anywhere. Inside the Android app they use the phone's own notifications instead, which a browser's do not reach. */
 
 export const DAILY_TAG = 'daily-reminder'
 const PERIODIC_MIN_MS = 12 * 60 * 60 * 1000
@@ -8,11 +11,27 @@ export type Permission = NotificationPermission | 'unsupported'
 export const notificationPermission = (): Permission =>
   typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
 
+/** The permission as it really is: in the Android app the phone has to be asked, so this is the one to use where waiting is fine. */
+export const currentPermission = (): Promise<Permission> => (isNativeApp() ? nativePermission() : Promise.resolve(notificationPermission()))
+
+const permissionListeners = new Set<() => void>()
+
+/** Called when the person has answered the permission prompt, so what depends on it can be set up at once. Returns what stops it. */
+export function onPermissionChange(listener: () => void): () => void {
+  permissionListeners.add(listener)
+  return () => void permissionListeners.delete(listener)
+}
+
 /**
  * Ask for permission. This must be called from a tap: iPhones only show the prompt for a direct
  * user action, and browsers increasingly ignore prompts at page load.
  */
 export async function requestNotificationPermission(): Promise<Permission> {
+  if (isNativeApp()) {
+    const result = await requestNativePermission()
+    permissionListeners.forEach((listener) => listener())
+    return result
+  }
   if (!('Notification' in window)) return 'unsupported'
   try {
     return await Notification.requestPermission()
@@ -26,6 +45,7 @@ export async function requestNotificationPermission(): Promise<Permission> {
  * phone apps). Returns false when it could not be shown.
  */
 export async function notify(title: string, body: string, tag: string): Promise<boolean> {
+  if (isNativeApp()) return (await nativePermission()) === 'granted' && showNow(title, body, tag)
   if (notificationPermission() !== 'granted') return false
   try {
     const reg = await navigator.serviceWorker?.ready
@@ -60,6 +80,8 @@ type PeriodicRegistration = ServiceWorkerRegistration & {
  * Only some Android browsers allow this, and they choose how often. Returns whether it was registered.
  */
 export async function schedulePeriodicReminder(enabled: boolean): Promise<boolean> {
+  // In the Android app the reminders are set with the phone itself (see useReminders), so there is nothing to ask the browser for.
+  if (isNativeApp()) return enabled
   try {
     const reg = (await navigator.serviceWorker?.ready) as PeriodicRegistration | undefined
     if (!reg?.periodicSync) return false
