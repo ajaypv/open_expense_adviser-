@@ -70,6 +70,19 @@ npm test           # unit tests
 npm run build && npm run preview   # production build, installable as a PWA
 ```
 
+## Android app (Capacitor)
+
+The built web app also runs inside an Android app (Capacitor), in the `android/` folder. It needs a JDK (21) and the Android SDK (`ANDROID_HOME` set, platform 36 and build-tools installed); Android Studio is not required.
+
+```
+npm run android:sync    # build the web app and copy it into the Android project
+npm run android:debug   # ...then build a debug APK: android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+It has a Spending widget for the home screen (touch and hold the home screen, choose Widgets): the same figures as the Windows widget, left for it by the app whenever they change.
+
+The app keeps its data in its own storage on the phone, separate from the browser version, so move data across with Settings > export and import. Keep signing keys (`*.jks`, `keystore.properties`) out of git; `.gitignore` already skips them.
+
 ## Roadmap
 
 An AI assistant that uses your own API key, AI-generated charts, and reminders.

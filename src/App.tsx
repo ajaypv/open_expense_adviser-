@@ -87,7 +87,7 @@ type GoalSheetState = { open: boolean; goal: Goal | null; n: number }
 function Shell() {
   const pwa = usePwa()
   const ledger = useLedger()
-  // Where the Windows Widgets Board can show the app's widget, keep its figures current. Nothing on a phone.
+  // Where the app has a widget (the Windows Widgets Board, the home screen of the Android app), keep its figures current. Nothing in a phone browser.
   useWidgetSnapshot(ledger)
   const theme = useTheme()
   const toast = useToast()

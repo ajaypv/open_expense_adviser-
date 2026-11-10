@@ -28,8 +28,8 @@ export const updateWidgetNow = (ledger: Ledger, now: Date = new Date()) => publi
 
 /**
  * Keeps the widget's figures current: whenever what they come from changes (or amounts are hidden or shown), the data is
- * worked out again a moment later and left for the service worker, which redraws the widget. Only where a widget can exist
- * (Windows with Edge); on a phone it does nothing at all, so it costs nothing there.
+ * worked out again a moment later and left for the widget (through the service worker on Windows, straight to the home screen in the
+ * Android app). Only where a widget can exist; in a phone browser it does nothing at all, so it costs nothing there.
  */
 export function useWidgetSnapshot(ledger: Ledger): void {
   const { privacy } = useDisplay()

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_label">Spending</string>
+    <string name="widget_description">This month’s spending, where it is heading, and the next payment that leaves on its own.</string>
+    <string name="widget_empty">Open the app to load this month</string>
+
+    <color name="widget_background">#F7F7F8</color>
+    <color name="widget_text">#17181A</color>
+    <color name="widget_text_secondary">#5B5E66</color>
+    <color name="widget_good">#1B8A55</color>
+    <color name="widget_warning">#A86A00</color>
+    <color name="widget_attention">#C93636</color>
+</resources>

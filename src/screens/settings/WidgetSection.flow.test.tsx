@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { makeLedger } from '../../test/ledger'
 
 vi.mock('../../widget/useWidgetSnapshot', () => ({ updateWidgetNow: vi.fn() }))
+const app = vi.hoisted(() => ({ android: false }))
+vi.mock('../../widget/native', () => ({ isAndroidApp: () => app.android, publishToAndroid: vi.fn() }))
 
 import { updateWidgetNow } from '../../widget/useWidgetSnapshot'
 import { WidgetSection } from './WidgetSection'
@@ -19,6 +21,7 @@ const mount = (ua: string) => {
 }
 
 afterEach(() => {
+  app.android = false
   vi.restoreAllMocks()
   update.mockReset()
 })
@@ -88,5 +91,37 @@ describe('Settings: the widget, on a phone', () => {
   it('says where it can work', () => {
     mount(PHONE)
     expect(screen.getByText('On a Windows 11 PC with Microsoft Edge, this app can show a widget in the Widgets Board.')).toBeInTheDocument()
+  })
+})
+
+describe('Settings: the widget, in the Android app', () => {
+  const mountApp = () => {
+    app.android = true
+    mount(PHONE)
+  }
+
+  it('says it is available here, and how to add it on the home screen', () => {
+    mountApp()
+    expect(screen.getByText('Available here')).toBeInTheDocument()
+    const steps = screen.getAllByRole('listitem')
+    expect(steps).toHaveLength(2)
+    expect(steps[0]).toHaveTextContent('Touch and hold an empty spot on your home screen, then choose Widgets')
+    expect(steps[1]).toHaveTextContent('drag Spending onto the screen')
+  })
+
+  it('does not tell anyone to use Edge or the Widgets Board', () => {
+    mountApp()
+    expect(screen.queryByText(/Microsoft Edge/)).toBeNull()
+    expect(screen.queryByText(/Windows key and W/)).toBeNull()
+    expect(screen.queryByText(/do not let a web app/)).toBeNull()
+  })
+
+  it('brings the widget up to date from a button, and says what to do when it could not', async () => {
+    update.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
+    mountApp()
+    fireEvent.click(screen.getByRole('button', { name: 'Update the widget now' }))
+    expect(await screen.findByText('The widget has the latest figures.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Update the widget now' }))
+    expect(await screen.findByText('Couldn’t update the widget. Try again.')).toBeInTheDocument()
   })
 })
