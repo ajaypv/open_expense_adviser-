@@ -104,7 +104,7 @@ function Section({ id, title, intro, children }: { id: string; title: string; in
 /** What the logged expenses say, computed on the device. Each block answers one question. */
 export const Insights = memo(function Insights({ ledger, month, onMonth, today, onOpenSettings, onPickCategory, onOpenUpcoming, onOpenAi }: Props) {
   useDisplay() // amounts are masked or regrouped by display settings, so redraw when they change
-  const [categoryView, setCategoryView] = useState<'flow' | 'bubbles' | 'donut' | 'list'>('flow')
+  const [categoryView, setCategoryView] = useState<'bubbles' | 'donut' | 'list'>('bubbles')
   // Insights describe spending, so they use money sent only; received money feeds the balance.
   const { expenses: txs, income, categoryById, currency, budgetMinor, categoryBudgets, recurring, rates, balanceSet, estimatedBalanceMinor } = ledger
   const currentMonth = localDateString(today).slice(0, 7)
@@ -449,6 +449,16 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
             {pace && <p className="mt-3 text-lg text-ink-2">{pace}</p>}
           </section>
 
+          <Section
+            id="flow-h"
+            title="Money flow"
+            intro={`Your ${name} spending, from the chest to each category.${onPickCategory ? ' Tap one to see those expenses.' : ''}`}
+          >
+            <div className="mt-4">
+              <CategoryFlow totals={catParts} categoryById={categoryById} currency={currency} sourceLabel={`Spent in ${name}`} onPick={onPickCategory} />
+            </div>
+          </Section>
+
           <section
             aria-labelledby="pace-h"
             className="mt-8 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]"
@@ -489,7 +499,6 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
             <div role="group" aria-label="How to show the categories" className="mt-3 flex gap-1 rounded-full bg-surface-2 p-1">
               {(
                 [
-                  ['flow', 'Flow'],
                   ['bubbles', 'Bubbles'],
                   ['donut', 'Donut'],
                   ['list', 'List'],
@@ -507,9 +516,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
               ))}
             </div>
             <div className="mt-3">
-              {categoryView === 'flow' ? (
-                <CategoryFlow totals={catParts} categoryById={categoryById} currency={currency} sourceLabel={`Spent in ${name}`} onPick={onPickCategory} />
-              ) : categoryView === 'bubbles' ? (
+              {categoryView === 'bubbles' ? (
                 <CategoryBubbles totals={catParts} categoryById={categoryById} currency={currency} onPick={onPickCategory} />
               ) : categoryView === 'donut' ? (
                 <CategoryDonut totals={catParts} categoryById={categoryById} currency={currency} onPick={onPickCategory} />

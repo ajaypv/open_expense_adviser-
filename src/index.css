@@ -2165,7 +2165,7 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
     opacity: 1;
   }
   100% {
-    transform: translateY(250px);
+    transform: translateY(210px);
     opacity: 0;
   }
 }
@@ -2180,10 +2180,37 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 .flow-shine {
   animation: flow-shine 3.2s cubic-bezier(0.45, 0.05, 0.4, 1) calc(var(--d, 0ms) + 900ms) infinite backwards;
 }
+/* The chest glows, slowly, and its sparkles come and go. */
+@keyframes flow-glow {
+  50% {
+    opacity: 0.55;
+  }
+}
+@keyframes flow-twinkle {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.6);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.flow-glow {
+  animation: flow-glow 3.6s ease-in-out infinite;
+}
+.flow-twinkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: flow-twinkle 2.4s ease-in-out var(--d, 0ms) infinite;
+}
 @media (prefers-reduced-motion: reduce) {
   .flow-pour,
   .flow-cap,
-  .flow-shine {
+  .flow-shine,
+  .flow-glow,
+  .flow-twinkle {
     animation: none;
   }
 }

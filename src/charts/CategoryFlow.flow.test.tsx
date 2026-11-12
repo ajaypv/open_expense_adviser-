@@ -21,10 +21,19 @@ const ribbons = () => Array.from(document.querySelectorAll<SVGGElement>('[data-r
 const list = () => screen.getByRole('list', { name: 'Spending by category, as a flow' })
 
 describe('CategoryFlow: the total splitting into each category', () => {
-  it('puts the total and what it is on a pill at the top', () => {
+  it('puts the total on a treasure chest at the top, with what it is on its lid', () => {
     mount()
-    expect(screen.getByText('Spent in October')).toBeInTheDocument()
-    expect(screen.getByText('₹1,000')).toBeInTheDocument()
+    const chest = document.querySelector('[data-chest]')!
+    expect(chest).not.toBeNull()
+    expect(chest.textContent).toContain('Spent in October')
+    expect(chest.textContent).toContain('₹1,000')
+  })
+
+  it('shows an icon for each category, tinted in its colour', () => {
+    mount({ categoryById: new Map<number, Category>([[1, category(1, 'Groceries')], [2, category(2, 'Transport')], [3, category(3, 'Shopping')]]) })
+    const icons = Array.from(list().querySelectorAll<HTMLElement>('[data-icon]'))
+    expect(icons.map((i) => i.getAttribute('data-icon'))).toEqual(['cart', 'car', 'bag'])
+    expect(icons[0].style.background).toContain('var(--s1)')
   })
 
   it('draws a ribbon to each category, in its colour', () => {
@@ -53,7 +62,7 @@ describe('CategoryFlow: the total splitting into each category', () => {
     // A ribbon's middle line runs from where it leaves the pill to where it lands: "M<x> 0 C ... <x> <bottom>".
     const ends = ribbons().map((g) => {
       const d = g.querySelector('[data-strand="centre"]')!.getAttribute('d')!
-      const [, startX, endX] = /^M([\d.]+) 0C[\d.]+ [\d.]+ [\d.]+ [\d.]+ ([\d.]+) /.exec(d) ?? []
+      const [, startX, endX] = /^M([\d.]+) [\d.]+C[\d.]+ [\d.]+ [\d.]+ [\d.]+ ([\d.]+) /.exec(d) ?? []
       return { start: Number(startX), end: Number(endX) }
     })
     expect(ends[0].end).toBeLessThan(ends[0].start)
@@ -66,7 +75,7 @@ describe('CategoryFlow: the total splitting into each category', () => {
     mount()
     const widths = ribbons().map((g) => {
       const d = g.querySelector('path[data-wash]')!.getAttribute('d')!
-      const xs = /^M([\d.]+) 0.*?([\d.]+) 0Z$/.exec(d)!
+      const xs = /^M([\d.]+) [\d.]+.*?([\d.]+) [\d.]+Z$/.exec(d)!
       return Math.abs(Number(xs[2]) - Number(xs[1]))
     })
     expect(widths[0]).toBeCloseTo(75, 0)
@@ -82,7 +91,7 @@ describe('CategoryFlow: the total splitting into each category', () => {
 
   it('describes the picture for a screen reader', () => {
     mount()
-    expect(screen.getByRole('img', { name: 'Where the money went: Cat 1 50.0%, Cat 2 30.0%, Cat 3 20.0%' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Spent in October, ₹1,000. Where the money went: Cat 1 50.0%, Cat 2 30.0%, Cat 3 20.0%' })).toBeInTheDocument()
   })
 
   it('shows the biggest four and folds the rest into one grey Everything else', () => {
@@ -105,7 +114,7 @@ describe('CategoryFlow: the total splitting into each category', () => {
   it('still draws a thin share where it can be seen', () => {
     mount({ totals: [{ categoryId: 1, totalMinor: 99_900 }, { categoryId: 2, totalMinor: 100 }] })
     const d = ribbons()[1].querySelector('path[data-wash]')!.getAttribute('d')!
-    const xs = /^M([\d.]+) 0.*?([\d.]+) 0Z$/.exec(d)!
+    const xs = /^M([\d.]+) [\d.]+.*?([\d.]+) [\d.]+Z$/.exec(d)!
     expect(Math.abs(Number(xs[2]) - Number(xs[1]))).toBeGreaterThan(3)
   })
 

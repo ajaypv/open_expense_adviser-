@@ -21,8 +21,7 @@ const tx = (categoryId: number, rupees: number): Transaction => ({
 })
 const txs = [tx(1, 600), tx(2, 300), tx(3, 100)]
 
-/** Flow is what Where it went opens on; most of these look at the bubbles, so they choose them first. */
-function mount(onPickCategory = vi.fn(), view: string | null = 'Bubbles') {
+function mount(onPickCategory = vi.fn()) {
   const ledger = makeLedger({
     txs,
     expenses: txs,
@@ -32,7 +31,6 @@ function mount(onPickCategory = vi.fn(), view: string | null = 'Bubbles') {
     categoryById: new Map(categories.map((c) => [c.id, c])),
   })
   render(<Insights ledger={ledger} month="2026-10" onMonth={() => {}} today={today} onOpenSettings={() => {}} onPickCategory={onPickCategory} />)
-  if (view) fireEvent.click(within(screen.getByRole('group', { name: 'How to show the categories' })).getByRole('button', { name: view }))
   return onPickCategory
 }
 
@@ -40,19 +38,8 @@ const section = () => screen.getByRole('region', { name: 'Where it went' })
 const choice = () => within(section()).getByRole('group', { name: 'How to show the categories' })
 const bubbles = () => within(section()).queryByRole('list', { name: /bubbles sized by share/ })
 
-describe('Insights: Where it went, as a flow, bubbles or a list', () => {
-  it('shows the categories as a flow to begin with, each with its name, amount and share', () => {
-    const onPick = mount(vi.fn(), null)
-    expect(within(choice()).getByRole('button', { name: 'Flow' })).toHaveAttribute('aria-pressed', 'true')
-    expect(within(choice()).getByRole('button', { name: 'Bubbles' })).toHaveAttribute('aria-pressed', 'false')
-    expect(bubbles()).toBeNull()
-    expect(within(section()).getByRole('list', { name: 'Spending by category, as a flow' })).toBeInTheDocument()
-    expect(within(section()).getByText('Spent in October')).toBeInTheDocument()
-    fireEvent.click(within(section()).getByRole('button', { name: /^Transport, ₹300.*30\.0%/ }))
-    expect(onPick).toHaveBeenCalledWith(2)
-  })
-
-  it('shows the categories as bubbles when they are chosen, each with its name and share', () => {
+describe('Insights: Where it went, as bubbles or as a list', () => {
+  it('shows the categories as bubbles to begin with, each with its name and share', () => {
     mount()
     expect(within(choice()).getByRole('button', { name: 'Bubbles' })).toHaveAttribute('aria-pressed', 'true')
     expect(within(choice()).getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'false')
