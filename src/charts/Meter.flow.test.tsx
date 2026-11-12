@@ -40,3 +40,23 @@ describe('Meter', () => {
     expect(fill().style.width).toBe('25%')
   })
 })
+
+describe('Meter without its figures', () => {
+  it('leaves out the row of spent-of-limit and the percentage, for a place that already shows the amount', () => {
+    const { container } = render(<Meter spentMinor={500_000} limitMinor={2_000_000} currency="INR" hideFigures />)
+    expect(container.textContent).not.toContain('of ₹20,000')
+    expect(container.textContent).not.toContain('25%')
+  })
+
+  it('keeps the bar and the words, which still say where the budget stands', () => {
+    render(<Meter spentMinor={500_000} limitMinor={2_000_000} currency="INR" hideFigures />)
+    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuetext', '₹15,000 left')
+    expect(screen.getByText('₹15,000 left')).toBeInTheDocument()
+    expect(fill().style.width).toBe('25%')
+  })
+
+  it('still says it louder over the limit, in words and bold red', () => {
+    render(<Meter spentMinor={1_200_000} limitMinor={1_000_000} currency="INR" hideFigures />)
+    expect(screen.getByText('Over budget by ₹2,000').closest('p')).toHaveClass('text-critical', 'font-semibold')
+  })
+})

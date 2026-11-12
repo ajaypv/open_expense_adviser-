@@ -7,10 +7,12 @@ interface Props {
   spentMinor: number
   limitMinor: number
   currency: string
+  /** Leave out the row of "spent of limit" and the percentage, for a place that already shows the amount: the bar and the words stay. */
+  hideFigures?: boolean
 }
 
 /** Budget progress. The state is always stated in words and an icon, never by color alone. */
-export function Meter({ spentMinor, limitMinor, currency }: Props) {
+export function Meter({ spentMinor, limitMinor, currency, hideFigures = false }: Props) {
   const intro = useIntro()
   const ratio = spentMinor / limitMinor
   const { over, close, fill } = budgetTone(ratio)
@@ -19,13 +21,15 @@ export function Meter({ spentMinor, limitMinor, currency }: Props) {
 
   return (
     <div>
-      <div className="flex items-baseline justify-between gap-3">
-        <p>
-          <span className="font-semibold tabular-nums">{formatMoney(spentMinor, currency)}</span>
-          <span className="text-ink-2"> of {formatMoney(limitMinor, currency)}</span>
-        </p>
-        <p className="text-ink-2 tabular-nums">{Math.round(ratio * 100)}%</p>
-      </div>
+      {!hideFigures && (
+        <div className="flex items-baseline justify-between gap-3">
+          <p>
+            <span className="font-semibold tabular-nums">{formatMoney(spentMinor, currency)}</span>
+            <span className="text-ink-2"> of {formatMoney(limitMinor, currency)}</span>
+          </p>
+          <p className="text-ink-2 tabular-nums">{Math.round(ratio * 100)}%</p>
+        </div>
+      )}
       <div
         role="meter"
         aria-label="Monthly budget used"
@@ -33,7 +37,7 @@ export function Meter({ spentMinor, limitMinor, currency }: Props) {
         aria-valuemax={limitMinor / 100}
         aria-valuenow={Math.min(spentMinor, limitMinor) / 100}
         aria-valuetext={status}
-        className="mt-2 h-2.5 overflow-hidden rounded-full"
+        className={`${hideFigures ? 'mt-3' : 'mt-2'} h-2.5 overflow-hidden rounded-full`}
         style={{ background: BUDGET_SKY }}
       >
         <div

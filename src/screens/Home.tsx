@@ -7,7 +7,6 @@ import type { useLedger } from '../data/useLedger'
 import { localDateString } from '../db/money'
 import {
   byCategory,
-  byDay,
   daysInMonth,
   compareToPrevious,
   inMonth,
@@ -126,12 +125,11 @@ export const Home = memo(function Home({
       recentlySpent: recentSpending(expenses, today),
       monthTxs,
       categoryTotals: byCategory(monthTxs),
-      dailyMinor: byDay(monthTxs, month),
       recent: inMonth(txs, month).sort(newestFirst).slice(0, 5),
       expenseCount: monthTxs.length,
     }
   }, [txs, expenses, income, month, today])
-  const { total, received, comparison, monthTxs, categoryTotals, dailyMinor, recent, recentlySpent, expenseCount } = view
+  const { total, received, comparison, monthTxs, categoryTotals, recent, recentlySpent, expenseCount } = view
   // Months with something in them get a dot in the month picker.
   const activeMonths = useMemo(() => new Set(txs.map((t) => t.date.slice(0, 7))), [txs])
 
@@ -191,8 +189,6 @@ export const Home = memo(function Home({
               prevName={prevName}
               dailyAverageMinor={Math.round(total / elapsedDays / 100) * 100}
               expenseCount={expenseCount}
-              dailyMinor={dailyMinor}
-              todayDay={isCurrent ? today.getDate() : null}
               budgetMinor={budgetMinor}
               currency={currency}
               periods={
@@ -208,8 +204,9 @@ export const Home = memo(function Home({
               onTogglePrivacy={() => setDisplay({ privacy: !display.privacy })}
               onPickPeriod={onPickPeriod}
               monthKey={month}
-              ahead={isCurrent ? <PlanAhead ledger={ledger} today={today} /> : null}
             />
+
+            {isCurrent && <PlanAhead ledger={ledger} today={today} card />}
 
             <WalletPanel
               monthName={name}

@@ -1,6 +1,6 @@
-import { ArcMeter } from '../charts/ArcMeter'
+import { Meter } from '../charts/Meter'
 import { formatMoney } from '../db/money'
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { AnimatedMoney } from './AnimatedMoney'
 import { Icon } from './Icon'
 
@@ -24,10 +24,6 @@ interface Props {
   prevName: string
   dailyAverageMinor: number
   expenseCount: number
-  /** What was spent on each day of the month, in order (index 0 is day 1): one bar of the budget meter for each. */
-  dailyMinor: number[]
-  /** The day of the month it is, for the month in progress; null for a month that is over. */
-  todayDay: number | null
   budgetMinor: number | null
   currency: string
   periods: PeriodTile[]
@@ -36,8 +32,6 @@ interface Props {
   onPickPeriod: (range: { from: string; to: string }) => void
   /** The month in view (YYYY-MM): when it changes, the figures slide in from the side it came from. */
   monthKey?: string
-  /** Shown at the foot of the card, under the recent figures: what to plan for in the weeks ahead. */
-  ahead?: ReactNode
 }
 
 /**
@@ -54,8 +48,6 @@ export function SpendingOverview({
   prevName,
   dailyAverageMinor,
   expenseCount,
-  dailyMinor,
-  todayDay,
   budgetMinor,
   currency,
   periods,
@@ -63,7 +55,6 @@ export function SpendingOverview({
   onTogglePrivacy,
   onPickPeriod,
   monthKey,
-  ahead,
 }: Props) {
   const against = `${partial ? 'the same days in ' : ''}${prevName}`
 
@@ -90,21 +81,9 @@ export function SpendingOverview({
         data-month={monthKey}
         className={shown.dir === 'next' ? 'month-slide-from-right' : shown.dir === 'prev' ? 'month-slide-from-left' : undefined}
       >
-      {budgetMinor !== null && (
-        <ArcMeter
-          spentMinor={totalMinor}
-          limitMinor={budgetMinor}
-          dailyMinor={dailyMinor}
-          todayDay={todayDay}
-          currency={currency}
-          heading={isCurrent ? `Spent so far in ${monthName}` : `Spent in ${monthName}`}
-          emptyHeading={`Nothing spent in ${monthName} yet.`}
-        />
-      )}
-
-      {budgetMinor === null && totalMinor === 0 && <p className="pr-10 text-2xl font-semibold tracking-tight">{`Nothing spent in ${monthName} yet.`}</p>}
-
-      {budgetMinor === null && totalMinor > 0 && (
+      {totalMinor === 0 ? (
+        <p className="pr-10 text-2xl font-semibold tracking-tight">{`Nothing spent in ${monthName} yet.`}</p>
+      ) : (
         <>
           <p className="text-ink-2">{isCurrent ? `Spent so far in ${monthName}` : `Spent in ${monthName}`}</p>
           <p className="mt-1 whitespace-nowrap text-[clamp(2.25rem,10vw,2.5rem)] font-extrabold leading-none tracking-[-0.03em] tabular-nums">
@@ -113,15 +92,23 @@ export function SpendingOverview({
         </>
       )}
 
+      {/* With a budget: one plain bar of how much of it is used, and in words where that leaves you. */}
+      {budgetMinor !== null && (
+        <div className="mt-4">
+          <Meter spentMinor={totalMinor} limitMinor={budgetMinor} currency={currency} hideFigures />
+        </div>
+      )}
+
       {totalMinor > 0 && (
-        <p className={`mt-2 text-base text-ink-2 ${budgetMinor !== null ? 'text-center' : ''}`}>
+        <p className="mt-3 text-base text-ink-2">
+          {budgetMinor !== null && `Budget ${formatMoney(budgetMinor, currency)} · `}
           {`${expenseCount} ${expenseCount === 1 ? 'expense' : 'expenses'}`}
           {dailyAverageMinor > 0 && ` · about ${formatMoney(dailyAverageMinor, currency)} a day`}
         </p>
       )}
 
       {totalMinor > 0 && deltaPct !== null && (
-        <p className={`mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-ink-2 ${budgetMinor !== null ? 'justify-center' : ''}`}>
+        <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-ink-2">
           {deltaPct === 0 ? (
             <>{`The same as ${against}.`}</>
           ) : (
@@ -141,7 +128,7 @@ export function SpendingOverview({
       )}
 
       {periods.length > 0 && (
-        <section aria-label="Recent spending" className="mt-5 grid grid-cols-3 gap-2">
+        <section aria-label="Recent spending" className="mt-5 grid grid-cols-3 divide-x divide-line border-t border-line pt-4">
           {periods.map((p) => {
             const spent = formatMoney(p.amountMinor, currency)
             const body = (
@@ -159,12 +146,12 @@ export function SpendingOverview({
                 type="button"
                 aria-label={`${p.label}: ${spent}. See these transactions`}
                 onClick={() => onPickPeriod({ from: p.from, to: p.to })}
-                className="min-h-14 min-w-0 rounded-2xl bg-surface-2 px-3 py-2 text-left active:bg-line [@media(hover:hover)]:hover:bg-line"
+                className="flex min-h-12 min-w-0 flex-col justify-center px-3 text-left first:pl-0 active:opacity-60 [@media(hover:hover)]:hover:opacity-75"
               >
                 {body}
               </button>
             ) : (
-              <div key={p.id} role="group" aria-label={`${p.label}: ${spent}`} className="min-h-14 min-w-0 rounded-2xl bg-surface-2/50 px-3 py-2">
+              <div key={p.id} role="group" aria-label={`${p.label}: ${spent}`} className="flex min-h-12 min-w-0 flex-col justify-center px-3 first:pl-0">
                 {body}
               </div>
             )
@@ -172,7 +159,6 @@ export function SpendingOverview({
         </section>
       )}
 
-      {ahead}
       </div>
     </section>
   )
