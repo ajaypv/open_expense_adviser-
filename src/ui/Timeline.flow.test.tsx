@@ -395,3 +395,49 @@ describe('Timeline: today’s water bar', () => {
     add.mockRestore()
   })
 })
+
+describe('Timeline: the dates stick', () => {
+  const css = readFileSync('src/index.css', 'utf8')
+  const stick = (row: Element) => row.querySelector('[data-stick]') as HTMLElement
+
+  it('keeps each date in a wrapper that sticks near the top of the scrolling area, at the place the date always had', () => {
+    mount()
+    for (const row of document.querySelectorAll('li[data-day], li[data-quiet]')) {
+      const s = stick(row)
+      expect(s).toBeInTheDocument()
+      expect(s.className).toMatch(/\bsticky\b/)
+      expect(s.style.top).toBe('0.5rem')
+      expect(s.style.marginTop).toContain('0.3875rem') // the dot's centre 1.7rem down the row, less its own half height
+      expect(s.contains(row.querySelector('[data-dot]'))).toBe(true)
+    }
+  })
+
+  it('has the date sticking inside its own row, so the next day’s date pushes it off the top, and it does not stay on for the rest of the list', () => {
+    mount()
+    const row = dayRow('2026-11-06')
+    // The wrapper's container is the row's own column, which is as tall as the row and no taller.
+    expect(stick(row).parentElement!.parentElement).toBe(row)
+  })
+
+  it('has a pill behind each date, saying the date and the weekday in words', () => {
+    mount()
+    const pill = dayRow('2026-11-06').querySelector('[data-pill]') as HTMLElement
+    expect(pill.textContent).toMatch(/Nov/)
+    expect(pill.textContent).toContain('Friday')
+    expect(pill).toHaveClass('pointer-events-none')
+  })
+
+  it('says the days, from one to the other, for a run of quiet days, and the date for one', () => {
+    mount()
+    const quiet = [...document.querySelectorAll('li[data-quiet]')]
+    const text = quiet.map((q) => q.querySelector('[data-pill]')!.textContent ?? '')
+    expect(text.some((t) => t.includes('–'))).toBe(true)
+    expect(text.some((t) => /Wednesday|Thursday|Tuesday|Monday|Friday|Saturday|Sunday/.test(t))).toBe(true)
+  })
+
+  it('opens the pill only where a browser can tell that the date is stuck, and leaves it out of sight otherwise', () => {
+    expect(css).toMatch(/\.tl-pill \{\s*display: none/)
+    expect(css).toMatch(/@supports \(container-type: scroll-state\) \{[\s\S]*?\.tl-stick \{\s*container-type: scroll-state/)
+    expect(css).toMatch(/@container scroll-state\(stuck: top\) \{\s*\.tl-pill \{\s*opacity: 1/)
+  })
+})

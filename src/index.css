@@ -1106,6 +1106,17 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 /* The line between days is a small river. Its coloured part is shown from the top down as far as the page has been scrolled
    (--p, set as the page moves, so it follows the finger and trails it a little), and a bead of light rides the leading edge,
    along it. The grey line under it is always there. */
+/* The line is dotted: round dots one after another, evenly spaced, the grey ones always there and the coloured ones filling in down them.
+   Each dot is cut from the line, so where the line is broad (after a big day) the dots are full and round, and where it is thin (after a
+   quiet one) they are a little narrower. */
+.tl-river > svg {
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 0 3.3px, transparent 3.9px);
+  mask-image: radial-gradient(circle at 50% 50%, #000 0 3.3px, transparent 3.9px);
+  -webkit-mask-size: 100% 11px;
+  mask-size: 100% 11px;
+  -webkit-mask-repeat: repeat-y;
+  mask-repeat: repeat-y;
+}
 .tl-fill {
   clip-path: inset(0 0 calc((1 - var(--p, 1)) * 100%) 0);
 }
@@ -1123,6 +1134,37 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 }
 .tl-river[data-live='true'] .tl-head {
   opacity: 1;
+}
+
+/* The date sticks at the top as its day is scrolled past, and a pill opens out behind it, with the date and weekday in words. It opens
+   only where a browser can tell that the date is stuck (scroll-state queries); elsewhere the date just sticks. */
+.tl-pill {
+  display: none;
+}
+@supports (container-type: scroll-state) {
+  .tl-stick {
+    container-type: scroll-state;
+  }
+  .tl-pill {
+    display: flex;
+    opacity: 0;
+    transform: translateX(-0.75rem) scaleX(0.5);
+    transform-origin: 1.5rem 50%;
+    transition:
+      opacity 0.2s ease,
+      transform 0.35s cubic-bezier(0.3, 1.3, 0.5, 1);
+  }
+  @container scroll-state(stuck: top) {
+    .tl-pill {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tl-pill {
+    transition: none;
+  }
 }
 
 /* A date is dark until the line reaches it, then it fills in its colour with a little spring. */

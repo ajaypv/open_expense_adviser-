@@ -7,8 +7,8 @@
 export const RIVER_WIDTH = 24
 export const RIVER_HEIGHT = 100
 
-const MIN_WIDTH = 2.5
-const MAX_WIDTH = 8
+const MIN_WIDTH = 4
+const MAX_WIDTH = 9
 
 /** How wide the line is where a day of this size (0 to 1, against the biggest) meets it. */
 export const widthFor = (share: number) => MIN_WIDTH + (MAX_WIDTH - MIN_WIDTH) * Math.sqrt(Math.min(Math.max(share, 0), 1))

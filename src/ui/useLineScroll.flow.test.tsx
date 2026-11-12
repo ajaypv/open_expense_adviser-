@@ -14,6 +14,17 @@ let listTop = 100
 let scrollTop = 0
 const rect = (top: number, height: number): DOMRect => ({ top, height, bottom: top + height, left: 0, right: 0, width: 0, x: 0, y: top, toJSON: () => ({}) }) as DOMRect
 
+/** A date as the timeline makes it: in a row of its own, in a wrapper that sticks (so the date itself may be moved along by it). */
+function Dated({ at }: { at: number }) {
+  return (
+    <div data-spine data-at={at}>
+      <span data-stick style={{ marginTop: 0 }}>
+        <span data-dot />
+      </span>
+    </div>
+  )
+}
+
 function List({ k = 0 }: { k?: number }) {
   const ref = useRef<HTMLOListElement>(null)
   useLineScroll(ref, k)
@@ -22,12 +33,12 @@ function List({ k = 0 }: { k?: number }) {
       <ol ref={ref} data-testid="list">
         {[0, 1, 2].map((i) => (
           <li key={i}>
-            <span data-dot data-at={30 + i * 200} />
+            <Dated at={30 + i * 200} />
             <span data-seg data-top={30 + i * 200} data-height="100" />
           </li>
         ))}
         <li>
-          <span data-dot data-at={630} />
+          <Dated at={630} />
         </li>
       </ol>
     </main>
@@ -46,7 +57,9 @@ function layout() {
     if (el.tagName === 'MAIN') return rect(0, 1000)
     if (el.tagName === 'OL') return rect(listTop - up, 700)
     if (el.dataset.seg !== undefined) return rect(listTop - up + Number(el.dataset.top), Number(el.dataset.height))
-    if (el.dataset.dot !== undefined) return rect(listTop - up + Number(el.dataset.at) - 10, 20)
+    // A date is measured from its row, since it moves when it sticks: where the row is is where the date belongs.
+    if (el.dataset.spine !== undefined) return rect(listTop - up + Number(el.dataset.at), 20)
+    if (el.dataset.dot !== undefined) return rect(0, 20) // wherever it has been stuck to: not used
     return rect(0, 0)
   })
 }

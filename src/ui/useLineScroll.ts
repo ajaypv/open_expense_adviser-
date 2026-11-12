@@ -62,9 +62,12 @@ export function useLineScroll(list: RefObject<HTMLElement | null>, layoutKey: st
         const r = s.getBoundingClientRect()
         return { top: r.top - rootBox.top, height: r.height }
       })
+      // Where each date sits in its own row, which does not change as it sticks and is pushed along: from its row, not from the date.
       centres = dots.map((d) => {
-        const r = d.getBoundingClientRect()
-        return r.top - rootBox.top + r.height / 2
+        const stick = d.parentElement as HTMLElement
+        const spine = stick.parentElement as HTMLElement
+        const lift = parseFloat(getComputedStyle(stick).marginTop) || 0
+        return spine.getBoundingClientRect().top - rootBox.top + lift + d.offsetHeight / 2
       })
       lastP.length = 0
       lastLit.length = 0
