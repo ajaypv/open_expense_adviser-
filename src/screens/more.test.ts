@@ -127,9 +127,10 @@ describe('Insights additions', () => {
 })
 
 describe('Welcome, What’s new and the lock screen', () => {
-  it('welcomes with three optional questions and a way to skip', () => {
+  it('welcomes with its first of three optional questions and a way to skip', () => {
     const out = html(createElement(Welcome, { open: true, currency: 'INR', accounts: [{ id: 1, name: 'Main', openingMinor: null }] }))
-    for (const text of ['Welcome', 'Currency', 'Money you have today', 'Monthly budget', 'Get started', 'Skip for now']) expect(out).toContain(text)
+    // The first of the three, which is the one shown: the others come on one at a time (see Welcome.flow).
+    for (const text of ['Welcome', 'Currency', 'Continue', 'Skip for now', '1 of 3']) expect(out).toContain(text)
   })
 
   it('lists what changed in the newest version', () => {
