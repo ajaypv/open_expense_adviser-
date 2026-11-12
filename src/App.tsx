@@ -240,15 +240,20 @@ function Shell() {
   // Swiping along the bottom bar moves between Home's two pages, which sit like the pages of a phone's home screen: to the right for
   // the timeline, which is on the left, and to the left for the overview. From another screen it opens Home on that page. It never goes
   // to Activity, Insights or Settings; those are for tapping.
-  const swipeBar = useCallback(
-    (direction: 'left' | 'right') => {
-      const page = direction === 'right' ? 'timeline' : 'overview'
-      if (tabRef.current === 'home') return showHomeView(page)
+  // A page is shown on the pager if there is one on screen. If there is not (Home is another screen, or is still loading), the request is
+  // left for the pager about to be built, which opens on it.
+  const showHomePage = useCallback(
+    (page: 'timeline' | 'overview') => {
+      if (tabRef.current === 'home') {
+        if (!showHomeView(page)) openHomeOn(page)
+        return
+      }
       openHomeOn(page)
       go('home')
     },
     [go],
   )
+  const swipeBar = useCallback((direction: 'left' | 'right') => showHomePage(direction === 'right' ? 'timeline' : 'overview'), [showHomePage])
 
   // On any tab but Home, the phone's back button goes to Home rather than out of the app.
   useBackClose(tab !== 'home', () => go('home'))
