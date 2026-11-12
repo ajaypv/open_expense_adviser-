@@ -1106,17 +1106,6 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 /* The line between days is a small river. Its coloured part is shown from the top down as far as the page has been scrolled
    (--p, set as the page moves, so it follows the finger and trails it a little), and a bead of light rides the leading edge,
    along it. The grey line under it is always there. */
-/* The line is dotted: round dots one after another, evenly spaced, the grey ones always there and the coloured ones filling in down them.
-   Each dot is cut from the line, so where the line is broad (after a big day) the dots are full and round, and where it is thin (after a
-   quiet one) they are a little narrower. */
-.tl-river > svg {
-  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 0 3.3px, transparent 3.9px);
-  mask-image: radial-gradient(circle at 50% 50%, #000 0 3.3px, transparent 3.9px);
-  -webkit-mask-size: 100% 11px;
-  mask-size: 100% 11px;
-  -webkit-mask-repeat: repeat-y;
-  mask-repeat: repeat-y;
-}
 .tl-fill {
   clip-path: inset(0 0 calc((1 - var(--p, 1)) * 100%) 0);
 }
