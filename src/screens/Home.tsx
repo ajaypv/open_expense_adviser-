@@ -3,6 +3,7 @@ import type { LedgerTx } from '../data/buildLedger'
 import { setDisplay, useDisplay } from '../data/display'
 import { CategoryBars } from '../charts/CategoryBars'
 import { DayChart } from '../charts/DayChart'
+import { ShareRibbon } from '../charts/ShareRibbon'
 import type { useLedger } from '../data/useLedger'
 import { localDateString } from '../db/money'
 import {
@@ -263,6 +264,15 @@ export const Home = memo(function Home({
                       budgetMinor={budgetMinor}
                       onPickDay={pickDay}
                     />
+                  </div>
+                </section>
+
+                <section aria-labelledby="share-h" className="mt-8">
+                  <h2 id="share-h" className="mb-3 px-1 text-xl font-bold tracking-tight">
+                    Where the money flows
+                  </h2>
+                  <div className={`${card} p-4`}>
+                    <ShareRibbon key={month} totals={categoryTotals} categoryById={categoryById} onPick={onPickCategory} />
                   </div>
                 </section>
 

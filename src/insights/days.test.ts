@@ -210,3 +210,15 @@ describe('dayInsights', () => {
     expect(insights(txs, 12, 3_100_000).length).toBeLessThanOrEqual(4)
   })
 })
+
+describe('dayInsights: a big gap between weekends and weekdays', () => {
+  it('says how many times as much from three times up, since a percentage in the thousands is hard to read', () => {
+    const view = { totalMinor: 1, peak: null, limitMinor: null, overDays: 0, quietNow: 0, quietDays: 0, weekendRatio: 15 } as unknown as Parameters<typeof dayInsights>[0]
+    const text = dayInsights(view, (m) => String(m), (d) => d).find((i) => i.key === 'weekend')?.text
+    expect(text).toBe('Weekend days cost you about 15× what weekdays do')
+    const small = dayInsights({ ...view, weekendRatio: 3.46 } as typeof view, (m) => String(m), (d) => d).find((i) => i.key === 'weekend')?.text
+    expect(small).toBe('Weekend days cost you about 3.5× what weekdays do')
+    const back = dayInsights({ ...view, weekendRatio: 1 / 4 } as typeof view, (m) => String(m), (d) => d).find((i) => i.key === 'weekday')?.text
+    expect(back).toBe('Weekdays cost you about 4× what weekend days do')
+  })
+})

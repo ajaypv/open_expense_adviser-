@@ -3,7 +3,7 @@ import { formatMoney, formatMoneyCompact, parseLocalDate } from '../db/money'
 import type { Category, Transaction } from '../db/schema'
 import { monthLabel, type MonthKey } from '../insights/aggregates'
 import { dayInsights, dayView, versusAverage, type DayInfo, type DaySlice } from '../insights/days'
-import { Icon } from '../ui/Icon'
+import { Icon, type IconName } from '../ui/Icon'
 import { useSeen } from '../ui/motion'
 import { niceCeil } from './scale'
 import { TableDisclosure } from './TableDisclosure'
@@ -25,6 +25,10 @@ type Mode = 'total' | 'category'
 
 const LABEL_DAYS = [1, 8, 15, 22, 29]
 const DETAIL_ROWS = 3
+
+/** A sign beside each sentence the days say, so what kind of thing it is can be seen before it is read. */
+const SIGN: Record<string, IconName> = { peak: 'bars', budget: 'flag', weekend: 'sun', weekday: 'home', 'quiet-now': 'check', quiet: 'check' }
+const SIGN_COLOUR: Record<string, string> = { peak: 'var(--accent)', budget: 'var(--critical-text)', weekend: 'var(--warn-ui)', weekday: 'var(--accent)', 'quiet-now': 'var(--good-text)', quiet: 'var(--good-text)' }
 
 let dayName: Intl.DateTimeFormat | undefined
 const labelOf = (date: string) =>
@@ -54,9 +58,15 @@ export function DayChart({ txs, categoryById, monthKey, lastDay, currency, budge
   const nameOf = (id: number | null) => (id === null ? 'Everything else' : (categoryById.get(id)?.name ?? 'No category'))
   const colorOf = (s: DaySlice) => (s.categoryId === null ? 'var(--other)' : (categoryById.get(s.categoryId)?.color ?? 'var(--other)'))
 
-  const axisMax = niceCeil(Math.max(peak?.minor ?? 0, 1))
-  const heightOf = (minor: number) => (minor === 0 ? 0 : Math.max((minor / axisMax) * 100, 3))
+  // One day that towers over the rest (more than two and a half times the next) would flatten every other column to a sliver, so it is cut
+  // short, with a slanted break through it and its amount written above it; the axis is then made for the others. A straight 0-based scale
+  // otherwise: a log scale would stop the length of a column meaning how much.
+  const biggest = days.filter((d) => !d.future && d.minor > 0).map((d) => d.minor).sort((a, b) => b - a)
+  const cut = biggest.length >= 3 && biggest[0] > biggest[1] * 2.5
+  const axisMax = cut ? niceCeil(biggest[1] * 1.15) : niceCeil(Math.max(peak?.minor ?? 0, 1))
+  const heightOf = (minor: number) => (minor === 0 ? 0 : Math.min(100, Math.max((minor / axisMax) * 100, 3)))
   const showLimit = limitMinor !== null && limitMinor <= axisMax
+  const showAverage = averageMinor <= axisMax
   const shown = looking ?? picked
   const day: DayInfo | null = shown === null ? null : days[shown]
   const insights = dayInsights(view, money, labelOf)
@@ -167,16 +177,17 @@ export function DayChart({ txs, categoryById, monthKey, lastDay, currency, budge
                   data-weekend={d.weekend ? 'true' : undefined}
                   data-over={over ? 'true' : undefined}
                   data-selected={selected ? 'true' : undefined}
+                  data-cut={cut && d.minor > axisMax ? 'true' : undefined}
                   className="relative flex h-full flex-1 items-end justify-center"
                 >
-                  {d.weekend && <span aria-hidden="true" className="absolute inset-0 rounded-sm bg-surface-2/70" />}
-                  <span aria-hidden="true" className={`absolute inset-0 rounded-sm bg-line/60 transition-opacity duration-150 motion-reduce:transition-none ${selected ? 'opacity-100' : 'opacity-0'}`} />
+                  {d.weekend && <span aria-hidden="true" className="absolute inset-0 rounded-md bg-surface-2/45" />}
+                  <span aria-hidden="true" className={`absolute inset-0 rounded-md bg-line/60 transition-opacity duration-150 motion-reduce:transition-none ${selected ? 'opacity-100' : 'opacity-0'}`} />
                   {d.future ? (
                     <div className="relative h-[2px] w-full max-w-6 bg-axis opacity-50" />
                   ) : (
                     <div
                       data-bar
-                      className="day-bar relative flex w-full max-w-6 flex-col-reverse overflow-hidden rounded-t-[3px] transition-[height,opacity] duration-500 motion-reduce:transition-none"
+                      className="day-bar relative flex w-full max-w-5 flex-col-reverse overflow-hidden rounded-t-md transition-[height,opacity] duration-500 motion-reduce:transition-none"
                       style={{ height: `${heightOf(total)}%`, opacity: shown === null || selected ? 1 : 0.35, '--d': `${i * stagger}ms` } as CSSProperties}
                     >
                       {d.slices.map((s) => (
@@ -192,21 +203,29 @@ export function DayChart({ txs, categoryById, monthKey, lastDay, currency, budge
                         />
                       ))}
                       {over && <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px]" style={{ background: 'var(--critical)' }} />}
+                      {cut && d.minor > axisMax && <span aria-hidden="true" data-break className="absolute -inset-x-1 top-[22%] h-1.5 -rotate-12 bg-surface" />}
                     </div>
+                  )}
+                  {cut && d.minor > axisMax && shown !== i && (
+                    <span aria-hidden="true" data-testid="day-cut-label" className="pointer-events-none absolute bottom-full z-10 mb-1 whitespace-nowrap rounded-full bg-surface-2 px-1.5 py-0.5 text-xs font-semibold tabular-nums">
+                      {formatMoneyCompact(d.minor, currency)}
+                    </span>
                   )}
                 </div>
               )
             })}
           </div>
 
-          <div
-            aria-hidden="true"
-            data-testid="day-average"
-            className="day-line pointer-events-none absolute inset-x-0 border-t border-dashed border-ink-2 transition-[bottom] duration-500 motion-reduce:transition-none"
-            style={{ bottom: `${heightOf(averageMinor)}%` }}
-          >
-            <span className="absolute right-0 top-0 -translate-y-1/2 rounded bg-surface px-1 text-xs text-ink-2">average</span>
-          </div>
+          {showAverage && (
+            <div
+              aria-hidden="true"
+              data-testid="day-average"
+              className="day-line pointer-events-none absolute inset-x-0 border-t border-dashed border-ink-2 transition-[bottom] duration-500 motion-reduce:transition-none"
+              style={{ bottom: `${heightOf(averageMinor)}%` }}
+            >
+              <span className="absolute right-0 top-0 -translate-y-1/2 rounded-full bg-surface px-1.5 text-xs text-ink-2 shadow-[0_0_0_1px_var(--line)]">{`average ${formatMoneyCompact(averageMinor, currency)}`}</span>
+            </div>
+          )}
           {showLimit && (
             <div
               aria-hidden="true"
@@ -214,8 +233,8 @@ export function DayChart({ txs, categoryById, monthKey, lastDay, currency, budge
               className="day-line pointer-events-none absolute inset-x-0 border-t border-dashed transition-[bottom] duration-500 motion-reduce:transition-none"
               style={{ bottom: `${heightOf(limitMinor!)}%`, borderColor: 'var(--critical)' }}
             >
-              <span className="absolute left-0 top-0 -translate-y-1/2 rounded bg-surface px-1 text-xs" style={{ color: 'var(--critical-text)' }}>
-                budget
+              <span className="absolute left-0 top-0 -translate-y-1/2 rounded-full bg-surface px-1.5 text-xs shadow-[0_0_0_1px_var(--line)]" style={{ color: 'var(--critical-text)' }}>
+                {`budget ${formatMoneyCompact(limitMinor!, currency)}`}
               </span>
             </div>
           )}
@@ -241,6 +260,12 @@ export function DayChart({ txs, categoryById, monthKey, lastDay, currency, budge
         ))}
         {lastDay !== null && <span className="absolute top-0 size-1.5 -translate-x-1/2 -translate-y-2 rounded-full bg-ink" style={{ left: `${((Math.min(lastDay, n) - 0.5) / n) * 100}%` }} />}
       </div>
+
+      {cut && peak && (
+        <p data-testid="day-cut-note" className="mt-1 text-xs text-ink-2">
+          {`${labelOf(peak.date)} (${money(peak.minor)}) is cut short so the other days can be read.`}
+        </p>
+      )}
 
       {mode === 'category' && view.legend.length > 0 && (
         <ul aria-label="Colours by category" className="row-in mt-2 flex flex-wrap gap-x-4 gap-y-1">
@@ -292,24 +317,26 @@ export function DayChart({ txs, categoryById, monthKey, lastDay, currency, budge
         </div>
       ) : (
         insights.length > 0 && (
-          <ul aria-label="What the days say" className="mt-3 divide-y divide-line">
+          <ul aria-label="What the days say" className="mt-4 space-y-2">
             {insights.map((s, i) => {
               const row = { '--d': `${600 + i * 90}ms` } as CSSProperties
               const body = (
                 <>
-                  <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-ink-2" />
+                  <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface" style={{ color: SIGN_COLOUR[s.key] ?? 'var(--ink-2)' }}>
+                    <Icon name={SIGN[s.key] ?? 'spark'} size={16} />
+                  </span>
                   <span className="min-w-0 flex-1 text-left text-[0.9375rem]">{s.text}</span>
                 </>
               )
               return (
                 <li key={s.key} className="row-in" style={row}>
                   {s.day !== undefined ? (
-                    <button type="button" onClick={() => setPicked(s.day! - 1)} aria-label={`${s.text}. Show this day`} className="flex min-h-11 w-full items-center gap-2.5 py-2">
+                    <button type="button" onClick={() => setPicked(s.day! - 1)} aria-label={`${s.text}. Show this day`} className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-surface-2 px-3 py-2 active:opacity-70">
                       {body}
                       <Icon name="chevRight" size={18} />
                     </button>
                   ) : (
-                    <p className="flex min-h-11 items-center gap-2.5 py-2">{body}</p>
+                    <p className="flex min-h-12 items-center gap-3 rounded-2xl bg-surface-2 px-3 py-2">{body}</p>
                   )}
                 </li>
               )

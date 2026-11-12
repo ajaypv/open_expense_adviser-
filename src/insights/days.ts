@@ -133,6 +133,13 @@ export interface DayInsight {
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
+/** "about 40% more than weekdays"; from three times up, "about 15× what weekdays do", since 1488% is hard to read. */
+function timesMore(ratio: number, other: string): string {
+  if (ratio < 3) return `about ${Math.round((ratio - 1) * 100)}% more than ${other}`
+  const n = ratio >= 10 ? Math.round(ratio) : Math.round(ratio * 10) / 10
+  return `about ${n}× what ${other} do`
+}
+
 /** What the pattern says, in short sentences; at most four, the ones tied to a day first. */
 export function dayInsights(view: DaysView, money: (minor: number) => string, dayLabel: (date: string) => string): DayInsight[] {
   if (view.totalMinor <= 0) return []
@@ -147,8 +154,8 @@ export function dayInsights(view: DaysView, money: (minor: number) => string, da
   }
 
   const r = view.weekendRatio
-  if (r !== null && r >= 1.25) out.push({ key: 'weekend', text: `Weekend days cost you about ${Math.round((r - 1) * 100)}% more than weekdays` })
-  else if (r !== null && r <= 0.8) out.push({ key: 'weekday', text: `Weekdays cost you about ${Math.round((1 / r - 1) * 100)}% more than weekend days` })
+  if (r !== null && r >= 1.25) out.push({ key: 'weekend', text: `Weekend days cost you ${timesMore(r, 'weekdays')}` })
+  else if (r !== null && r <= 0.8) out.push({ key: 'weekday', text: `Weekdays cost you ${timesMore(1 / r, 'weekend days')}` })
 
   if (view.quietNow >= 2) out.push({ key: 'quiet-now', text: `Nothing spent for the last ${view.quietNow} days` })
   else if (view.quietDays > 0) out.push({ key: 'quiet', text: `${plural(view.quietDays, 'day', 'days')} with nothing spent` })
