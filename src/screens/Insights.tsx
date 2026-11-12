@@ -4,6 +4,7 @@ import { BillSplit } from '../charts/BillSplit'
 import { CategoryBars } from '../charts/CategoryBars'
 import { CategoryBubbles } from '../charts/CategoryBubbles'
 import { CategoryDonut } from '../charts/CategoryDonut'
+import { CategoryFlow } from '../charts/CategoryFlow'
 import { Meter } from '../charts/Meter'
 import { MonthColumns } from '../charts/MonthColumns'
 import { Movers } from '../charts/Movers'
@@ -103,7 +104,7 @@ function Section({ id, title, intro, children }: { id: string; title: string; in
 /** What the logged expenses say, computed on the device. Each block answers one question. */
 export const Insights = memo(function Insights({ ledger, month, onMonth, today, onOpenSettings, onPickCategory, onOpenUpcoming, onOpenAi }: Props) {
   useDisplay() // amounts are masked or regrouped by display settings, so redraw when they change
-  const [categoryView, setCategoryView] = useState<'bubbles' | 'donut' | 'list'>('bubbles')
+  const [categoryView, setCategoryView] = useState<'flow' | 'bubbles' | 'donut' | 'list'>('flow')
   // Insights describe spending, so they use money sent only; received money feeds the balance.
   const { expenses: txs, income, categoryById, currency, budgetMinor, categoryBudgets, recurring, rates, balanceSet, estimatedBalanceMinor } = ledger
   const currentMonth = localDateString(today).slice(0, 7)
@@ -488,6 +489,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
             <div role="group" aria-label="How to show the categories" className="mt-3 flex gap-1 rounded-full bg-surface-2 p-1">
               {(
                 [
+                  ['flow', 'Flow'],
                   ['bubbles', 'Bubbles'],
                   ['donut', 'Donut'],
                   ['list', 'List'],
@@ -505,7 +507,9 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
               ))}
             </div>
             <div className="mt-3">
-              {categoryView === 'bubbles' ? (
+              {categoryView === 'flow' ? (
+                <CategoryFlow totals={catParts} categoryById={categoryById} currency={currency} sourceLabel={`Spent in ${name}`} onPick={onPickCategory} />
+              ) : categoryView === 'bubbles' ? (
                 <CategoryBubbles totals={catParts} categoryById={categoryById} currency={currency} onPick={onPickCategory} />
               ) : categoryView === 'donut' ? (
                 <CategoryDonut totals={catParts} categoryById={categoryById} currency={currency} onPick={onPickCategory} />

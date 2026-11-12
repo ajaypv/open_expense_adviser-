@@ -24,6 +24,8 @@ function mount(txs: Transaction[], onPickCategory?: (id: number) => void) {
     categoryById: new Map(categories.map((c) => [c.id, c])), recurring: [],
   })
   render(<Insights ledger={ledger} month="2026-10" onMonth={() => {}} today={today} onOpenSettings={() => {}} onPickCategory={onPickCategory} />)
+  // Where it went opens on the flow; these look at the bubbles.
+  fireEvent.click(screen.getByRole('button', { name: 'Bubbles' }))
 }
 
 const section = () => screen.getByRole('region', { name: 'Bills, recharges and EMIs' })
