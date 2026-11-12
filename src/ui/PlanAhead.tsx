@@ -75,9 +75,9 @@ export function PlanAhead({ ledger, today, onOpen, onSetUp }: Props) {
   const aside = setAside && <SetAsideCard key="aside" setAside={setAside} today={today} currency={currency} index={first ? 0 : shown.length} />
 
   return (
-    <section aria-label="Plan ahead" className="font-cred mt-8">
+    <section aria-label="Plan ahead" className="mt-8">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="px-1 text-2xl font-bold tracking-tight">Plan ahead</h2>
+        <h2 className="type-title px-1">Plan ahead</h2>
         {onOpen && (
           <button type="button" onClick={onOpen} aria-label="View plan ahead" className="-mr-2 min-h-11 rounded-full px-3 font-medium underline underline-offset-2">
             View
@@ -89,7 +89,7 @@ export function PlanAhead({ ledger, today, onOpen, onSetUp }: Props) {
         <p className="mt-0.5 px-1 text-[0.9375rem] text-ink-2">{`Nothing due in the next ${HORIZON_DAYS} days.`}</p>
       ) : (
         <>
-          <p className="mt-0.5 px-1 text-base text-ink-2">
+          <p className="mt-0.5 px-1 text-base text-ink-2 text-pretty">
             {`In the next ${HORIZON_DAYS} days, `}
             <b className="font-semibold text-ink">{money(totals.outMinor)}</b>
             {' goes out'}
@@ -137,7 +137,7 @@ export function PlanAhead({ ledger, today, onOpen, onSetUp }: Props) {
                     <Icon name="chevRight" size={20} />
                   </span>
                   <span>
-                    <span className="block text-2xl font-bold tabular-nums">{`+${more}`}</span>
+                    <span className="type-figure block text-2xl">{`+${more}`}</span>
                     <span className="block text-[0.9375rem] font-medium leading-snug text-ink-2">{`more in the next ${HORIZON_DAYS} days`}</span>
                   </span>
                 </button>

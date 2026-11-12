@@ -39,7 +39,7 @@ export function DateLeaf({ date, tone, colour, size = 56 }: { date: string; tone
       <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: tone === 'late' ? 'var(--critical-text)' : 'var(--ink-2)' }}>
         {(monthFormat ??= new Intl.DateTimeFormat(undefined, { month: 'short' })).format(d)}
       </span>
-      <span className="mt-0.5 text-2xl font-bold tabular-nums">{d.getDate()}</span>
+      <span className="type-figure mt-0.5 text-2xl">{d.getDate()}</span>
     </span>
   )
 }
@@ -96,7 +96,7 @@ export function PaymentCard({
         </div>
         <p className="mt-3 text-[0.9375rem] font-medium leading-snug text-ink-2">{highlight ? LABELS(highlight) : TAG_LABELS[tagOf(p.rule)]}</p>
         <p className="truncate text-lg font-semibold leading-snug">{name}</p>
-        <p className={`text-[1.75rem] font-bold leading-tight tracking-tight tabular-nums ${p.kind === 'income' ? 'text-good' : ''}`}>{signedAmount(p, currency)}</p>
+        <p className={`type-figure text-[1.75rem] ${p.kind === 'income' ? 'text-good' : ''}`}>{signedAmount(p, currency)}</p>
         <div className="mt-auto pt-3">
           <SoonBar payment={p} colour={colour} />
           <p className={`mt-1.5 flex items-center gap-1.5 text-[0.9375rem] font-medium ${p.overdue ? 'text-critical' : 'text-ink-2'}`}>

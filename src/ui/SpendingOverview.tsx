@@ -82,11 +82,11 @@ export function SpendingOverview({
         className={shown.dir === 'next' ? 'month-slide-from-right' : shown.dir === 'prev' ? 'month-slide-from-left' : undefined}
       >
       {totalMinor === 0 ? (
-        <p className="pr-10 text-2xl font-semibold tracking-tight">{`Nothing spent in ${monthName} yet.`}</p>
+        <p className="type-title pr-10">{`Nothing spent in ${monthName} yet.`}</p>
       ) : (
         <>
-          <p className="text-ink-2">{isCurrent ? `Spent so far in ${monthName}` : `Spent in ${monthName}`}</p>
-          <p className="mt-1 whitespace-nowrap text-[clamp(2.25rem,10vw,2.5rem)] font-extrabold leading-none tracking-[-0.03em] tabular-nums">
+          <p className="font-medium text-ink-2">{isCurrent ? `Spent so far in ${monthName}` : `Spent in ${monthName}`}</p>
+          <p className="type-display mt-1 whitespace-nowrap">
             <AnimatedMoney minor={totalMinor} currency={currency} id="hero" />
           </p>
         </>

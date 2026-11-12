@@ -2222,3 +2222,50 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
     display: none;
   }
 }
+
+/* ---------- Home's type ---------- */
+
+/* Two voices. A serif drawn for screens (Newsreader, the face of the AI insights page, shipped with the app, with the rupee sign and
+   lining, tabular figures) says what the page is about: the greeting, the title of each section and every figure that matters. The
+   theme's own sans says everything that is read in small type. Each size runs between two rem bounds with the screen's width between,
+   so it follows the person's text size and never grows past two and a half times its smallest. Titles are balanced across their lines. */
+:root {
+  --font-voice: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
+}
+@layer components {
+  .type-greeting,
+  .type-display,
+  .type-title,
+  .type-figure {
+    font-family: var(--font-voice);
+    font-optical-sizing: auto;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  /* The one big figure of the screen. */
+  .type-display {
+    font-size: clamp(2.5rem, 2rem + 3.4vw, 3.25rem);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .type-greeting {
+    font-size: clamp(1.75rem, 1.5rem + 1.2vw, 2rem);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+  }
+  .type-title {
+    font-size: clamp(1.5rem, 1.3rem + 1vw, 1.75rem);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.012em;
+    text-wrap: balance;
+  }
+  /* A figure in a card: a balance, an amount owed, what a payment comes to. Its size is set where it is used, if it should not be this. */
+  .type-figure {
+    font-size: clamp(1.375rem, 1.1rem + 1.4vw, 1.625rem);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+}

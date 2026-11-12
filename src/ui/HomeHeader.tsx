@@ -27,7 +27,7 @@ export function HomeHeader({ today, goals, onOpenGoals }: Props) {
   return (
     <header className="flex items-center justify-between gap-3 pt-3">
       <div className="min-w-0">
-        <h1 className="truncate text-2xl font-bold tracking-tight">
+        <h1 className="type-greeting truncate">
           <span className="sr-only">Home. </span>
           {greetingFor(today)}
         </h1>

@@ -109,10 +109,10 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
 
   return (
     <Dialog open={open} onClose={onClose} labelledBy="plan-title" variant="page">
-      <div className="font-cred mx-auto w-full max-w-xl px-5 pb-[max(3rem,env(safe-area-inset-bottom))]">
+      <div className="mx-auto w-full max-w-xl px-5 pb-[max(3rem,env(safe-area-inset-bottom))]">
         <header className="sticky top-0 z-10 -mx-5 flex items-center justify-between gap-3 bg-bg/80 px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md">
           <div className="min-w-0">
-            <h2 id="plan-title" className="text-2xl font-bold tracking-tight">
+            <h2 id="plan-title" className="type-title">
               Plan ahead
             </h2>
             <p className="truncate text-xs text-ink-2">{`The next ${horizon} days from ${shortDay(todayKey, today)}`}</p>
@@ -141,11 +141,11 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
               <dl className="grid grid-cols-2 gap-3">
                 <div>
                   <dt className="text-[0.9375rem] font-medium text-ink-2">Going out</dt>
-                  <dd data-testid="plan-out" className="text-[1.75rem] font-bold tabular-nums">{money(totals.outMinor)}</dd>
+                  <dd data-testid="plan-out" className="type-figure text-[1.75rem]">{money(totals.outMinor)}</dd>
                 </div>
                 <div>
                   <dt className="text-[0.9375rem] font-medium text-ink-2">Coming in</dt>
-                  <dd data-testid="plan-in" className="text-[1.75rem] font-bold tabular-nums text-good">{money(totals.inMinor)}</dd>
+                  <dd data-testid="plan-in" className="type-figure text-[1.75rem] text-good">{money(totals.inMinor)}</dd>
                 </div>
               </dl>
 
@@ -194,7 +194,7 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
                 if (list.length === 0) return null
                 return (
                   <section key={band.id} aria-labelledby={`plan-${band.id}`} className="mt-7">
-                    <h3 id={`plan-${band.id}`} className="mb-2 flex items-baseline justify-between px-1 text-2xl font-bold tracking-tight">
+                    <h3 id={`plan-${band.id}`} className="type-title mb-2 flex items-baseline justify-between px-1">
                       {band.label}
                       <span className="text-[0.9375rem] font-medium text-ink-2">{`${list.length} ${list.length === 1 ? 'payment' : 'payments'}`}</span>
                     </h3>

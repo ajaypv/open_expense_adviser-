@@ -25,7 +25,7 @@ export function InsightCard({ totals, totalMinor, categoryById, monthName, onOpe
   return (
     <section aria-labelledby="insight-h" className="mt-8">
       <div className="rounded-3xl bg-surface-2/60 p-5">
-        <h2 id="insight-h" className="text-xl font-bold tracking-tight">
+        <h2 id="insight-h" className="type-title">
           Understand your spending
         </h2>
         <p className="mt-2 flex items-start gap-2.5 text-ink-2">

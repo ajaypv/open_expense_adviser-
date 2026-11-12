@@ -102,7 +102,7 @@ export function SuggestionList({ items, categoryById, currency, onPick, tone, va
                   )}
                 </span>
                 <span className="mt-3 truncate font-medium">{s.merchant}</span>
-                <span className={`text-xl font-bold leading-tight tabular-nums ${received ? 'text-good' : ''}`}>{amount}</span>
+                <span className={`type-figure text-xl ${received ? 'text-good' : ''}`}>{amount}</span>
                 <span className="mt-1 line-clamp-2 text-sm leading-snug text-ink-2">{s.reason}</span>
               </button>
               {direct && (

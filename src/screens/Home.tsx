@@ -143,7 +143,7 @@ export const Home = memo(function Home({
       <div>
         <HomeHeader today={today} goals={ledger.goals} onOpenGoals={onOpenGoals} />
         <div className="pt-10">
-        <h2 className="text-3xl font-bold tracking-tight">Let’s add your first one.</h2>
+        <h2 className="type-display text-balance">Let’s add your first one.</h2>
         <p className="mt-3 max-w-sm text-lg text-ink-2">
           Type what you spent or received in the bar below, as you would say it. Tap an example, then press send. Or use + for the full form.
         </p>
@@ -227,10 +227,10 @@ export const Home = memo(function Home({
 
             {isCurrent && suggestions.length > 0 && (
               <section aria-labelledby="suggest-h" className="mt-8">
-                <h2 id="suggest-h" className="px-1 text-xl font-bold tracking-tight">
+                <h2 id="suggest-h" className="type-title px-1">
                   Suggested for now
                 </h2>
-                <p className="mb-3 mt-0.5 px-1 text-[0.9375rem] text-ink-2">Your usual ones around this time. Tap + to add one now, or tap the tile to check it first.</p>
+                <p className="mb-3 mt-0.5 px-1 text-[0.9375rem] text-ink-2 text-pretty">Your usual ones around this time. Tap + to add one now, or tap the tile to check it first.</p>
                 <SuggestionList
                   items={suggestions}
                   categoryById={categoryById}
@@ -249,7 +249,7 @@ export const Home = memo(function Home({
             {total > 0 && (
               <>
                 <section aria-labelledby="daily-h" className="mt-8">
-                  <h2 id="daily-h" className="mb-3 px-1 text-xl font-bold tracking-tight">
+                  <h2 id="daily-h" className="type-title mb-3 px-1">
                     Day by day
                   </h2>
                   <div className={`${card} p-4`}>
@@ -268,7 +268,7 @@ export const Home = memo(function Home({
                 </section>
 
                 <section aria-labelledby="share-h" className="mt-8">
-                  <h2 id="share-h" className="mb-3 px-1 text-xl font-bold tracking-tight">
+                  <h2 id="share-h" className="type-title mb-3 px-1">
                     Where the money flows
                   </h2>
                   <div className={`${card} p-4`}>
@@ -278,7 +278,7 @@ export const Home = memo(function Home({
 
                 <section aria-labelledby="recent-h" className="mt-8">
                   <div className="mb-1 flex items-center justify-between px-1">
-                    <h2 id="recent-h" className="text-xl font-bold tracking-tight">
+                    <h2 id="recent-h" className="type-title">
                       Recent transactions
                     </h2>
                     <button type="button" onClick={onSeeAll} className="min-h-11 px-2 font-medium underline underline-offset-2">
@@ -289,7 +289,7 @@ export const Home = memo(function Home({
                 </section>
 
                 <section aria-labelledby="cats-h" className="mt-8">
-                  <h2 id="cats-h" className="mb-1 px-1 text-xl font-bold tracking-tight">
+                  <h2 id="cats-h" className="type-title mb-1 px-1">
                     Where it went
                   </h2>
                   <div className="px-1">

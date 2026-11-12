@@ -43,13 +43,13 @@ export function WalletPanel({
             </span>
             {`Received in ${monthName}`}
           </p>
-          <p className="mt-1 truncate text-[clamp(1.25rem,6vw,1.5rem)] font-bold leading-tight tracking-tight tabular-nums text-good">
+          <p className="type-figure mt-1 truncate text-good">
             <AnimatedMoney minor={receivedMinor} currency={currency} id="received" />
           </p>
         </div>
         <div className="min-w-0 border-l border-line pl-4">
           <p className="text-sm font-medium text-ink-2">Estimated balance</p>
-          <p id="balance-value" className="mt-1 truncate text-[clamp(1.25rem,6vw,1.5rem)] font-bold leading-tight tracking-tight tabular-nums">
+          <p id="balance-value" className="type-figure mt-1 truncate">
             {shown ? (
               formatMoney(balanceMinor, currency)
             ) : (

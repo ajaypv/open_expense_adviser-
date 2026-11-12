@@ -284,7 +284,36 @@ describe('Home: what comes first', () => {
 
   it('has one calm headline number, then the tools around it, not a stack of equal cards', () => {
     const html = renderFull()
-    expect((html.match(/text-\[clamp\(2\.25rem,10vw,2\.5rem\)\]/g) ?? []).length).toBe(1)
+    expect((html.match(/type-display/g) ?? []).length).toBe(1)
+  })
+
+  describe('type: two voices, not one weight for everything', () => {
+    // The greeting, the title of each section and the figures that matter are in the serif; what is read in small type is in the theme's sans.
+    const classes = (html: string, name: string) => (html.match(new RegExp(`class="[^"]*\\b${name}\\b[^"]*"`, 'g')) ?? []).length
+
+    it('sets the greeting in the serif, and every section title in the same one size', () => {
+      const html = renderFull()
+      expect(classes(html, 'type-greeting')).toBe(1)
+      // Plan ahead, Day by day, Where the money flows, Recent transactions, Where it went, Goals and the insights card.
+      expect(classes(html, 'type-title')).toBeGreaterThanOrEqual(6)
+      for (const title of ['Plan ahead', 'Day by day', 'Where the money flows', 'Recent transactions', 'Where it went']) {
+        expect(html).toMatch(new RegExp(`<h2[^>]*class="[^"]*type-title[^"]*"[^>]*>${title}<`))
+      }
+    })
+
+    it('sets the money that matters in the serif, with figures that stand level', () => {
+      const html = renderFull()
+      expect(classes(html, 'type-display')).toBe(1)
+      expect(classes(html, 'type-figure')).toBeGreaterThanOrEqual(2)
+    })
+
+    it('does not give any section a sans of its own: Plan ahead is in the theme font like the rest', () => {
+      expect(renderFull()).not.toContain('font-cred')
+    })
+
+    it('does not put the old bold-sans heading on any title', () => {
+      expect(renderFull()).not.toMatch(/<h2[^>]*class="[^"]*text-xl font-bold tracking-tight/)
+    })
   })
 
   it('offers the insights as the next step, in words and a button', () => {

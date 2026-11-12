@@ -39,7 +39,7 @@ export function CardsCard({ ledger, today, onOpen }: { ledger: Ledger; today: Da
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium text-ink-2">{summaries.length === 1 ? summaries[0].account.name : `${summaries.length} credit cards`}</span>
-        <span className="block text-xl font-bold leading-tight tabular-nums">{owed > 0 ? `${formatMoney(owed, ledger.currency)} owed` : 'Nothing owed'}</span>
+        <span className="type-figure block">{owed > 0 ? `${formatMoney(owed, ledger.currency)} owed` : 'Nothing owed'}</span>
         {next && (
           <span className={`mt-0.5 flex items-center gap-1.5 text-sm ${soon ? 'font-medium text-critical' : 'text-ink-2'}`}>
             {soon && <Icon name="warn" size={14} />}

@@ -37,8 +37,8 @@ describe('SpendingOverview: the one number', () => {
     expect(text(render({ isCurrent: false }))).toContain('Spent in October')
   })
 
-  it('keeps the big number prominent but no longer huge: between 36 and 40 px', () => {
-    expect(render()).toContain('text-[clamp(2.25rem,10vw,2.5rem)]')
+  it('sets the big number large in the serif display voice, which runs between 40 and 52 px', () => {
+    expect(render()).toContain('type-display')
   })
 
   it('says so when nothing was spent, instead of showing a zero', () => {
@@ -132,7 +132,7 @@ describe('SpendingOverview: today, yesterday and the week, kept small', () => {
   it('says what is spent once, with the same big amount whether or not there is a budget', () => {
     for (const budgetMinor of [null, 3_000_000]) {
       const html = render({ budgetMinor })
-      expect(html).toContain('text-[clamp(2.25rem,10vw,2.5rem)]')
+      expect(html).toContain('type-display')
       expect(html.match(/Spent so far in October/g)).toHaveLength(1)
     }
   })
