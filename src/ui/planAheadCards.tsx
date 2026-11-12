@@ -13,23 +13,30 @@ export type Tone = 'out' | 'in' | 'late'
 
 export const toneOf = (p: UpcomingPayment): Tone => (p.overdue ? 'late' : p.kind === 'income' ? 'in' : 'out')
 export const TONE_COLOUR: Record<Tone, string> = { out: 'var(--accent)', in: 'var(--good-text)', late: 'var(--critical)' }
-const tint = (tone: Tone, percent = 16) => `color-mix(in oklab, ${TONE_COLOUR[tone]} ${percent}%, var(--surface))`
+const tint = (colour: string, percent = 24) => `color-mix(in oklab, ${colour} ${percent}%, var(--surface))`
+
+/**
+ * The colour of a payment's card: its category's own colour, as on the suggestion tiles, so a bill, a subscription and a salary do not
+ * all look alike. A late payment is red whatever its category, and one with no colour falls back to blue for money out, green for in.
+ */
+export const paymentColour = (p: UpcomingPayment, categoryColour?: string): string => (p.overdue ? TONE_COLOUR.late : (categoryColour ?? TONE_COLOUR[toneOf(p)]))
 
 export const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
 
 let monthFormat: Intl.DateTimeFormat | undefined
 
-/** A little calendar leaf: the month over the day of the month, tinted by which way the money goes. Decoration; the date is also written out. */
-export function DateLeaf({ date, tone, size = 56 }: { date: string; tone: Tone; size?: number }) {
+/** A little calendar leaf: the month over the day of the month, tinted in the payment's colour. Decoration; the date is also written out. */
+export function DateLeaf({ date, tone, colour, size = 56 }: { date: string; tone: Tone; colour: string; size?: number }) {
   const d = parseLocalDate(date)
   return (
     <span
       aria-hidden="true"
       data-leaf
       className="flex shrink-0 flex-col items-center justify-center rounded-2xl leading-none"
-      style={{ width: size, height: size, background: tint(tone, 18) }}
+      data-colour={colour}
+      style={{ width: size, height: size, background: tint(colour) }}
     >
-      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: tone === 'late' ? 'var(--critical-text)' : tone === 'in' ? 'var(--good-text)' : 'var(--ink-2)' }}>
+      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: tone === 'late' ? 'var(--critical-text)' : 'var(--ink-2)' }}>
         {(monthFormat ??= new Intl.DateTimeFormat(undefined, { month: 'short' })).format(d)}
       </span>
       <span className="mt-0.5 text-xl font-bold tabular-nums">{d.getDate()}</span>
@@ -38,11 +45,11 @@ export function DateLeaf({ date, tone, size = 56 }: { date: string; tone: Tone; 
 }
 
 /** A thin bar that fills as the day comes closer, over the days the page looks ahead. Decoration; the days are written beside it. */
-export function SoonBar({ payment, horizon = HORIZON_DAYS }: { payment: UpcomingPayment; horizon?: number }) {
+export function SoonBar({ payment, colour, horizon = HORIZON_DAYS }: { payment: UpcomingPayment; colour: string; horizon?: number }) {
   const near = payment.overdue ? 1 : Math.min(1, Math.max(0.06, 1 - payment.daysLeft / horizon))
   return (
     <span aria-hidden="true" className="block h-1.5 overflow-hidden rounded-full bg-surface-2">
-      <span className="bar-grow block h-full rounded-full" style={{ width: `${near * 100}%`, background: TONE_COLOUR[toneOf(payment)] }} />
+      <span className="bar-grow block h-full rounded-full" style={{ width: `${near * 100}%`, background: colour }} />
     </span>
   )
 }
@@ -60,6 +67,7 @@ export function PaymentCard({
   today,
   currency,
   categoryName,
+  categoryColour,
   index = 0,
   wide = false,
 }: {
@@ -69,18 +77,20 @@ export function PaymentCard({
   today: Date
   currency: string
   categoryName?: string
+  categoryColour?: string
   index?: number
   wide?: boolean
 }) {
   const tone = toneOf(p)
+  const colour = paymentColour(p, categoryColour)
   const name = paymentName(p, categoryName)
   const icon = paymentIcon(tagOf(p.rule), name, categoryName)
   return (
     <li data-kind={highlight?.kind ?? 'payment'} className={`row-in shrink-0 snap-start ${wide ? 'w-full' : 'w-[15rem]'}`} style={{ '--d': `${Math.min(index, 5) * 70}ms` } as CSSProperties}>
       <div className="flex h-full flex-col rounded-3xl bg-surface p-3.5 shadow-[0_0_0_1px_var(--ring)]">
         <div className="flex items-start justify-between">
-          <DateLeaf date={p.date} tone={tone} />
-          <span aria-hidden="true" data-icon={icon} className="flex size-9 items-center justify-center rounded-full bg-surface-2">
+          <DateLeaf date={p.date} tone={tone} colour={colour} />
+          <span aria-hidden="true" data-icon={icon} className="flex size-9 items-center justify-center rounded-full" style={{ background: tint(colour) }}>
             <Icon name={icon} size={18} />
           </span>
         </div>
@@ -88,7 +98,7 @@ export function PaymentCard({
         <p className="truncate font-medium">{name}</p>
         <p className={`text-2xl font-bold leading-tight tabular-nums ${p.kind === 'income' ? 'text-good' : ''}`}>{signedAmount(p, currency)}</p>
         <div className="mt-auto pt-3">
-          <SoonBar payment={p} />
+          <SoonBar payment={p} colour={colour} />
           <p className={`mt-1.5 flex items-center gap-1.5 text-sm ${p.overdue ? 'font-medium text-critical' : 'text-ink-2'}`}>
             {p.overdue && <Icon name="warn" size={14} />}
             {`${shortDay(p.date, today)}, ${lowerFirst(describeWhen(p.daysLeft))}`}

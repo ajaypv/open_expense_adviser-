@@ -6,7 +6,7 @@ import { planAhead } from '../insights/ahead'
 import { describeWhen, forecast, TAG_LABELS, tagOf, totalsOf, upcomingPayments, type UpcomingPayment } from '../insights/upcoming'
 import { Dialog } from './Dialog'
 import { Icon } from './Icon'
-import { DateLeaf, SetAsideCard, toneOf } from './planAheadCards'
+import { DateLeaf, paymentColour, SetAsideCard, toneOf } from './planAheadCards'
 import { paymentName, shortDay, shortfallPhrase, signedAmount } from './upcomingText'
 
 type Ledger = ReturnType<typeof useLedger>
@@ -211,7 +211,7 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
                               aria-label={`Edit ${name}, ${type}, ${when}, ${money(p.amountMinor)} ${p.kind === 'income' ? 'coming in' : 'going out'}, due ${shortDay(p.date, today)}`}
                               className={`${card} flex min-h-[4.5rem] w-full items-center gap-3 p-3 text-left transition-transform active:scale-[0.985] motion-reduce:transition-none`}
                             >
-                              <DateLeaf date={p.date} tone={toneOf(p)} size={52} />
+                              <DateLeaf date={p.date} tone={toneOf(p)} colour={paymentColour(p, categoryById.get(p.rule.categoryId)?.color)} size={52} />
                               <span className="min-w-0 flex-1">
                                 <span className="block truncate font-medium">{name}</span>
                                 <span className="block truncate text-sm text-ink-2">{type}</span>

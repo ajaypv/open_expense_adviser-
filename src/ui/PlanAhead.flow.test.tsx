@@ -208,3 +208,26 @@ describe('PlanAhead: the sentence, the balance line and the long list', () => {
     expect(screen.queryByRole('region', { name: 'Plan ahead' })).toBeNull()
   })
 })
+
+describe('PlanAhead: colours', () => {
+  const cats: Category[] = [
+    { id: 1, name: 'Bills', color: 'var(--s1)' },
+    { id: 2, name: 'Entertainment', color: 'var(--s4)' },
+  ]
+  const leaves = (rules: Recurring[]) => {
+    cleanup()
+    const ledger = makeLedger({ categories: cats, expenseCategories: cats, categoryById: new Map(cats.map((c) => [c.id, c])), recurring: rules })
+    render(<PlanAhead ledger={ledger} today={today} />)
+    return Array.from(section().querySelectorAll<HTMLElement>('[data-leaf]')).map((l) => l.getAttribute('data-colour'))
+  }
+
+  it('colours each card with its category, as the suggestion tiles are, so they do not all look alike', () => {
+    const colours = leaves([rule({ merchant: 'Rent', categoryId: 1, nextDue: '2026-10-31' }), rule({ merchant: 'Netflix', categoryId: 2, nextDue: '2026-11-02' })])
+    expect(colours).toEqual(['var(--s1)', 'var(--s4)'])
+  })
+
+  it('keeps a late payment red, whatever its category', () => {
+    const colours = leaves([rule({ merchant: 'Rent', categoryId: 2, nextDue: '2026-10-25' }), rule({ merchant: 'Netflix', categoryId: 2, nextDue: '2026-11-02' })])
+    expect(colours.slice(0, 2)).toEqual(['var(--critical)', 'var(--s4)'])
+  })
+})

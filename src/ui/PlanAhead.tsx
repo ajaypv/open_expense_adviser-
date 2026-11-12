@@ -122,7 +122,7 @@ export function PlanAhead({ ledger, today, onOpen, onSetUp }: Props) {
           <ul ref={watch} data-seen={seen} className="when-seen -mx-5 flex snap-x snap-proximity gap-3 overflow-x-auto scroll-px-5 px-5 py-0.5 pb-1">
             {first && aside}
             {shown.map((p, i) => (
-              <PaymentCard key={p.key} payment={p} highlight={highlights.get(p.key)} today={today} currency={currency} categoryName={categoryById.get(p.rule.categoryId)?.name} index={i + (first ? 1 : 0)} />
+              <PaymentCard key={p.key} payment={p} highlight={highlights.get(p.key)} today={today} currency={currency} categoryName={categoryById.get(p.rule.categoryId)?.name} categoryColour={categoryById.get(p.rule.categoryId)?.color} index={i + (first ? 1 : 0)} />
             ))}
             {!first && aside}
             {more > 0 && onOpen && (
