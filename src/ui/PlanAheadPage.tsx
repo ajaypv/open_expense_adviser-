@@ -109,10 +109,10 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
 
   return (
     <Dialog open={open} onClose={onClose} labelledBy="plan-title" variant="page">
-      <div className="mx-auto w-full max-w-xl px-5 pb-[max(3rem,env(safe-area-inset-bottom))]">
+      <div className="font-cred mx-auto w-full max-w-xl px-5 pb-[max(3rem,env(safe-area-inset-bottom))]">
         <header className="sticky top-0 z-10 -mx-5 flex items-center justify-between gap-3 bg-bg/80 px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md">
           <div className="min-w-0">
-            <h2 id="plan-title" className="text-xl font-semibold tracking-tight">
+            <h2 id="plan-title" className="text-2xl font-extrabold tracking-tight">
               Plan ahead
             </h2>
             <p className="truncate text-xs text-ink-2">{`The next ${horizon} days from ${shortDay(todayKey, today)}`}</p>
@@ -140,16 +140,16 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
             <section aria-label={`Next ${horizon} days`} className={`${card} mt-4 p-5`}>
               <dl className="grid grid-cols-2 gap-3">
                 <div>
-                  <dt className="text-sm text-ink-2">Going out</dt>
-                  <dd data-testid="plan-out" className="text-2xl font-bold tabular-nums">{money(totals.outMinor)}</dd>
+                  <dt className="text-[0.9375rem] font-semibold text-ink-2">Going out</dt>
+                  <dd data-testid="plan-out" className="text-[1.75rem] font-extrabold tabular-nums">{money(totals.outMinor)}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-ink-2">Coming in</dt>
-                  <dd data-testid="plan-in" className="text-2xl font-bold tabular-nums text-good">{money(totals.inMinor)}</dd>
+                  <dt className="text-[0.9375rem] font-semibold text-ink-2">Coming in</dt>
+                  <dd data-testid="plan-in" className="text-[1.75rem] font-extrabold tabular-nums text-good">{money(totals.inMinor)}</dd>
                 </div>
               </dl>
 
-              <p className={`mt-4 flex items-start gap-2 border-t border-line pt-3 ${shortPhrase ? 'font-semibold text-critical' : balanceSet ? '' : 'text-ink-2'}`}>
+              <p className={`mt-4 flex items-start gap-2 border-t border-line pt-3 text-base ${shortPhrase ? 'font-bold text-critical' : balanceSet ? 'font-semibold' : 'font-medium text-ink-2'}`}>
                 {shortPhrase ? (
                   <>
                     <span className="mt-0.5 shrink-0">
@@ -194,9 +194,9 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
                 if (list.length === 0) return null
                 return (
                   <section key={band.id} aria-labelledby={`plan-${band.id}`} className="mt-7">
-                    <h3 id={`plan-${band.id}`} className="mb-2 flex items-baseline justify-between px-1 text-xl font-bold tracking-tight">
+                    <h3 id={`plan-${band.id}`} className="mb-2 flex items-baseline justify-between px-1 text-2xl font-extrabold tracking-tight">
                       {band.label}
-                      <span className="text-sm font-normal text-ink-2">{`${list.length} ${list.length === 1 ? 'payment' : 'payments'}`}</span>
+                      <span className="text-[0.9375rem] font-semibold text-ink-2">{`${list.length} ${list.length === 1 ? 'payment' : 'payments'}`}</span>
                     </h3>
                     <ul className="space-y-2">
                       {list.map((p) => {
@@ -213,12 +213,12 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
                             >
                               <DateLeaf date={p.date} tone={toneOf(p)} colour={paymentColour(p, categoryById.get(p.rule.categoryId)?.color)} size={52} />
                               <span className="min-w-0 flex-1">
-                                <span className="block truncate font-medium">{name}</span>
-                                <span className="block truncate text-sm text-ink-2">{type}</span>
+                                <span className="block truncate text-lg font-bold leading-snug">{name}</span>
+                                <span className="block truncate text-[0.9375rem] font-semibold text-ink-2">{type}</span>
                               </span>
                               <span className="shrink-0 text-right">
-                                <span className={`block font-semibold tabular-nums ${p.kind === 'income' ? 'text-good' : ''}`}>{signedAmount(p, currency)}</span>
-                                <span className={`flex items-center justify-end gap-1 text-sm ${p.overdue ? 'font-medium text-critical' : 'text-ink-2'}`}>
+                                <span className={`block text-lg font-extrabold tabular-nums ${p.kind === 'income' ? 'text-good' : ''}`}>{signedAmount(p, currency)}</span>
+                                <span className={`flex items-center justify-end gap-1 text-[0.9375rem] font-semibold ${p.overdue ? 'text-critical' : 'text-ink-2'}`}>
                                   {p.overdue && <Icon name="warn" size={14} />}
                                   <span>{when}</span>
                                 </span>
@@ -233,7 +233,7 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
               })
             )}
 
-            <button type="button" onClick={onManage} className={`${card} mt-8 flex min-h-12 w-full items-center justify-between gap-3 px-4 text-left font-medium`}>
+            <button type="button" onClick={onManage} className={`${card} mt-8 flex min-h-12 w-full items-center justify-between gap-3 px-4 text-left font-bold`}>
               All regular payments, and the paused ones
               <span aria-hidden="true" className="text-ink-2">
                 <Icon name="chevRight" size={20} />
