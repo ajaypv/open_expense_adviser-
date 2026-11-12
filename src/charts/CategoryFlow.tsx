@@ -1,10 +1,11 @@
-import { useId, type CSSProperties } from 'react'
+import { useCallback, useEffect, useId, useRef, type CSSProperties } from 'react'
 import type { Category } from '../db/schema'
 import { formatMoney, formatMoneyCompact } from '../db/money'
 import type { CategoryTotal } from '../insights/aggregates'
 import { categoryIcon } from '../ui/categoryIcon'
 import { Icon, type IconName } from '../ui/Icon'
 import { useSeen } from '../ui/motion'
+import { tilt, watchTilt } from '../ui/useTilt'
 import { formatShare } from './share'
 
 interface Props {
@@ -45,6 +46,21 @@ const SOURCE_W = 150
 const MAX_COLUMNS = 5
 
 const num = (n: number) => Math.round(n * 100) / 100
+const clamp = (n: number, low: number, high: number) => Math.min(high, Math.max(low, n))
+const motionAllowed = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: no-preference)').matches === true
+
+/** How far the middle of a line is swung sideways, and up or down, at a full tilt, in the units of the picture. */
+const SWAY_X = 24
+const SWAY_Y = 12
+/** The path of a line from where it leaves the chest to where it lands, with its middle swung by `sx` sideways and `sy` up or down. */
+const linePath = (from: number, to: number, sx: number, sy: number) => {
+  const mid = TOP + FLOW / 2
+  return `M${num(from)} ${TOP}C${num(from + sx)} ${num(mid + sy)} ${num(to + sx)} ${num(mid + sy)} ${num(to)} ${BOTTOM - CAP - 1}`
+}
+interface LineGeometry {
+  from: number
+  to: number
+}
 /** A four-pointed sparkle. */
 const sparkle = (x: number, y: number, r: number) =>
   `M${x} ${y - r}L${x + r * 0.3} ${y - r * 0.3}L${x + r} ${y}L${x + r * 0.3} ${y + r * 0.3}L${x} ${y + r}L${x - r * 0.3} ${y + r * 0.3}L${x - r} ${y}L${x - r * 0.3} ${y - r * 0.3}Z`
@@ -56,16 +72,97 @@ const sparkle = (x: number, y: number, r: number) =>
  * middle goes straight down. A line is a single stroke, not a band: a pearly wash of the category's colour, paler at the
  * chest and deeper where it lands, with a soft glow round it; a bigger spend is only a little thicker, because the share is
  * written under it. Each draws down from the chest one after another when the chart comes into view, and then a soft light
- * keeps travelling down it, which is the money moving; the chest glows and sparkles. Under each line, the category's icon,
+ * keeps travelling down it, which is the money moving; the chest glows and sparkles. The lines hang from the chest like
+ * ropes: as the phone is tipped (the gyroscope) they swing the other way, and a push or a shake (the accelerometer) swings
+ * them too and jolts the chest, while the chest and its glow drift a little, each at its own depth. With no sensor (a
+ * computer) they sway gently by themselves; with reduced motion nothing moves. Under each line, the category's icon,
  * name, amount and share; it opens that category's expenses. More than five categories show the biggest four and fold the
  * rest into one grey "Everything else".
  */
 export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPick }: Props) {
   const [watch, seen] = useSeen()
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
+  const box = useRef<HTMLDivElement | null>(null)
+  const geometry = useRef<LineGeometry[]>([])
+  const setBox = useCallback(
+    (el: HTMLDivElement | null) => {
+      box.current = el
+      watch(el)
+    },
+    [watch],
+  )
   const nonZero = totals.filter((t) => t.totalMinor > 0)
   const grand = nonZero.reduce((a, t) => a + t.totalMinor, 0)
-  if (grand <= 0) return null
+  const drawn = grand > 0
+  // The lines are looked up once, so they are looked up again whenever the categories drawn are not the same ones.
+  const lineKeys = nonZero.map((t) => t.key ?? t.categoryId).join(",")
+
+  // The sway: while the chart is on screen, read the sensors every frame and swing the lines and the chest to match.
+  useEffect(() => {
+    const el = box.current
+    if (!drawn || !el || !motionAllowed()) return
+    const paths = Array.from(el.querySelectorAll<SVGGElement>('[data-ribbon]')).map((g) => Array.from(g.querySelectorAll<SVGPathElement>('path')))
+    let visible = typeof IntersectionObserver === 'undefined'
+    let frame = 0
+    let last = 0
+    let x = 0
+    let y = 0
+    let shake = 0
+    const unwatch = watchTilt()
+
+    const draw = (now: number) => {
+      frame = requestAnimationFrame(draw)
+      const seconds = now / 1000
+      const dt = last ? Math.min(seconds - last, 0.1) : 1 / 60
+      last = seconds
+      // Where the phone says to swing: against the roll, and against a push (a rope hangs back), or by itself without a sensor.
+      const aimX = tilt.live ? clamp(-tilt.roll / 0.5 - tilt.push / 14, -1.2, 1.2) : Math.sin(seconds * 0.7) * 0.35
+      const aimY = tilt.live ? clamp(tilt.pitch / 0.5, -1, 1) : Math.cos(seconds * 0.5) * 0.2
+      const ease = Math.min(1, dt * 6)
+      x += (aimX - x) * ease
+      y += (aimY - y) * ease
+      // A shake is a jolt well above carrying the phone about; it throws the chest and fades.
+      if (tilt.jolt > 9 && now - tilt.movedAt < 250) shake = Math.max(shake, clamp((tilt.jolt - 9) / 10, 0.3, 1))
+      shake *= Math.pow(0.05, dt)
+      if (shake < 0.01) shake = 0
+      el.style.setProperty('--tx', x.toFixed(3))
+      el.style.setProperty('--ty', y.toFixed(3))
+      el.style.setProperty('--shake', shake.toFixed(3))
+      el.style.setProperty('--jx', (Math.sin(seconds * 70) * shake * 4).toFixed(2))
+      const lines = geometry.current
+      for (let i = 0; i < paths.length && i < lines.length; i++) {
+        // The lines swing most in the middle and not at all where they leave the chest or land; the longer the swing, the more it lags.
+        const d = linePath(lines[i].from, lines[i].to, x * SWAY_X + shake * Math.sin(seconds * 40 + i) * 5, y * SWAY_Y)
+        for (const p of paths[i]) p.setAttribute('d', d)
+      }
+    }
+
+    const run = () => {
+      if (!frame && visible) frame = requestAnimationFrame(draw)
+    }
+    const stop = () => {
+      cancelAnimationFrame(frame)
+      frame = 0
+      last = 0
+    }
+    const watcher =
+      typeof IntersectionObserver === 'undefined'
+        ? null
+        : new IntersectionObserver((entries) => {
+            visible = entries.some((e) => e.isIntersecting)
+            if (visible) run()
+            else stop()
+          })
+    watcher?.observe(el)
+    run()
+    return () => {
+      stop()
+      watcher?.disconnect()
+      unwatch()
+    }
+  }, [drawn, lineKeys])
+
+  if (!drawn) return null
 
   const named = (t: CategoryTotal): Part => {
     const cat = categoryById.get(t.categoryId)
@@ -81,14 +178,13 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
 
   const n = parts.length
   const colW = W / n
-  const yMid = TOP + FLOW / 2
-  const yEnd = BOTTOM - CAP - 1
   const lines = parts.map((p, i) => {
     // Each leaves the chest at its own place along its base, in the order of the columns, and lands in the middle of its column.
     const sx = (W - SOURCE_W) / 2 + (SOURCE_W / n) * (i + 0.5)
     const ex = colW * (i + 0.5)
-    return { part: p, d: `M${num(sx)} ${TOP}C${num(sx)} ${yMid} ${num(ex)} ${yMid} ${num(ex)} ${yEnd}`, ex, width: num(3.5 + p.share * 8) }
+    return { part: p, d: linePath(sx, ex, 0, 0), from: sx, ex, width: num(3.5 + p.share * 8) }
   })
+  geometry.current = lines.map((l) => ({ from: l.from, to: l.ex }))
 
   const total = formatMoney(grand, currency)
   const summary = parts.map((p) => `${p.name} ${formatShare(p.share)}`).join(', ')
@@ -101,7 +197,7 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
   const id = (s: string) => `${uid}-${s}`
 
   return (
-    <div ref={watch} data-seen={seen} className="when-seen mx-auto w-full max-w-md" data-flow>
+    <div ref={setBox} data-seen={seen} className="when-seen mx-auto w-full max-w-md" data-flow>
       <svg role="img" aria-label={`${sourceLabel}, ${total}. Where the money went: ${summary}`} viewBox={`0 0 ${W} ${BOTTOM}`} className="block h-auto w-full" preserveAspectRatio="xMidYMid meet">
         <defs>
           <linearGradient id={id('wood')} x1="0" y1="0" x2="0" y2="1">
@@ -143,8 +239,10 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
         })}
 
         {/* The treasure chest. Drawn after the lines, so they come out from under it. */}
-        <g data-chest>
+        <g className="flow-back">
           <ellipse className="flow-glow" cx={cx} cy={CHEST_Y + 46} rx={150} ry={62} fill={`url(#${id('glow')})`} />
+        </g>
+        <g data-chest className="flow-chest">
           <rect x={CHEST_X} y={bodyTop} width={CHEST_W} height={CHEST_H - LID_H} rx={8} fill={`url(#${id('wood')})`} stroke="#3f2610" strokeWidth={1.5} />
           {/* The planks. */}
           <path d={`M${CHEST_X + 2} ${bodyTop + 22}H${chestRight - 2}M${CHEST_X + 2} ${bodyTop + 38}H${chestRight - 2}`} stroke="#3f2610" strokeOpacity={0.35} strokeWidth={1} />

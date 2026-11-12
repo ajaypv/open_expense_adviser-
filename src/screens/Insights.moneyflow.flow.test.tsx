@@ -31,13 +31,14 @@ function mount(txs: Transaction[], onPickCategory = vi.fn()) {
 
 const section = () => screen.getByRole('region', { name: 'Money flow' })
 
-describe('Insights: Money flow, a section of its own at the top', () => {
+describe('Insights: Money flow, a section of its own right at the top', () => {
   const txs = () => [tx(1, 600), tx(2, 300), tx(3, 100)]
 
-  it('comes first, straight after the headline and before the spending pace', () => {
+  it('comes first, before the headline and the spending pace', () => {
     mount(txs())
     const text = document.body.textContent ?? ''
-    expect(text.indexOf('Money flow')).toBeGreaterThan(text.indexOf('You spent'))
+    expect(text.indexOf('Money flow')).toBeGreaterThanOrEqual(0)
+    expect(text.indexOf('Money flow')).toBeLessThan(text.indexOf('You spent'))
     expect(text.indexOf('Money flow')).toBeLessThan(text.indexOf('Spending pace'))
     expect(text.indexOf('Money flow')).toBeLessThan(text.indexOf('Where it went'))
   })

@@ -2172,6 +2172,19 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   animation: flow-pulse 2.8s cubic-bezier(0.45, 0.05, 0.4, 1) calc(var(--d, 0ms) + 1000ms) infinite backwards;
 }
 
+/* The chest and its glow are moved by the phone's tilt and by a shake: the component sets --tx and --ty (about -1 to 1, how far it
+   is tipped), --jx (a shaking jitter) and --shake (0 to 1) on the chart as it reads the sensors. At rest they are not set, and
+   nothing moves. The chest moves a little, the glow behind it the other way, so they seem to sit at different depths. */
+.flow-chest {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  transform: translate(calc(var(--tx, 0) * 7px + var(--jx, 0) * 1px), calc(var(--ty, 0) * 3px)) rotate(calc(var(--tx, 0) * 2.2deg));
+}
+.flow-back {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: translate(calc(var(--tx, 0) * -10px), calc(var(--ty, 0) * -5px)) scale(calc(1 + var(--shake, 0) * 0.3));
+}
 /* The chest glows, slowly, and its sparkles come and go. */
 @keyframes flow-glow {
   50% {

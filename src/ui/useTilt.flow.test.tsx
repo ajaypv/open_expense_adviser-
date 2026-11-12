@@ -24,6 +24,31 @@ describe('watchTilt', () => {
     stop()
   })
 
+  it('reads how far the phone is tipped forward or back from the way it is held to read', () => {
+    const stop = watchTilt()
+    window.dispatchEvent(Object.assign(new Event('deviceorientation'), { gamma: 0, beta: 55, alpha: 0 }))
+    expect(tilt.pitch).toBeCloseTo(0, 5)
+    window.dispatchEvent(Object.assign(new Event('deviceorientation'), { gamma: 0, beta: 85, alpha: 0 }))
+    expect(tilt.pitch).toBeCloseTo((30 * Math.PI) / 180, 5)
+    window.dispatchEvent(Object.assign(new Event('deviceorientation'), { gamma: 0, beta: 25, alpha: 0 }))
+    expect(tilt.pitch).toBeCloseTo((-30 * Math.PI) / 180, 5)
+    stop()
+    expect(tilt.pitch).toBe(0)
+  })
+
+  it('smooths how hard the phone is moved in any direction, and says when it last was', () => {
+    const stop = watchTilt()
+    expect(tilt.jolt).toBe(0)
+    window.dispatchEvent(Object.assign(new Event('devicemotion'), { acceleration: { x: 0, y: 0, z: 10 } }))
+    expect(tilt.jolt).toBeCloseTo(4, 5)
+    expect(tilt.movedAt).toBeGreaterThan(0)
+    window.dispatchEvent(Object.assign(new Event('devicemotion'), { acceleration: { x: 0, y: 0, z: 10 } }))
+    expect(tilt.jolt).toBeGreaterThan(4)
+    stop()
+    expect(tilt.jolt).toBe(0)
+    expect(tilt.movedAt).toBe(0)
+  })
+
   it('does not count a reading with no angle (a computer) as a sensor', () => {
     const stop = watchTilt()
     orient(null)

@@ -89,9 +89,9 @@ function repeatDetail(r: RepeatingSpend, money: (minor: number) => string): stri
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
-function Section({ id, title, intro, children }: { id: string; title: string; intro?: string; children: React.ReactNode }) {
+function Section({ id, title, intro, className = 'mt-10', children }: { id: string; title: string; intro?: string; className?: string; children: React.ReactNode }) {
   return (
-    <section aria-labelledby={id} className="mt-10">
+    <section aria-labelledby={id} className={className}>
       <h2 id={id} className="text-xl font-bold tracking-tight">
         {title}
       </h2>
@@ -438,6 +438,17 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
         </>
       ) : (
         <>
+          <Section
+            id="flow-h"
+            className="mt-5"
+            title="Money flow"
+            intro={`Your ${name} spending, from the chest to each category.${onPickCategory ? ' Tap one to see those expenses.' : ''}`}
+          >
+            <div className="mt-4">
+              <CategoryFlow totals={catParts} categoryById={categoryById} currency={currency} sourceLabel={`Spent in ${name}`} onPick={onPickCategory} />
+            </div>
+          </Section>
+
           {onOpenAi && <AiEntry onOpen={onOpenAi} />}
 
           <section aria-label="Highlights" className="mt-5">
@@ -448,16 +459,6 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
             <p className="mt-2 text-xl">{`${categoryById.get(cats[0].categoryId)?.name ?? 'One category'} was the biggest part, ${Math.round((cats[0].totalMinor / total) * 100)}%.`}</p>
             {pace && <p className="mt-3 text-lg text-ink-2">{pace}</p>}
           </section>
-
-          <Section
-            id="flow-h"
-            title="Money flow"
-            intro={`Your ${name} spending, from the chest to each category.${onPickCategory ? ' Tap one to see those expenses.' : ''}`}
-          >
-            <div className="mt-4">
-              <CategoryFlow totals={catParts} categoryById={categoryById} currency={currency} sourceLabel={`Spent in ${name}`} onPick={onPickCategory} />
-            </div>
-          </Section>
 
           <section
             aria-labelledby="pace-h"
