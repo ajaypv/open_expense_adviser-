@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { currentPermission, requestNotificationPermission, schedulePeriodicReminder } from '../reminders/notify'
+import { notificationPermission, requestNotificationPermission, schedulePeriodicReminder } from '../reminders/notify'
 import { setReminderPrefs } from '../reminders/store'
 import { Dialog } from './Dialog'
 import { Icon, type IconName } from './Icon'
@@ -172,7 +172,7 @@ export function Intro({ open, onDone }: { open: boolean; onDone: () => void }) {
 
   async function next() {
     // Only a phone that has not been asked yet is asked: otherwise there is nothing to turn on here.
-    const permission = await currentPermission()
+    const permission = notificationPermission()
     if (permission === 'default') setStep('notify')
     else onDone()
   }

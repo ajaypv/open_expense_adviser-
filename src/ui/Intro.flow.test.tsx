@@ -10,7 +10,7 @@ import { getReminderPrefs } from '../reminders/store'
 const ask = vi.hoisted(() => ({ permission: 'default' as 'default' | 'granted' | 'denied' | 'unsupported', result: 'granted' as 'granted' | 'denied' }))
 vi.mock('../reminders/notify', async (original) => ({
   ...(await original<typeof import('../reminders/notify')>()),
-  currentPermission: vi.fn(async () => ask.permission),
+  notificationPermission: vi.fn(() => ask.permission),
   requestNotificationPermission: vi.fn(async () => ask.result),
   schedulePeriodicReminder: vi.fn(async () => true),
 }))
