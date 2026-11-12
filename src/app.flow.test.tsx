@@ -25,6 +25,9 @@ const onboard = () =>
     { key: 'lastSeenVersion', value: APP_VERSION },
   ])
 
+/** Someone who has been through the cards at the start, and comes to the welcome questions. */
+const seeIntro = () => db.settings.put({ key: 'introSeen', value: true })
+
 const tx = (over: Record<string, unknown> = {}) =>
   db.transactions.add({
     kind: 'expense', amountMinor: 45_000, currency: 'INR', categoryId: 1, merchant: 'Cafe', note: '', date: localDateString(),
@@ -40,7 +43,19 @@ const open = async () => {
 const nav = (name: string) => screen.getByRole('navigation', { name: 'Main' }).querySelector<HTMLButtonElement>(`button:has(span.short\\:sr-only)`)!.parentElement && within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name })
 
 describe('First launch', () => {
+  it('shows a new person the cards first, and the welcome questions after them', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    expect(await screen.findByRole('dialog', { name: /Simple spending/ })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Welcome' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    // A browser with no notifications has nothing to ask for, so it goes straight on to the questions.
+    expect(await screen.findByRole('dialog', { name: 'Welcome' })).toBeInTheDocument()
+    expect((await db.settings.get('introSeen'))?.value).toBe(true)
+  })
+
   it('welcomes a new person, and skipping leaves the app ready to use', async () => {
+    await seeIntro()
     const user = userEvent.setup()
     render(<App />)
     expect(await screen.findByRole('dialog', { name: 'Welcome' })).toBeInTheDocument()
@@ -50,6 +65,7 @@ describe('First launch', () => {
   })
 
   it('saves the currency, balance and budget typed in the welcome', async () => {
+    await seeIntro()
     const user = userEvent.setup()
     render(<App />)
     await screen.findByRole('dialog', { name: 'Welcome' })
@@ -66,6 +82,7 @@ describe('First launch', () => {
   })
 
   it('refuses a balance that is not a number', async () => {
+    await seeIntro()
     const user = userEvent.setup()
     render(<App />)
     await screen.findByRole('dialog', { name: 'Welcome' })
