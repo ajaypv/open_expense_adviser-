@@ -35,16 +35,14 @@ const CHEST_W = 200
 const CHEST_Y = 14
 const CHEST_H = 92
 const LID_H = 40
-/** The ribbons run from just inside the bottom of the chest, so they seem to come out of it, down to the caps. */
+/** The lines run from just inside the bottom of the chest, so they seem to come out of it, down to the dots they end on. */
 const TOP = CHEST_Y + CHEST_H - 6
 const FLOW = 140
 const BOTTOM = TOP + FLOW
 const CAP = 5
-/** How wide the stream is where it leaves the chest. */
+/** How far across the chest's base the lines leave it. */
 const SOURCE_W = 150
 const MAX_COLUMNS = 5
-/** How tall the band of light is that slides down the ribbons. */
-const SHINE = 70
 
 const num = (n: number) => Math.round(n * 100) / 100
 /** A four-pointed sparkle. */
@@ -53,14 +51,14 @@ const sparkle = (x: number, y: number, r: number) =>
 
 /**
  * The month's spending as a treasure chest with the money flowing out of it: the chest sits at the top middle with the
- * total written on its front and what it is on its lid, and a ribbon runs from it to each category along the bottom, with
- * the category's icon under it. A ribbon is as thick as the category's share where it leaves the chest and narrows to fit
- * its column, so the ones on the left bend left, the ones on the right bend right and the one in the middle goes straight
- * down. Each is smooth like water or the inside of a shell: a pearly wash of the category's colour, paler at the chest
- * and deeper where it lands, with fine strands along it like the ridges of a shell. Each pours in from the chest one after
- * another when the chart comes into view, and then a soft light keeps sliding down it, which is the money moving; the
- * chest glows and sparkles. Under each ribbon, the category's icon, name, amount and share; it opens that category's
- * expenses. More than five categories show the biggest four and fold the rest into one grey "Everything else".
+ * total written on its front and what it is on its lid, and one smooth line runs from it to each category along the bottom,
+ * with the category's icon under it. The ones on the left bend left, the ones on the right bend right and the one in the
+ * middle goes straight down. A line is a single stroke, not a band: a pearly wash of the category's colour, paler at the
+ * chest and deeper where it lands, with a soft glow round it; a bigger spend is only a little thicker, because the share is
+ * written under it. Each draws down from the chest one after another when the chart comes into view, and then a soft light
+ * keeps travelling down it, which is the money moving; the chest glows and sparkles. Under each line, the category's icon,
+ * name, amount and share; it opens that category's expenses. More than five categories show the biggest four and fold the
+ * rest into one grey "Everything else".
  */
 export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPick }: Props) {
   const [watch, seen] = useSeen()
@@ -83,31 +81,13 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
 
   const n = parts.length
   const colW = W / n
-  // A thin share still gets a ribbon you can see; the widths are then scaled back so together they fill the stream's width.
-  const raw = parts.map((p) => Math.max(p.share * SOURCE_W, 4))
-  const scale = SOURCE_W / raw.reduce((a, b) => a + b, 0)
-  const widths = raw.map((w) => w * scale)
   const yMid = TOP + FLOW / 2
-  const yEnd = BOTTOM - CAP
-  let cursor = (W - SOURCE_W) / 2
-  const ribbons = parts.map((p, i) => {
-    const w = widths[i]
-    const x0 = cursor
-    cursor += w
-    const endW = Math.min(w, colW - 10)
-    const cx = colW * (i + 0.5)
-    const top = { l: x0, r: x0 + w }
-    const bottom = { l: cx - endW / 2, r: cx + endW / 2 }
-    const shape =
-      `M${num(top.l)} ${TOP}C${num(top.l)} ${yMid} ${num(bottom.l)} ${yMid} ${num(bottom.l)} ${yEnd}` +
-      `L${num(bottom.r)} ${yEnd}C${num(bottom.r)} ${yMid} ${num(top.r)} ${yMid} ${num(top.r)} ${TOP}Z`
-    // Fine strands along the ribbon, a quarter, half and three quarters of the way across it; the middle one is its centre line.
-    const strands = [0.25, 0.5, 0.75].map((f) => {
-      const sx = top.l + w * f
-      const ex = bottom.l + endW * f
-      return `M${num(sx)} ${TOP}C${num(sx)} ${yMid} ${num(ex)} ${yMid} ${num(ex)} ${yEnd}`
-    })
-    return { part: p, shape, strands, capX: bottom.l, capW: endW }
+  const yEnd = BOTTOM - CAP - 1
+  const lines = parts.map((p, i) => {
+    // Each leaves the chest at its own place along its base, in the order of the columns, and lands in the middle of its column.
+    const sx = (W - SOURCE_W) / 2 + (SOURCE_W / n) * (i + 0.5)
+    const ex = colW * (i + 0.5)
+    return { part: p, d: `M${num(sx)} ${TOP}C${num(sx)} ${yMid} ${num(ex)} ${yMid} ${num(ex)} ${yEnd}`, ex, width: num(3.5 + p.share * 8) }
   })
 
   const total = formatMoney(grand, currency)
@@ -124,12 +104,6 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
     <div ref={watch} data-seen={seen} className="when-seen mx-auto w-full max-w-md" data-flow>
       <svg role="img" aria-label={`${sourceLabel}, ${total}. Where the money went: ${summary}`} viewBox={`0 0 ${W} ${BOTTOM}`} className="block h-auto w-full" preserveAspectRatio="xMidYMid meet">
         <defs>
-          {/* The light that slides down: clear at both ends, a soft white band in the middle. */}
-          <linearGradient id={id('shine')} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#fff" stopOpacity="0" />
-            <stop offset="0.5" stopColor="#fff" stopOpacity="0.5" />
-            <stop offset="1" stopColor="#fff" stopOpacity="0" />
-          </linearGradient>
           <linearGradient id={id('wood')} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="#a8712f" />
             <stop offset="1" stopColor="#6b431c" />
@@ -146,39 +120,29 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
             <stop offset="0" stopColor="#ffd34d" stopOpacity="0.55" />
             <stop offset="1" stopColor="#ffd34d" stopOpacity="0" />
           </radialGradient>
-          {ribbons.map(({ part, shape }) => (
-            <g key={part.key}>
-              {/* Pale where the ribbon leaves the chest, deeper where it lands. */}
-              <linearGradient id={id(`${part.key}-wash`)} gradientUnits="userSpaceOnUse" x1="0" y1={TOP} x2="0" y2={BOTTOM}>
-                <stop offset="0" style={{ stopColor: part.color }} stopOpacity="0.16" />
-                <stop offset="1" style={{ stopColor: part.color }} stopOpacity="0.62" />
-              </linearGradient>
-              <clipPath id={id(`${part.key}-clip`)}>
-                <path d={shape} />
-              </clipPath>
-            </g>
+          {lines.map(({ part }) => (
+            /* Pale where the line leaves the chest, deeper where it lands. */
+            <linearGradient key={part.key} id={id(`${part.key}-wash`)} gradientUnits="userSpaceOnUse" x1="0" y1={TOP} x2="0" y2={BOTTOM}>
+              <stop offset="0" style={{ stopColor: part.color }} stopOpacity="0.4" />
+              <stop offset="1" style={{ stopColor: part.color }} stopOpacity="1" />
+            </linearGradient>
           ))}
         </defs>
 
-        {ribbons.map(({ part, shape, strands, capX, capW }, i) => {
+        {lines.map(({ part, d, ex, width }, i) => {
           const style = { '--d': `${i * 110}ms` } as CSSProperties
+          const draw = { fill: 'none', strokeLinecap: 'round', pathLength: 100 } as const
           return (
             <g key={part.key} data-ribbon={part.key} style={style}>
-              <g className="flow-pour">
-                <path d={shape} fill={`url(#${id(`${part.key}-wash`)})`} data-wash />
-                {strands.map((s, k) => (
-                  <path key={k} d={s} fill="none" stroke="#fff" strokeOpacity={k === 1 ? 0.4 : 0.25} strokeWidth={1} data-strand={k === 1 ? 'centre' : undefined} />
-                ))}
-                <g clipPath={`url(#${id(`${part.key}-clip`)})`}>
-                  <rect className="flow-shine" x={0} y={TOP - SHINE} width={W} height={SHINE} fill={`url(#${id('shine')})`} />
-                </g>
-              </g>
-              <rect className="flow-cap" x={num(capX)} y={yEnd} width={num(capW)} height={CAP} rx={2} fill={part.color} />
+              <path className="flow-draw" d={d} {...draw} stroke={part.color} strokeOpacity={0.14} strokeWidth={width + 7} />
+              <path className="flow-draw" d={d} {...draw} stroke={`url(#${id(`${part.key}-wash`)})`} strokeWidth={width} data-line data-width={width} />
+              <path className="flow-pulse" d={d} {...draw} stroke="#fff" strokeOpacity={0.8} strokeWidth={Math.max(1.5, width * 0.35)} />
+              <circle className="flow-cap" cx={num(ex)} cy={BOTTOM - CAP} r={CAP} fill={part.color} />
             </g>
           )
         })}
 
-        {/* The treasure chest. Drawn after the ribbons, so they come out from under it. */}
+        {/* The treasure chest. Drawn after the lines, so they come out from under it. */}
         <g data-chest>
           <ellipse className="flow-glow" cx={cx} cy={CHEST_Y + 46} rx={150} ry={62} fill={`url(#${id('glow')})`} />
           <rect x={CHEST_X} y={bodyTop} width={CHEST_W} height={CHEST_H - LID_H} rx={8} fill={`url(#${id('wood')})`} stroke="#3f2610" strokeWidth={1.5} />

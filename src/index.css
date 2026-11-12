@@ -2139,47 +2139,39 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 
 /* ---------- The money flowing from the total to each category ---------- */
 
-/* Each ribbon pours down from the pill, one after another, and its end cap fades in. Then a soft band of light keeps sliding
-   down it from the top, as light moves over water or the inside of a shell. The band is clipped to the ribbon by the
-   component, and sits above the picture (out of sight) when the animation is off. */
-@keyframes flow-pour {
-  from {
-    transform: scaleY(0);
-    opacity: 0;
-  }
-}
+/* Each line draws down from the chest, one after another, and the dot it ends on fades in. Then a soft light keeps travelling
+   down it from the top, as light moves over water or the inside of a shell. The lines are drawn with a pathLength of 100, so
+   the same numbers fit every one however long it is. With reduced motion the line is simply there and the light is not. */
 @keyframes flow-fade {
   from {
     opacity: 0;
   }
 }
-@keyframes flow-shine {
-  0% {
-    transform: translateY(0);
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  75% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(210px);
-    opacity: 0;
+@keyframes flow-draw {
+  from {
+    stroke-dashoffset: 100;
   }
 }
-.flow-pour {
-  transform-box: fill-box;
-  transform-origin: 50% 0;
-  animation: flow-pour 0.9s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--d, 0ms) + 100ms) backwards;
+@keyframes flow-pulse {
+  from {
+    stroke-dashoffset: 18;
+  }
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+.flow-draw {
+  stroke-dasharray: 100;
+  animation: flow-draw 0.9s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--d, 0ms) + 100ms) backwards;
 }
 .flow-cap {
   animation: flow-fade 0.4s ease-out calc(var(--d, 0ms) + 750ms) backwards;
 }
-.flow-shine {
-  animation: flow-shine 3.2s cubic-bezier(0.45, 0.05, 0.4, 1) calc(var(--d, 0ms) + 900ms) infinite backwards;
+.flow-pulse {
+  stroke-dasharray: 18 100;
+  animation: flow-pulse 2.8s cubic-bezier(0.45, 0.05, 0.4, 1) calc(var(--d, 0ms) + 1000ms) infinite backwards;
 }
+
 /* The chest glows, slowly, and its sparkles come and go. */
 @keyframes flow-glow {
   50% {
@@ -2206,11 +2198,14 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   animation: flow-twinkle 2.4s ease-in-out var(--d, 0ms) infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .flow-pour,
+  .flow-draw,
   .flow-cap,
-  .flow-shine,
+  .flow-pulse,
   .flow-glow,
   .flow-twinkle {
     animation: none;
+  }
+  .flow-pulse {
+    display: none;
   }
 }

@@ -18,7 +18,13 @@ const totals: CategoryTotal[] = [
 const mount = (over: Record<string, unknown> = {}) =>
   render(<CategoryFlow totals={totals} categoryById={categoryById} currency="INR" sourceLabel="Spent in October" {...over} />)
 const ribbons = () => Array.from(document.querySelectorAll<SVGGElement>('[data-ribbon]'))
+const lineOf = (g: Element) => g.querySelector('[data-line]')!
 const list = () => screen.getByRole('list', { name: 'Spending by category, as a flow' })
+/** A line runs "M<x> <y>C ... <x> <y>": where it leaves the chest and where it lands. */
+const ends = (g: Element) => {
+  const [, startX, endX] = /^M([\d.]+) [\d.]+C[\d.]+ [\d.]+ [\d.]+ [\d.]+ ([\d.]+) /.exec(lineOf(g).getAttribute('d')!) ?? []
+  return { start: Number(startX), end: Number(endX) }
+}
 
 describe('CategoryFlow: the total splitting into each category', () => {
   it('puts the total on a treasure chest at the top, with what it is on its lid', () => {
@@ -36,54 +42,52 @@ describe('CategoryFlow: the total splitting into each category', () => {
     expect(icons[0].style.background).toContain('var(--s1)')
   })
 
-  it('draws a ribbon to each category, in its colour', () => {
+  it('draws one line to each category, in its colour', () => {
     mount()
     expect(ribbons().map((g) => g.getAttribute('data-ribbon'))).toEqual(['1', '2', '3'])
     expect(ribbons().map((g) => g.querySelector('.flow-cap')?.getAttribute('fill'))).toEqual(['var(--s1)', 'var(--s2)', 'var(--s3)'])
-    // The ribbon itself is a wash of that colour, pale at the top and deeper at the bottom.
+    // The line itself is a wash of that colour, paler at the chest and deeper where it lands.
     const stops = Array.from(document.querySelectorAll('linearGradient[id$="1-wash"] stop')) as SVGStopElement[]
     expect(stops.map((s) => s.style.stopColor)).toEqual(['var(--s1)', 'var(--s1)'])
-    expect(stops.map((s) => Number(s.getAttribute('stop-opacity')))).toEqual([0.16, 0.62])
+    expect(stops.map((s) => Number(s.getAttribute('stop-opacity')))).toEqual([0.4, 1])
   })
 
-  it('is smooth, with fine strands along each ribbon and no dotted line', () => {
+  it('is a single smooth line each, not a band of strands, and not dotted', () => {
     mount()
     for (const g of ribbons()) {
-      expect(g.querySelectorAll('[data-strand]')).toHaveLength(1)
-      expect(g.querySelectorAll('path[data-wash], path[d]')).not.toHaveLength(0)
-      expect(g.querySelector('[stroke-dasharray]')).toBeNull()
-      expect(g.querySelector('.flow-shine')).not.toBeNull()
+      expect(g.querySelectorAll('[data-line]')).toHaveLength(1)
+      expect(g.querySelector('[data-strand]')).toBeNull()
+      expect(g.querySelector('.flow-pulse')).not.toBeNull()
     }
+    // The only dashes are in the stylesheet, where one long dash is the light that travels down the line.
     expect(document.querySelectorAll('[stroke-dasharray]')).toHaveLength(0)
   })
 
   it('lets the ones on the left bend left, the middle one go straight down and the ones on the right bend right', () => {
     mount()
-    // A ribbon's middle line runs from where it leaves the pill to where it lands: "M<x> 0 C ... <x> <bottom>".
-    const ends = ribbons().map((g) => {
-      const d = g.querySelector('[data-strand="centre"]')!.getAttribute('d')!
-      const [, startX, endX] = /^M([\d.]+) [\d.]+C[\d.]+ [\d.]+ [\d.]+ [\d.]+ ([\d.]+) /.exec(d) ?? []
-      return { start: Number(startX), end: Number(endX) }
-    })
-    expect(ends[0].end).toBeLessThan(ends[0].start)
-    expect(ends[2].end).toBeGreaterThan(ends[2].start)
-    // The middle one starts and lands within a few units of straight down.
-    expect(Math.abs(ends[1].end - ends[1].start)).toBeLessThan(25)
+    const [first, middle, last] = ribbons().map(ends)
+    expect(first.end).toBeLessThan(first.start)
+    expect(last.end).toBeGreaterThan(last.start)
+    expect(middle.end).toBeCloseTo(middle.start, 5)
   })
 
-  it('makes each ribbon as wide as its share where it leaves the pill', () => {
+  it('leaves the chest at a different place along its base for each, in the order of the columns', () => {
     mount()
-    const widths = ribbons().map((g) => {
-      const d = g.querySelector('path[data-wash]')!.getAttribute('d')!
-      const xs = /^M([\d.]+) [\d.]+.*?([\d.]+) [\d.]+Z$/.exec(d)!
-      return Math.abs(Number(xs[2]) - Number(xs[1]))
-    })
-    expect(widths[0]).toBeCloseTo(75, 0)
-    expect(widths[1]).toBeCloseTo(45, 0)
-    expect(widths[2]).toBeCloseTo(30, 0)
+    const starts = ribbons().map((g) => ends(g).start)
+    expect([...starts].sort((a, b) => a - b)).toEqual(starts)
+    expect(new Set(starts).size).toBe(3)
   })
 
-  it('writes the name, amount and share of each under its ribbon', () => {
+  it('makes a bigger share only a little thicker, and none thinner than a line you can see', () => {
+    mount()
+    const widths = ribbons().map((g) => Number(lineOf(g).getAttribute('data-width')))
+    expect(widths[0]).toBeGreaterThan(widths[1])
+    expect(widths[1]).toBeGreaterThan(widths[2])
+    expect(Math.min(...widths)).toBeGreaterThanOrEqual(3.5)
+    expect(Math.max(...widths)).toBeLessThanOrEqual(12)
+  })
+
+  it('writes the name, amount and share of each under its line', () => {
     mount()
     const rows = Array.from(list().querySelectorAll('li')).map((li) => li.textContent)
     expect(rows).toEqual(['Cat 1₹50050.0%', 'Cat 2₹30030.0%', 'Cat 3₹20020.0%'])
@@ -111,11 +115,9 @@ describe('CategoryFlow: the total splitting into each category', () => {
     expect(screen.queryByText('Everything else')).toBeNull()
   })
 
-  it('still draws a thin share where it can be seen', () => {
+  it('still draws a thin share as a line that can be seen', () => {
     mount({ totals: [{ categoryId: 1, totalMinor: 99_900 }, { categoryId: 2, totalMinor: 100 }] })
-    const d = ribbons()[1].querySelector('path[data-wash]')!.getAttribute('d')!
-    const xs = /^M([\d.]+) [\d.]+.*?([\d.]+) [\d.]+Z$/.exec(d)!
-    expect(Math.abs(Number(xs[2]) - Number(xs[1]))).toBeGreaterThan(3)
+    expect(Number(lineOf(ribbons()[1]).getAttribute('data-width'))).toBeGreaterThanOrEqual(3.5)
   })
 
   it('opens a category from its label, and nothing from the folded one', () => {
