@@ -10,7 +10,7 @@ import { Icon } from './Icon'
 import { useCountWhen, useSeen } from './motion'
 import { riverPath, widthFor } from './river'
 import { useLineScroll } from './useLineScroll'
-import { WaveCover } from './Water'
+import { Bottle } from './Water'
 
 interface Props {
   /** Money sent, in the main currency. */
@@ -67,14 +67,14 @@ interface Look {
 }
 
 /** One stacked bar, each category a piece sized by its share, with a gap between, drawn from the left when seen. */
-function Pieces({ parts, look, delay = 0 }: { parts: DayPart[]; look: Look; delay?: number }) {
+function Pieces({ parts, look, delay = 0, still = false }: { parts: DayPart[]; look: Look; delay?: number; still?: boolean }) {
   return (
     <div className="flex h-full gap-0.5">
       {parts.map((p, i) => (
         <span
           key={p.categoryId}
           data-piece={p.categoryId}
-          className="ai-bar-right h-full min-w-1 rounded-full"
+          className={`${still ? '' : 'ai-bar-right '}h-full min-w-1 rounded-full`}
           style={{ flexGrow: p.minor, flexBasis: 0, background: look.colorOf(p.categoryId), ...delayOf(delay + i * 90) }}
         />
       ))}
@@ -84,25 +84,19 @@ function Pieces({ parts, look, delay = 0 }: { parts: DayPart[]; look: Look; dela
 
 /**
  * Today's bar, the one bar that moves. It is the day's bar as it always is (the categories side by side, as long as the day is
- * against the biggest), but as water: two waves roll along its surface and slosh when it comes into view, and the expense added last
- * floats on the end of it, in its category's icon, bobbing, and drops in with a splash when it is new.
+ * against the biggest), but as a little bottle of water: poured in when it comes into view, then level against the world as the phone
+ * is tilted. No icons on it: the colour on the end is the category of the expense added last.
  */
-function TodayBar({ day, look, width, categoryById }: { day: TimelineDay; look: Look; width: number; categoryById: Map<number, Category> }) {
+function TodayBar({ day, look, width }: { day: TimelineDay; look: Look; width: number }) {
   const last = day.txs[0]
-  const category = categoryById.get(last.categoryId)
   // The category of the expense added last is the end of the bar, so the colour on the end is what was just spent on.
   const parts = useMemo(() => [...day.parts.filter((p) => p.categoryId !== last.categoryId), ...day.parts.filter((p) => p.categoryId === last.categoryId)], [day.parts, last.categoryId])
   return (
     <span aria-hidden="true" data-today-bar className="today-bar relative mt-3 block h-8 overflow-hidden rounded-full bg-surface-2">
       <span className="relative block h-full" style={{ width: `${width}%` }}>
-        <Pieces parts={parts} look={look} delay={250} />
-        <WaveCover />
-        {/* A new expense is a new float: keyed, so it drops in again. */}
-        <span key={last.id} data-floater={last.id} className="today-drop absolute right-1 top-1/2 -mt-3.5">
-          <span className="today-float flex size-7 items-center justify-center rounded-full bg-surface text-ink shadow-[0_1px_4px_rgb(0_0_0/0.25)]" style={{ boxShadow: `inset 0 0 0 2px ${look.colorOf(last.categoryId)}, 0 1px 4px rgb(0 0 0 / 0.25)` }}>
-            <Icon name={spendIcon(last.merchant, category?.name)} size={15} />
-          </span>
-        </span>
+        <Bottle>
+          <Pieces parts={parts} look={look} still />
+        </Bottle>
       </span>
     </span>
   )
@@ -239,7 +233,7 @@ function DayRowBase({ day, look, max, color, next, edge, wFrom, wTo, open, onTog
               </span>
 
               {day.daysAgo === 0 ? (
-                <TodayBar day={day} look={look} width={Math.max(14, (day.totalMinor / Math.max(max, 1)) * 100)} categoryById={categoryById} />
+                <TodayBar day={day} look={look} width={Math.max(30, (day.totalMinor / Math.max(max, 1)) * 100)} />
               ) : (
                 <span aria-hidden="true" className="mt-3 block h-3.5 overflow-hidden rounded-full bg-surface-2">
                   <span className="block h-full" style={{ width: `${Math.max(10, (day.totalMinor / Math.max(max, 1)) * 100)}%` }}>
