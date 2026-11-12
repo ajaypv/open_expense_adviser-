@@ -347,38 +347,37 @@ describe('Timeline: today’s water bar', () => {
   const todayBar = () => document.querySelector('[data-today-bar]') as HTMLElement | null
   const pieces = (row: HTMLElement) => [...row.querySelectorAll('[data-piece]')].map((p) => p.getAttribute('data-piece'))
 
-  it('is only on today, and no other day has waves or a floater', () => {
+  it('is only on today, and no other day is water', () => {
     mount()
     expect(document.querySelectorAll('[data-today-bar]')).toHaveLength(1)
     expect(dayRow('2026-11-06').querySelector('[data-today-bar]')).toBeInTheDocument()
-    for (const date of ['2026-11-05', '2026-11-03', '2026-10-31']) {
-      expect(dayRow(date).querySelector('.water-wave')).toBeNull()
-      expect(dayRow(date).querySelector('[data-floater]')).toBeNull()
-    }
+    for (const date of ['2026-11-05', '2026-11-03', '2026-10-31']) expect(dayRow(date).querySelector('[data-water]')).toBeNull()
   })
 
-  it('rolls two waves along the top of the water', () => {
+  it('is a bottle: the pieces are shown only where there is water, with a light line along the surface', () => {
     mount()
-    expect(todayBar()!.querySelectorAll('.water-wave')).toHaveLength(2)
+    const bottle = todayBar()!.querySelector('[data-water]') as HTMLElement
+    expect(bottle).toBeInTheDocument()
+    const water = bottle.firstElementChild as HTMLElement
+    expect(water.querySelectorAll('[data-piece]').length).toBeGreaterThan(0)
+    expect(water.style.clipPath).toMatch(/^inset\(28(\.\d)?% 0/) // level, with air above it, before anything moves
+    expect(bottle.querySelectorAll('polyline')).toHaveLength(2)
   })
 
-  it('floats the icon of the expense added last on the end of the bar, and ends the bar on its category', () => {
+  it('does not draw the pieces in from the left, since the water is poured in instead', () => {
+    mount()
+    expect(todayBar()!.querySelector('[data-piece]')!.className).not.toContain('ai-bar-right')
+    expect(dayRow('2026-11-05').querySelector('[data-piece]')!.className).toContain('ai-bar-right')
+  })
+
+  it('has no icon on the bar, and ends the bar on the category of the expense added last', () => {
     const list = [tx('2026-11-06', 300, 2, 'Uber'), tx('2026-11-06', 120, 1, 'Cafe'), tx('2026-11-06', 50, 2, 'Metro')]
     mount(list)
-    const floater = todayBar()!.querySelector('[data-floater]') as HTMLElement
-    expect(floater.getAttribute('data-floater')).toBe(String(list[2].id)) // the Metro, added last
+    expect(todayBar()!.querySelector('[data-floater]')).toBeNull()
+    expect(todayBar()!.querySelector('[data-icon]')).toBeNull()
+    expect(todayBar()!.querySelector('.today-float')).toBeNull()
     // Transport is the biggest and Food & Dining the smallest, yet the colour on the end is the one just spent on.
     expect(pieces(dayRow('2026-11-06'))).toEqual(['1', '2'])
-  })
-
-  it('drops a new float in when a newer expense is added', () => {
-    const first = [tx('2026-11-06', 120, 1, 'Cafe')]
-    const { rerender } = render(<Timeline expenses={first} categoryById={categoryById} currency="INR" today={today} onPickDay={vi.fn()} />)
-    const before = document.querySelector('[data-floater]')!
-    rerender(<Timeline expenses={[...first, tx('2026-11-06', 60, 2, 'Bus')]} categoryById={categoryById} currency="INR" today={today} onPickDay={vi.fn()} />)
-    const after = document.querySelector('[data-floater]')!
-    expect(after).not.toBe(before)
-    expect(after.getAttribute('data-floater')).not.toBe(before.getAttribute('data-floater'))
   })
 
   it('has no bar, and so no water, on a day with nothing spent', () => {
@@ -386,10 +385,13 @@ describe('Timeline: today’s water bar', () => {
     expect(todayBar()).toBeNull()
   })
 
-  it('stills the water for reduced motion', () => {
-    const css = readFileSync('src/index.css', 'utf8')
-    const block = css.slice(css.indexOf('@keyframes wave-roll'))
-    const reduced = block.slice(block.indexOf('@media (prefers-reduced-motion: reduce)'))
-    for (const name of ['.water-wave-front', '.water-wave-back', '.water-slosh', '.today-drop', '.today-float']) expect(reduced.slice(0, 300)).toContain(name)
+  it('is still for reduced motion: no frame is drawn and no sensor is listened to', () => {
+    const frames = vi.spyOn(window, 'requestAnimationFrame')
+    const add = vi.spyOn(window, 'addEventListener')
+    mount()
+    expect(frames).not.toHaveBeenCalled()
+    expect(add.mock.calls.some(([type]) => type === 'deviceorientation')).toBe(false)
+    frames.mockRestore()
+    add.mockRestore()
   })
 })
