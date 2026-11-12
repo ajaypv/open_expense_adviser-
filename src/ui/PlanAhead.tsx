@@ -47,7 +47,7 @@ export function PlanAhead({ ledger, today, onOpen, onSetUp }: Props) {
         <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-2">
           <Icon name="repeat" size={18} />
         </span>
-        <span className="min-w-0 flex-1 font-bold">Track loans, auto-payments and salary</span>
+        <span className="min-w-0 flex-1 font-semibold">Track loans, auto-payments and salary</span>
         <span aria-hidden="true" className="text-ink-2">
           <Icon name="chevRight" size={20} />
         </span>
@@ -77,7 +77,7 @@ export function PlanAhead({ ledger, today, onOpen, onSetUp }: Props) {
   return (
     <section aria-label="Plan ahead" className="font-cred mt-8">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="px-1 text-2xl font-extrabold tracking-tight">Plan ahead</h2>
+        <h2 className="px-1 text-2xl font-bold tracking-tight">Plan ahead</h2>
         {onOpen && (
           <button type="button" onClick={onOpen} aria-label="View plan ahead" className="-mr-2 min-h-11 rounded-full px-3 font-medium underline underline-offset-2">
             View
@@ -89,20 +89,20 @@ export function PlanAhead({ ledger, today, onOpen, onSetUp }: Props) {
         <p className="mt-0.5 px-1 text-[0.9375rem] text-ink-2">{`Nothing due in the next ${HORIZON_DAYS} days.`}</p>
       ) : (
         <>
-          <p className="mt-0.5 px-1 text-base font-medium text-ink-2">
+          <p className="mt-0.5 px-1 text-base text-ink-2">
             {`In the next ${HORIZON_DAYS} days, `}
-            <b className="font-extrabold text-ink">{money(totals.outMinor)}</b>
+            <b className="font-semibold text-ink">{money(totals.outMinor)}</b>
             {' goes out'}
             {totals.inMinor > 0 && (
               <>
                 {' and '}
-                <b className="font-extrabold text-good">{money(totals.inMinor)}</b>
+                <b className="font-semibold text-good">{money(totals.inMinor)}</b>
                 {' comes in'}
               </>
             )}
             .
           </p>
-          <p className={`mb-3 mt-1 flex items-center gap-1.5 px-1 text-base font-semibold ${short ? 'text-critical' : balanceSet ? '' : 'text-ink-2'}`}>
+          <p className={`mb-3 mt-1 flex items-center gap-1.5 px-1 text-base font-medium ${short ? 'text-critical' : balanceSet ? '' : 'text-ink-2'}`}>
             {short ? (
               <>
                 <Icon name="warn" size={16} />
@@ -137,8 +137,8 @@ export function PlanAhead({ ledger, today, onOpen, onSetUp }: Props) {
                     <Icon name="chevRight" size={20} />
                   </span>
                   <span>
-                    <span className="block text-2xl font-extrabold tabular-nums">{`+${more}`}</span>
-                    <span className="block text-[0.9375rem] font-semibold leading-snug text-ink-2">{`more in the next ${HORIZON_DAYS} days`}</span>
+                    <span className="block text-2xl font-bold tabular-nums">{`+${more}`}</span>
+                    <span className="block text-[0.9375rem] font-medium leading-snug text-ink-2">{`more in the next ${HORIZON_DAYS} days`}</span>
                   </span>
                 </button>
               </li>

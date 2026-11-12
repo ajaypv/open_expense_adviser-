@@ -36,10 +36,10 @@ export function DateLeaf({ date, tone, colour, size = 56 }: { date: string; tone
       data-colour={colour}
       style={{ width: size, height: size, background: tint(colour) }}
     >
-      <span className="text-xs font-extrabold uppercase tracking-wide" style={{ color: tone === 'late' ? 'var(--critical-text)' : 'var(--ink-2)' }}>
+      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: tone === 'late' ? 'var(--critical-text)' : 'var(--ink-2)' }}>
         {(monthFormat ??= new Intl.DateTimeFormat(undefined, { month: 'short' })).format(d)}
       </span>
-      <span className="mt-0.5 text-2xl font-extrabold tabular-nums">{d.getDate()}</span>
+      <span className="mt-0.5 text-2xl font-bold tabular-nums">{d.getDate()}</span>
     </span>
   )
 }
@@ -94,12 +94,12 @@ export function PaymentCard({
             <Icon name={icon} size={18} />
           </span>
         </div>
-        <p className="mt-3 text-[0.9375rem] font-semibold leading-snug text-ink-2">{highlight ? LABELS(highlight) : TAG_LABELS[tagOf(p.rule)]}</p>
-        <p className="truncate text-lg font-bold leading-snug">{name}</p>
-        <p className={`text-[1.75rem] font-extrabold leading-tight tracking-tight tabular-nums ${p.kind === 'income' ? 'text-good' : ''}`}>{signedAmount(p, currency)}</p>
+        <p className="mt-3 text-[0.9375rem] font-medium leading-snug text-ink-2">{highlight ? LABELS(highlight) : TAG_LABELS[tagOf(p.rule)]}</p>
+        <p className="truncate text-lg font-semibold leading-snug">{name}</p>
+        <p className={`text-[1.75rem] font-bold leading-tight tracking-tight tabular-nums ${p.kind === 'income' ? 'text-good' : ''}`}>{signedAmount(p, currency)}</p>
         <div className="mt-auto pt-3">
           <SoonBar payment={p} colour={colour} />
-          <p className={`mt-1.5 flex items-center gap-1.5 text-[0.9375rem] font-semibold ${p.overdue ? 'text-critical' : 'text-ink-2'}`}>
+          <p className={`mt-1.5 flex items-center gap-1.5 text-[0.9375rem] font-medium ${p.overdue ? 'text-critical' : 'text-ink-2'}`}>
             {p.overdue && <Icon name="warn" size={14} />}
             {`${shortDay(p.date, today)}, ${lowerFirst(describeWhen(p.daysLeft))}`}
           </p>
@@ -132,13 +132,13 @@ export function SetAsideCard({ setAside, today, currency, horizon = HORIZON_DAYS
         <div className="mt-3 min-w-0">
           {short ? (
             <>
-              <p className="text-lg font-bold leading-snug text-critical">{`Save ${money(setAside.amountMinor)} more by ${shortDay(setAside.byDate!, today)}`}</p>
-              <p className="mt-1 text-[0.9375rem] font-medium leading-snug text-ink-2">{`Your balance will not cover what is due. About ${money(setAside.perDayMinor)} a day gets you there.`}</p>
+              <p className="text-lg font-semibold leading-snug text-critical">{`Save ${money(setAside.amountMinor)} more by ${shortDay(setAside.byDate!, today)}`}</p>
+              <p className="mt-1 text-[0.9375rem] leading-snug text-ink-2">{`Your balance will not cover what is due. About ${money(setAside.perDayMinor)} a day gets you there.`}</p>
             </>
           ) : (
             <>
-              <p className="text-lg font-bold leading-snug">{`${money(setAside.amountMinor)} to pay in the next ${horizon} days`}</p>
-              <p className="mt-1 text-[0.9375rem] font-medium leading-snug text-ink-2">{`Set aside about ${money(setAside.perDayMinor)} a day to be ready. Add your balance to check it is covered.`}</p>
+              <p className="text-lg font-semibold leading-snug">{`${money(setAside.amountMinor)} to pay in the next ${horizon} days`}</p>
+              <p className="mt-1 text-[0.9375rem] leading-snug text-ink-2">{`Set aside about ${money(setAside.perDayMinor)} a day to be ready. Add your balance to check it is covered.`}</p>
             </>
           )}
         </div>
