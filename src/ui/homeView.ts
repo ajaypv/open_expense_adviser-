@@ -13,9 +13,10 @@ const WAIT_MS = 2000
 const listeners = new Set<Listener>()
 let waiting: { view: HomeView; at: number } | null = null
 
-/** Moves the pager on screen to `view`. Does nothing when Home is not showing its pager. */
-export function showHomeView(view: HomeView): void {
+/** Moves the pager on screen to `view`. Does nothing when Home is not showing its pager; returns whether there was one to move. */
+export function showHomeView(view: HomeView): boolean {
   listeners.forEach((listen) => listen(view))
+  return listeners.size > 0
 }
 
 /** For when Home is about to open: the pager built next starts on `view` instead of the Overview. */

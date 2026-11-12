@@ -387,6 +387,16 @@ describe('HomePager: asked from the bottom bar', () => {
     expect(track().style.transform).toBe(at(1))
   })
 
+  it('says whether there was a pager to move, so a request that found none can wait for the one about to be built', () => {
+    expect(showHomeView('timeline')).toBe(false)
+    setup()
+    let moved = false
+    act(() => void (moved = showHomeView('timeline')))
+    expect(moved).toBe(true)
+    cleanup()
+    expect(showHomeView('timeline')).toBe(false)
+  })
+
   it('stays put when asked for the page it is already on', () => {
     setup()
     act(() => showHomeView('overview'))
