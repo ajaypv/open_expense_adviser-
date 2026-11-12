@@ -12,8 +12,6 @@ const base = {
   prevName: 'September',
   dailyAverageMinor: 2_400,
   expenseCount: 2,
-  dailyMinor: Array.from({ length: 31 }, (_, i) => (i === 27 ? 50_000 : i === 26 ? 18_000 : 0)),
-  todayDay: 28 as number | null,
   budgetMinor: null as number | null,
   currency: 'INR',
   periods: [
@@ -85,9 +83,14 @@ describe('SpendingOverview: the line under it', () => {
     expect(html.indexOf('12% more')).toBeLessThan(html.indexOf('aria-label="Recent spending"'))
   })
 
-  it('is centred under the half circle when there is a budget, and left under the plain amount when there is not', () => {
-    expect(render({ budgetMinor: 3_000_000 })).toMatch(/text-center">2 expenses/)
-    expect(render()).not.toMatch(/text-center">2 expenses/)
+  it('says what the budget is in that line, when there is one, so the bar above it needs no figures of its own', () => {
+    expect(text(render({ budgetMinor: 3_000_000 }))).toContain('Budget ₹30,000 · 2 expenses · about ₹24 a day')
+    expect(text(render())).not.toContain('Budget')
+  })
+
+  it('is left-aligned under the amount, with or without a budget, and not centred under anything', () => {
+    expect(render({ budgetMinor: 3_000_000 })).not.toMatch(/text-center/)
+    expect(render()).not.toMatch(/text-center/)
   })
 })
 
@@ -115,29 +118,36 @@ describe('SpendingOverview: today, yesterday and the week, kept small', () => {
     expect(html).toContain('aria-label="Recent spending"')
   })
 
-  it('makes the budget the headline once there is one, as a half circle with the figure in it, since that answers "am I okay?"', () => {
+  it('shows the budget as one plain bar under the amount, with where that leaves you in words, and no half circle', () => {
     const html = render({ budgetMinor: 3_000_000 })
-    expect(html.indexOf('role="meter"')).toBeLessThan(html.indexOf('expenses · about'))
-    expect(html.indexOf('role="meter"')).toBeLessThan(html.indexOf('aria-label="Recent spending"'))
-    // What the figure is of is said once, just above the meter, and ahead of the facts under it.
-    expect(html.indexOf('Spent so far in October')).toBeLessThan(html.indexOf('role="meter"'))
-    expect(html.indexOf('Spent so far in October')).toBeLessThan(html.indexOf('expenses · about'))
-    expect(html.match(/Spent so far in October/g)).toHaveLength(1)
-    expect(html.match(/₹680/g)?.length).toBeGreaterThanOrEqual(1)
+    // The amount, then the bar and the words, then the line, then the days.
+    expect(html.indexOf('₹680')).toBeLessThan(html.indexOf('role="meter"'))
+    expect(html.indexOf('role="meter"')).toBeLessThan(html.indexOf('Budget ₹30,000'))
+    expect(html.indexOf('Budget ₹30,000')).toBeLessThan(html.indexOf('aria-label="Recent spending"'))
+    expect(text(html)).toContain('₹29,320 left')
+    expect(html).not.toContain('<svg viewBox')
+    expect(html).not.toContain('<line ')
   })
 
-  it('draws one bar for each day of the month in the meter', () => {
-    const html = render({ budgetMinor: 3_000_000 })
-    expect(html.match(/<line /g)).toHaveLength(31)
+  it('says what is spent once, with the same big amount whether or not there is a budget', () => {
+    for (const budgetMinor of [null, 3_000_000]) {
+      const html = render({ budgetMinor })
+      expect(html).toContain('text-[clamp(2.25rem,10vw,2.5rem)]')
+      expect(html.match(/Spent so far in October/g)).toHaveLength(1)
+    }
   })
 
-  it('keeps the plain headline when there is no budget, and no meter', () => {
-    const html = render()
-    expect(html).not.toContain('role="meter"')
-    expect(html).toContain('text-[clamp(2.25rem,10vw,2.5rem)]')
+  it('leaves out the bar when there is no budget', () => {
+    expect(render()).not.toContain('role="meter"')
   })
 
-  it('says nothing was spent inside the meter when there is a budget but no spending', () => {
+  it('leaves out the bar’s own row of figures, since the amount is already above it', () => {
+    const t = text(render({ budgetMinor: 3_000_000 }))
+    expect(t).not.toContain('of ₹30,000')
+    expect(t).not.toMatch(/\d+%/)
+  })
+
+  it('says nothing was spent, in words, with the budget’s bar under it, when there is a budget but no spending', () => {
     const html = render({ budgetMinor: 3_000_000, totalMinor: 0, expenseCount: 0 })
     expect(html).toContain('role="meter"')
     expect(text(html)).toContain('Nothing spent in October yet.')
@@ -145,10 +155,17 @@ describe('SpendingOverview: today, yesterday and the week, kept small', () => {
     expect(text(html)).not.toContain('about')
   })
 
-  it('shows the comparison with the month before under the meter, centred', () => {
+  it('shows the comparison with the month before under the line, to the left like the rest', () => {
     const html = render({ budgetMinor: 3_000_000, deltaPct: 12 })
     expect(text(html)).toContain('12% more than September')
-    expect(html).toMatch(/justify-center[^"]*"[^>]*><span[^>]*>.*12% more/)
+    expect(/<p class="mt-3 flex[^"]*"/.exec(html)![0]).not.toContain('justify-center')
+    expect(html.indexOf('about ₹24 a day')).toBeLessThan(html.indexOf('12% more'))
+  })
+
+  it('shows Today, Yesterday and Last 7 days as one quiet row, divided by thin lines, not as boxes', () => {
+    const html = render()
+    expect(html).toMatch(/aria-label="Recent spending" class="[^"]*divide-x/)
+    expect(html).not.toMatch(/aria-label="Today: [^"]*" class="[^"]*bg-surface-2/)
   })
 
   it('has no day tiles for a month that is over', () => {

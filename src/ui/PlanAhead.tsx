@@ -18,9 +18,10 @@ const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
  * Under the Today, Yesterday and Last 7 days figures: what is worth knowing about the weeks ahead. The date of the
  * next loan EMI, the biggest payment coming and when, when money next arrives, and, when the balance will not stretch,
  * how much to save and about how much a day. Only for payments that are set up, and only for the month in progress.
- * With plain, it drops its own top rule and visible title, for a place that already has a heading. It has no button of its own to open the full list: the Coming up card further down has it, and two would be read out alike.
+ * With plain, it drops its own top rule and visible title, for a place that already has a heading. With card, it is a card of its own, with its
+ * title, for standing under the summary instead of inside it. It has no button of its own to open the full list: the Coming up card further down has it, and two would be read out alike.
  */
-export function PlanAhead({ ledger, today, plain = false }: { ledger: Ledger; today: Date; plain?: boolean }) {
+export function PlanAhead({ ledger, today, plain = false, card = false }: { ledger: Ledger; today: Date; plain?: boolean; card?: boolean }) {
   const todayKey = localDateString(today)
   const { recurring, currency, rates, balanceSet, estimatedBalanceMinor, categoryById } = ledger
   const plan = useMemo(() => {
@@ -35,8 +36,11 @@ export function PlanAhead({ ledger, today, plain = false }: { ledger: Ledger; to
   const { setAside } = plan
 
   return (
-    <section aria-label="Plan ahead" className={plain ? undefined : "mt-4 border-t border-line pt-3"}>
-      <h3 className={plain ? "sr-only" : "mb-1 text-[0.8125rem] font-medium text-ink-2"}>Plan ahead</h3>
+    <section
+      aria-label="Plan ahead"
+      className={card ? 'mt-3 rounded-3xl bg-surface p-5 shadow-[0_0_0_1px_var(--ring)]' : plain ? undefined : 'mt-4 border-t border-line pt-3'}
+    >
+      <h3 className={plain ? 'sr-only' : card ? 'mb-1 text-base font-semibold' : 'mb-1 text-[0.8125rem] font-medium text-ink-2'}>Plan ahead</h3>
 
       {plan.rows.length > 0 && (
         <ul className="divide-y divide-line">

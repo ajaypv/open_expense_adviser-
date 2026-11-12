@@ -563,25 +563,6 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   }
 }
 
-/* The lit bars of the half-circle meter come on one after another, left to right (the delay is set on each). */
-@keyframes arc-bar-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.arc-bar-in {
-  animation: arc-bar-in 0.25s ease-out both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .arc-bar-in {
-    animation: none;
-  }
-}
 
 /* ---------- Small helpers ---------- */
 
