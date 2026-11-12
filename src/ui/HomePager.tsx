@@ -268,7 +268,7 @@ export function HomePager({ overview, timeline }: Props) {
         e.stopPropagation()
       }}
     >
-      <div role="group" aria-label="Home view" className="relative mt-3 grid grid-cols-2 rounded-full bg-surface-2 p-1">
+      <div role="group" aria-label="Home view" className="relative mt-4 grid grid-cols-2 rounded-full bg-surface-2 p-1 shadow-[inset_0_0_0_1px_var(--ring)]">
         <span ref={pillEl} aria-hidden="true" data-dragging={dragging} className="pager-pill absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-btn" style={{ transform: pillTransform(index) }} />
         {TABS.map((tab) => (
           <button
@@ -276,7 +276,7 @@ export function HomePager({ overview, timeline }: Props) {
             type="button"
             aria-pressed={view === tab.id}
             onClick={() => go(tab.id)}
-            className={`relative min-h-11 rounded-full px-3 text-sm font-semibold transition-colors motion-reduce:transition-none ${view === tab.id ? 'text-btn-ink' : 'text-ink-2'}`}
+            className={`relative min-h-10 rounded-full px-3 text-sm font-semibold transition-colors motion-reduce:transition-none ${view === tab.id ? 'text-btn-ink' : 'text-ink-2'}`}
           >
             {tab.label}
           </button>
