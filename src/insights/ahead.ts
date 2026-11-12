@@ -35,7 +35,7 @@ const ceilWhole = (minor: number) => Math.ceil(minor / 100) * 100
  * biggest payment going out, when money next comes in, and what to put aside. A payment shown as the EMI is not shown
  * again as the biggest. With a balance set, the amount to save is the shortfall the balance would reach, spread over the
  * days until it first goes short; with none, it is what is due, spread over the window. Null when there is nothing to say.
- * A covered balance has nothing to put aside, and the Coming up card already says it is covered.
+ * A covered balance has nothing to put aside, and the Plan ahead line on Home already says it is covered.
  */
 export function planAhead(items: UpcomingPayment[], balance: { set: boolean; minor: number }, todayKey: string, horizonDays = 30): PlanAhead | null {
   const going = items.filter((p) => p.kind === 'expense')
@@ -47,7 +47,7 @@ export function planAhead(items: UpcomingPayment[], balance: { set: boolean; min
   const rows: AheadRow[] = []
   const emiIsBiggest = emi !== null && biggest !== null && emi.key === biggest.key && going.length > 1
   if (emi) rows.push({ kind: 'emi', payment: emi, alsoBiggest: emiIsBiggest })
-  // With one payment going out there is no "biggest" to point out; the Coming up card shows it.
+  // With one payment going out there is no "biggest" to point out; it is in the row anyway.
   if (biggest && going.length > 1 && !(emi && emi.key === biggest.key)) rows.push({ kind: 'biggest', payment: biggest, alsoBiggest: false })
   if (coming) rows.push({ kind: 'income', payment: coming, alsoBiggest: false })
 

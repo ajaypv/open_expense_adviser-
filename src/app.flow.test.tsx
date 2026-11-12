@@ -470,19 +470,19 @@ describe('Upcoming payments', () => {
     // The sheet it was added from now lists it, six days away.
     expect(await within(upcoming).findByRole('button', { name: /^Edit Home loan, Loan EMI, In 6 days/ })).toBeInTheDocument()
 
-    // And once the sheet is closed, Home shows it in its card.
+    // And once the sheet is closed, Home shows it among the Plan ahead cards.
     await user.click(within(upcoming).getByRole('button', { name: 'Close' }))
-    const card = await screen.findByRole('region', { name: 'Coming up' })
+    const card = await screen.findByRole('region', { name: 'Plan ahead' })
     expect(within(card).getByText('Home loan')).toBeInTheDocument()
-    expect(card).toHaveTextContent('In 6 days')
+    expect(card).toHaveTextContent('in 6 days')
   })
 
   it('opens a payment from the list to change it', async () => {
     await tx()
     await db.recurring.add({ kind: 'expense', amountMinor: 1_250_000, currency: 'INR', categoryId: 1, merchant: 'Home loan', note: '', paymentMethod: '', frequency: 'monthly', nextDue: localDateString(new Date(Date.now() + 6 * 86_400_000)), active: true, tag: 'loan' } as never)
     const user = await open()
-    await user.click(await screen.findByRole('button', { name: 'See all upcoming payments' }))
-    const upcoming = await screen.findByRole('dialog', { name: 'Upcoming payments' })
+    await user.click(await screen.findByRole('button', { name: 'View plan ahead' }))
+    const upcoming = await screen.findByRole('dialog', { name: 'Plan ahead' })
     await user.click(await within(upcoming).findByRole('button', { name: /^Edit Home loan/ }))
     const edit = await screen.findByRole('dialog', { name: 'Edit regular payment' })
     expect(within(edit).getByLabelText('Name')).toHaveValue('Home loan')

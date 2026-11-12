@@ -32,7 +32,6 @@ import { MonthSwitcher } from '../ui/MonthSwitcher'
 import { PlanAhead } from '../ui/PlanAhead'
 import { SuggestionList } from '../ui/SuggestionList'
 import { TxList } from '../ui/TxList'
-import { UpcomingCard } from '../ui/UpcomingCard'
 import { WalletPanel } from '../ui/WalletPanel'
 import { HomePager } from '../ui/HomePager'
 import { Timeline } from '../ui/Timeline'
@@ -65,6 +64,8 @@ interface Props {
   onOpenGoals: () => void
   /** Opens the upcoming payments: loans, auto-payments, subscriptions and salary. */
   onOpenUpcoming: () => void
+  /** Opens the whole plan for the weeks ahead, from the View button on the Plan ahead cards. */
+  onOpenPlan?: () => void
   /** Opens the credit cards, from the card that shows what is owed. */
   onOpenCards?: () => void
   /** Opens Activity on what was spent in a period, from the Today, Yesterday and Last 7 days figures. */
@@ -98,6 +99,7 @@ export const Home = memo(function Home({
   onAdd,
   onOpenGoals,
   onOpenUpcoming,
+  onOpenPlan,
   onOpenCards,
   onPickPeriod,
   onOpenInsights,
@@ -207,7 +209,7 @@ export const Home = memo(function Home({
               monthKey={month}
             />
 
-            {isCurrent && <PlanAhead ledger={ledger} today={today} card />}
+            {isCurrent && <PlanAhead ledger={ledger} today={today} onOpen={onOpenPlan} onSetUp={onOpenUpcoming} />}
 
             <WalletPanel
               monthName={name}
@@ -222,8 +224,6 @@ export const Home = memo(function Home({
             />
 
             {onOpenCards && <CardsCard ledger={ledger} today={today} onOpen={onOpenCards} />}
-
-            {isCurrent && <UpcomingCard ledger={ledger} today={today} onOpen={onOpenUpcoming} />}
 
             {isCurrent && suggestions.length > 0 && (
               <section aria-labelledby="suggest-h" className="mt-8">

@@ -45,6 +45,7 @@ import { CardsSheet } from './ui/CardsSheet'
 import { GoalsOverview } from './ui/GoalsOverview'
 import { RuleSheet } from './ui/RuleSheet'
 import { AiSheet } from './ui/AiSheet'
+import { PlanAheadPage } from './ui/PlanAheadPage'
 import { UpcomingSheet } from './ui/UpcomingSheet'
 import { PwaBanner } from './ui/PwaBanner'
 import { ScreenSkeleton } from './ui/ScreenSkeleton'
@@ -113,6 +114,7 @@ function Shell() {
   const [goalSheet, setGoalSheet] = useState<GoalSheetState>({ open: false, goal: null, n: 0 })
   // Upcoming payments are a sheet, and adding or changing one is a second sheet on top of it.
   const [upcomingOpen, setUpcomingOpen] = useState(false)
+  const [planOpen, setPlanOpen] = useState(false)
   const [aiOpen, setAiOpen] = useState(false)
   const [ruleSheet, setRuleSheet] = useState<{ open: boolean; rule: Recurring | null; n: number }>({ open: false, rule: null, n: 0 })
   const [moneySheet, setMoneySheet] = useState<GoalSheetState>({ open: false, goal: null, n: 0 })
@@ -432,6 +434,8 @@ function Shell() {
   }, [go])
   const openInsights = useCallback(() => go('insights'), [go])
   const openUpcoming = useCallback(() => setUpcomingOpen(true), [])
+  const openPlan = useCallback(() => setPlanOpen(true), [])
+  const closePlan = useCallback(() => setPlanOpen(false), [])
   const openAi = useCallback(() => setAiOpen(true), [])
   const closeAi = useCallback(() => setAiOpen(false), [])
   const closeUpcoming = useCallback(() => setUpcomingOpen(false), [])
@@ -471,6 +475,7 @@ function Shell() {
             onOpenGoals={openGoals}
             onOpenCards={openCards}
             onOpenUpcoming={openUpcoming}
+            onOpenPlan={openPlan}
             onPickPeriod={pickPeriod}
             onOpenInsights={openInsights}
           />
@@ -551,6 +556,7 @@ function Shell() {
         onAddMoney={goalMoney}
       />
       <AiSheet open={aiOpen} onClose={closeAi} ledger={ledger} month={month} today={today} />
+      <PlanAheadPage open={planOpen} onClose={closePlan} ledger={ledger} today={today} onAdd={newRule} onEdit={editRule} onManage={openUpcoming} />
       <UpcomingSheet open={upcomingOpen} onClose={closeUpcoming} ledger={ledger} today={today} onAdd={newRule} onEdit={editRule} />
       <RuleSheet key={`rule-${ruleSheet.n}`} open={ruleSheet.open} rule={ruleSheet.rule} categories={ledger.categories} accounts={ledger.accounts} currency={ledger.currency} today={today} onClose={closeRule} />
       <GoalSheet key={`goal-${goalSheet.n}`} open={goalSheet.open} goal={goalSheet.goal} today={today} onClose={closeGoalSheet} />

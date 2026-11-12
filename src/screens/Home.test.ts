@@ -225,7 +225,7 @@ describe('Home: the budget invitation', () => {
     expect(html).toContain('Set a monthly budget to see how much you have left.')
     const at = (s: string) => html.indexOf(s)
     expect(at('Set a monthly budget')).toBeGreaterThan(at('aria-label="Money received and your balance"'))
-    expect(at('Set a monthly budget')).toBeGreaterThan(at('aria-label="Coming up"'))
+    expect(at('Set a monthly budget')).toBeGreaterThan(at('aria-label="Plan ahead"'))
     expect(at('Set a monthly budget')).toBeLessThan(at('Recent transactions'))
     // and not part of the overview card above
     const overview = html.slice(at('aria-label="Summary"'), at('aria-label="Money received and your balance"'))
@@ -268,8 +268,8 @@ describe('Home: what comes first', () => {
     const html = renderFull()
     const order = [
       'aria-label="Summary"',
+      'aria-label="Plan ahead"',
       'aria-label="Money received and your balance"',
-      'aria-label="Coming up"',
       'aria-label="Budget"',
       'Day by day',
       'Recent transactions',
