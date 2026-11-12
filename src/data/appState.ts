@@ -3,6 +3,17 @@ import { db } from '../db/schema'
 
 const ONBOARDED = 'onboarded'
 const SEEN_VERSION = 'lastSeenVersion'
+const INTRO_SEEN = 'introSeen'
+
+/** The cards and the ask for notifications that come before the welcome have been seen (or skipped), and do not come again. */
+export async function markIntroSeen(): Promise<void> {
+  await db.settings.put({ key: INTRO_SEEN, value: true })
+}
+
+/** undefined while the first read is in progress. */
+export function useIntroSeen(): boolean | undefined {
+  return useLiveQuery(async () => (await db.settings.get(INTRO_SEEN))?.value === true, [])
+}
 
 export async function markOnboarded(): Promise<void> {
   await db.settings.put({ key: ONBOARDED, value: true })

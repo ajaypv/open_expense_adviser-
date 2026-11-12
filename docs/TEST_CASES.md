@@ -52,6 +52,7 @@ I checked that the tests can fail by planting ten bugs one at a time. All ten we
 
 | ID | Check | Steps | Expected | Auto |
 |---|---|---|---|---|
+| WEL-0 | The first screens | Open on a clean install (or with all data cleared) | Before the Welcome, a full dark screen: cards drift slowly across it in three lanes (one going the other way), each bobbing a little, over "Simple spending starts here" and a round gradient arrow. The arrow goes on to "Get Notified" (a bell, what it is for, three sample notifications, a white "Turn on notifications" button, and Skip at the top). The button brings the phone's own prompt, and if allowed turns on the evening reminder and budget alerts (Settings → Reminders shows them on); Skip asks for nothing. Then the Welcome questions follow, and the first two screens never come back. Where notifications are already allowed or blocked, or the browser has none, the second screen is left out. With reduced motion the cards stand still | Auto: `Intro.flow`, `app.flow`; Device |
 | WEL-1 | Welcome shows once | Open on a clean install | A "Welcome" sheet asks for currency, what you have today, and a monthly budget | Auto: `app.flow` |
 | WEL-2 | Skip | Tap "Skip for now" | The sheet closes, Home says "Nothing logged yet.", and it never comes back | Auto: `app.flow` |
 | WEL-3 | Save the answers | Pick USD, enter 5,000 and 30,000, tap Get started | Currency is USD, the account balance is 5,000, a 30,000 budget is set | Auto: `app.flow` |

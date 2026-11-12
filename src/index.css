@@ -1228,6 +1228,59 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 /* Today's bar is a little bottle of water; it is drawn in src/ui/Water.tsx (a clip and a surface line worked out every frame from how the
    phone is held), so it has no styles of its own. */
 
+/* ---------- The first screen a new person sees ---------- */
+
+/* Little cards drift along in three lanes, each at its own pace (--t) and two the same way, one against; the lane's content is the same
+   sequence drawn four times, so moving a quarter of it along lands exactly where it began. Each card also bobs a little on its own. */
+@keyframes intro-drift {
+  to {
+    transform: translateX(-25%);
+  }
+}
+@keyframes intro-bob {
+  from {
+    transform: translateY(-7px) rotate(-1.2deg);
+  }
+  to {
+    transform: translateY(9px) rotate(1.2deg);
+  }
+}
+@keyframes intro-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(1rem);
+  }
+}
+@keyframes intro-rise {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+}
+.intro-lane {
+  animation: intro-drift var(--t, 90s) linear infinite;
+}
+.intro-lane[data-reverse='true'] {
+  animation-direction: reverse;
+}
+.intro-card {
+  animation: intro-bob var(--b, 7s) ease-in-out var(--bd, 0s) infinite alternate;
+}
+.intro-field {
+  animation: intro-in 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.intro-rise {
+  animation: intro-rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-lane,
+  .intro-card,
+  .intro-field,
+  .intro-rise {
+    animation: none;
+  }
+}
+
 /* ---------- Settings ---------- */
 
 /* Settings is set in a rounded geometric face (Plus Jakarta Sans, already shipped for the glass themes), whatever the theme. */

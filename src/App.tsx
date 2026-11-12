@@ -1,6 +1,6 @@
 import { flushSync } from 'react-dom'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { markVersionSeen, startupNotice, useOnboarded, useSeenVersion } from './data/appState'
+import { markIntroSeen, markVersionSeen, startupNotice, useIntroSeen, useOnboarded, useSeenVersion } from './data/appState'
 import type { LedgerTx } from './data/buildLedger'
 import { useDisplay } from './data/display'
 import { attachLocation } from './data/location'
@@ -50,6 +50,7 @@ import { PwaBanner } from './ui/PwaBanner'
 import { ScreenSkeleton } from './ui/ScreenSkeleton'
 import { SuggestionList } from './ui/SuggestionList'
 import { ToastProvider, useToast } from './ui/toast'
+import { Intro } from './ui/Intro'
 import { Welcome } from './ui/Welcome'
 import { WhatsNew } from './ui/WhatsNew'
 
@@ -173,6 +174,7 @@ function Shell() {
   // First launch asks three optional questions; after an update, what is new is shown once.
   const onboarded = useOnboarded()
   const seenVersion = useSeenVersion()
+  const introSeen = useIntroSeen()
   const notice = startupNotice({
     loading: ledger.loading,
     hasData: ledger.txs.length > 0 || ledger.trash.length > 0,
@@ -554,7 +556,9 @@ function Shell() {
       <GoalSheet key={`goal-${goalSheet.n}`} open={goalSheet.open} goal={goalSheet.goal} today={today} onClose={closeGoalSheet} />
       <GoalMoneySheet key={`money-${moneySheet.n}`} open={moneySheet.open} goal={moneySheet.goal} currency={ledger.currency} onClose={closeMoneySheet} />
 
-      <Welcome open={notice === 'welcome'} currency={ledger.currency} accounts={ledger.accounts} />
+      {/* A new person sees the cards and the ask for notifications first, then the three questions. */}
+      <Intro open={notice === 'welcome' && introSeen === false} onDone={() => void markIntroSeen()} />
+      <Welcome open={notice === 'welcome' && introSeen === true} currency={ledger.currency} accounts={ledger.accounts} />
       <WhatsNew open={notice === 'whats-new' || whatsNewByHand} onClose={closeWhatsNew} />
     </div>
   )
