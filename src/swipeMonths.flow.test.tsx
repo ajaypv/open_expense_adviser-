@@ -51,19 +51,20 @@ const swipe = (el: Element, dx: number) => {
   fireEvent(el, pointer('pointerup', dx, 3))
 }
 const card = () => screen.getByRole('region', { name: 'Summary' })
+const row = () => screen.getByRole('group', { name: 'Month' })
 const monthButton = (key: string) => screen.getByRole('button', { name: `${monthLabel(key)}. Choose a month` })
 
-describe('Swiping the spending card on Home changes the month', () => {
+describe('Swiping the month row on Home changes the month', () => {
   it('goes to the previous month on a swipe to the right, and back on a swipe to the left', async () => {
     await open()
     await screen.findByRole('region', { name: 'Summary' })
     expect(monthButton(thisMonth)).toBeInTheDocument()
 
-    swipe(card(), 110)
+    swipe(row(), 110)
     await waitFor(() => expect(monthButton(lastMonth)).toBeInTheDocument())
     expect(screen.getByText(`Spent in ${monthLabel(lastMonth).split(' ')[0]}`)).toBeInTheDocument()
 
-    swipe(card(), -110)
+    swipe(row(), -110)
     await waitFor(() => expect(monthButton(thisMonth)).toBeInTheDocument())
     expect(screen.getByText(/Spent so far in/)).toBeInTheDocument()
   })
@@ -71,7 +72,7 @@ describe('Swiping the spending card on Home changes the month', () => {
   it('stays on the month in progress when swiping to the left, since there is nothing after it', async () => {
     await open()
     await screen.findByRole('region', { name: 'Summary' })
-    swipe(card(), -110)
+    swipe(row(), -110)
     await new Promise((r) => setTimeout(r, 40))
     expect(monthButton(thisMonth)).toBeInTheDocument()
   })
@@ -79,16 +80,24 @@ describe('Swiping the spending card on Home changes the month', () => {
   it('can keep going back, one month for each swipe', async () => {
     await open()
     await screen.findByRole('region', { name: 'Summary' })
-    swipe(card(), 110)
+    swipe(row(), 110)
     await waitFor(() => expect(monthButton(lastMonth)).toBeInTheDocument())
-    swipe(card(), 110)
+    swipe(row(), 110)
     await waitFor(() => expect(monthButton(shiftMonth(thisMonth, -2))).toBeInTheDocument())
   })
 
   it('leaves the month alone for a small movement or a tap', async () => {
     await open()
     await screen.findByRole('region', { name: 'Summary' })
-    swipe(card(), 20)
+    swipe(row(), 20)
+    await new Promise((r) => setTimeout(r, 40))
+    expect(monthButton(thisMonth)).toBeInTheDocument()
+  })
+
+  it('does not change the month for a swipe on the spending card, which is left to open the Timeline', async () => {
+    await open()
+    await screen.findByRole('region', { name: 'Summary' })
+    swipe(card(), 110)
     await new Promise((r) => setTimeout(r, 40))
     expect(monthButton(thisMonth)).toBeInTheDocument()
   })

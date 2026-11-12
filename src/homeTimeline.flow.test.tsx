@@ -47,8 +47,9 @@ async function open() {
 const view = () => within(screen.getByRole('group', { name: 'Home view' }))
 
 describe('Home: the timeline', () => {
-  it('has an Overview and a Timeline tab at the top, on the overview', async () => {
+  it('has a Timeline and an Overview tab at the top, in that order, on the overview', async () => {
     await open()
+    expect(view().getAllByRole('button').map((b) => b.textContent)).toEqual(['Timeline', 'Overview'])
     expect(view().getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-pressed', 'true')
     expect(view().getByRole('button', { name: 'Timeline' })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.queryByRole('list', { name: 'Spending, day by day' })).toBeNull()
@@ -94,45 +95,75 @@ function swipeBar(dx: number) {
 }
 const pressed = (name: string) => view().getByRole('button', { name }).getAttribute('aria-pressed')
 
-describe('Home: swiping the bottom bar', () => {
-  it('moves from the overview to the timeline on a swipe left, and back on a swipe right', async () => {
+/** A finger down on `el` at (0, 0), moved along in steps, and lifted at (dx, 0). */
+function dragOn(el: Element, dx: number) {
+  for (const [type, x] of [['pointerdown', 0], ['pointermove', dx / 4], ['pointermove', dx / 2], ['pointermove', dx], ['pointerup', dx]] as const) {
+    const e = new MouseEvent(type, { bubbles: true, clientX: x, clientY: 0 })
+    Object.defineProperty(e, 'pointerType', { value: 'touch' })
+    Object.defineProperty(e, 'pointerId', { value: 1 })
+    fireEvent(el, e)
+  }
+}
+
+describe('Home: swiping the page', () => {
+  it('opens the timeline from a swipe to the right that starts on the spending card, the most prominent part of the page', async () => {
     await open()
-    swipeBar(-90)
+    dragOn(screen.getByRole('region', { name: 'Summary' }), 160)
+    expect(pressed('Timeline')).toBe('true')
+  })
+
+  it('opens the timeline from a swipe to the right on the other cards too', async () => {
+    await open()
+    dragOn(screen.getByRole('region', { name: 'Money received and your balance' }), 160)
+    expect(pressed('Timeline')).toBe('true')
+  })
+
+  it('leaves a swipe on the month row to the months, and does not open the timeline from it', async () => {
+    await open()
+    dragOn(screen.getByRole('group', { name: 'Month' }), 160)
+    expect(pressed('Overview')).toBe('true')
+  })
+})
+
+describe('Home: swiping the bottom bar', () => {
+  it('moves from the overview to the timeline, which is on its left, on a swipe right, and back on a swipe left', async () => {
+    await open()
+    swipeBar(90)
     expect(pressed('Timeline')).toBe('true')
     expect(await screen.findByRole('list', { name: 'Spending, day by day' })).toBeInTheDocument()
-    swipeBar(90)
+    swipeBar(-90)
     expect(pressed('Overview')).toBe('true')
   })
 
   it('stays on the page it is on when swiped the way there is no page', async () => {
     await open()
-    swipeBar(90)
+    swipeBar(-90)
     expect(pressed('Overview')).toBe('true')
-    swipeBar(-90)
-    swipeBar(-90)
+    swipeBar(90)
+    swipeBar(90)
     expect(pressed('Timeline')).toBe('true')
   })
 
-  it('opens Home on the timeline from another screen, and on the overview for a swipe right', async () => {
+  it('opens Home on the timeline from another screen on a swipe right, and on the overview for a swipe left', async () => {
     const user = await open()
     await user.click(screen.getByRole('button', { name: 'Insights' }))
     await screen.findByRole('heading', { name: /Insights/i })
-    swipeBar(-90)
+    swipeBar(90)
     await waitFor(() => expect(screen.getByRole('group', { name: 'Home view' })).toBeInTheDocument())
     expect(pressed('Timeline')).toBe('true')
     expect(screen.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
 
     await user.click(screen.getByRole('button', { name: 'Insights' }))
-    swipeBar(90)
+    swipeBar(-90)
     await waitFor(() => expect(screen.getByRole('group', { name: 'Home view' })).toBeInTheDocument())
     expect(pressed('Overview')).toBe('true')
   })
 
   it('never goes to Activity, Insights or Settings by swiping', async () => {
     await open()
-    swipeBar(-90)
-    swipeBar(-90)
     swipeBar(90)
+    swipeBar(90)
+    swipeBar(-90)
     expect(screen.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
     for (const name of ['Activity', 'Insights', 'Settings']) {
       expect(screen.getByRole('button', { name })).not.toHaveAttribute('aria-current')

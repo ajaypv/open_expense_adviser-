@@ -237,11 +237,12 @@ function Shell() {
     document.startViewTransition({ update, types: [direction] } as unknown as () => void)
   }, [])
 
-  // Swiping along the bottom bar moves between Home's two pages: left for the timeline, right for the overview. From another
-  // screen it opens Home on that page. It never goes to Activity, Insights or Settings; those are for tapping.
+  // Swiping along the bottom bar moves between Home's two pages, which sit like the pages of a phone's home screen: to the right for
+  // the timeline, which is on the left, and to the left for the overview. From another screen it opens Home on that page. It never goes
+  // to Activity, Insights or Settings; those are for tapping.
   const swipeBar = useCallback(
     (direction: 'left' | 'right') => {
-      const page = direction === 'left' ? 'timeline' : 'overview'
+      const page = direction === 'right' ? 'timeline' : 'overview'
       if (tabRef.current === 'home') return showHomeView(page)
       openHomeOn(page)
       go('home')

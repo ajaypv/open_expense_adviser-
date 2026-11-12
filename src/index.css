@@ -1036,7 +1036,10 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 .pager-track {
   display: flex;
   align-items: flex-start;
-  transition: transform 380ms cubic-bezier(0.22, 0.85, 0.25, 1);
+  /* Matches GAP in HomePager: the space between the pages. */
+  column-gap: 3px;
+  /* A page let go of settles with a spring: it goes a little past its place and comes back (the curve rises above 1 and returns). */
+  transition: transform 520ms cubic-bezier(0.34, 1.32, 0.5, 1);
 }
 .pager-track[data-dragging='true'] {
   transition: none;
@@ -1050,14 +1053,62 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   flex: 0 0 100%;
   min-width: 0;
 }
-/* The page that is not in view, once the slide is over, takes no room, cannot be reached, and is not laid out or drawn at all (it
-   keeps its state, so it is as it was when it comes back), and nothing in it keeps animating. */
-.pager-panel[data-rest='true'] {
-  height: 0;
-  overflow: hidden;
-  visibility: hidden;
-  content-visibility: hidden;
+/* The overview is a sheet on top. While it moves, or is the part left showing beside the timeline, it is solid and throws a shadow on what
+   is under it, so the timeline looks to be under it. At rest in view it has neither: there is nothing under it to cover, and a solid colour
+   and a shadow of its own would show as a block against the page. */
+.pager-panel[data-page='overview'] {
+  position: relative;
+  z-index: 1;
+  border-radius: 1.5rem 0 0 1.5rem;
+  transition: box-shadow 260ms ease-out;
 }
+.pager-track[data-dragging='true'] .pager-panel[data-page='overview'],
+.pager-track[data-moving='true'] .pager-panel[data-page='overview'],
+.pager-panel[data-page='overview'][data-rest='true'] {
+  background: var(--bg);
+  box-shadow: -14px 0 26px -8px rgb(0 0 0 / 0.4);
+}
+/* A small handle on the sheet's edge, to say it can be pulled: beside it in the margin when the overview is in view, and on the part of
+   it that is left showing when the timeline is. It goes with the sheet as it moves. */
+.pager-panel[data-page='overview']::before {
+  content: '';
+  position: absolute;
+  top: 7.5rem;
+  left: -0.8rem;
+  width: 4px;
+  height: 2.75rem;
+  border-radius: 2px;
+  background: var(--ink-2);
+  opacity: 0.55;
+}
+.pager-panel[data-page='overview'][data-rest='true']::before {
+  left: 0.4rem;
+}
+/* The timeline is under it: it rises from a little smaller and dimmer to its full size and place (the component writes where it is as the
+   pages move), settling without a bounce while the sheet above it springs. */
+.pager-panel[data-page='timeline'] {
+  transform-origin: 0 0;
+  transition:
+    transform 520ms cubic-bezier(0.22, 0.85, 0.25, 1),
+    opacity 520ms ease-out;
+}
+.pager-track[data-dragging='true'] .pager-panel {
+  transition: none;
+}
+/* The page that is not in view, once the slide is over, cannot be reached, and is cut to the height of the page that is (the component
+   sets that), so only a slice of its edge shows in the margin beside the page in view, faded, to say there is more that way. It keeps
+   its state, and nothing in it keeps animating. */
+.pager-panel[data-rest='true'] {
+  overflow: hidden;
+  opacity: 0.55;
+}
+/* The page out of view draws none of its content, so what shows at the edge is clean, not scraps of cards and words: just the edge of the
+   overview sheet, with its handle. */
+.pager-panel[data-rest='true'] > * {
+  visibility: hidden;
+}
+/* The slice is the same on both: on the overview it is the timeline's edge on the left; on the timeline it is the overview's edge on the
+   right, as if the overview had been pushed aside with the timeline under it. */
 .pager-panel[data-rest='true'] * {
   animation-play-state: paused;
 }

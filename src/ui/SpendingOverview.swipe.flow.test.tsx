@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '../test/dom'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { SpendingOverview } from './SpendingOverview'
 
 const base = {
@@ -38,56 +38,16 @@ const swipe = (el: Element, dx: number) => {
 }
 const card = () => screen.getByRole('region', { name: 'Summary' })
 
-describe('SpendingOverview: swiping between months', () => {
-  it('goes to the previous month on a swipe to the right', () => {
-    const onPrevMonth = vi.fn()
-    const onNextMonth = vi.fn()
-    render(<SpendingOverview {...base} onPrevMonth={onPrevMonth} onNextMonth={onNextMonth} />)
-    swipe(card(), 100)
-    expect(onPrevMonth).toHaveBeenCalledOnce()
-    expect(onNextMonth).not.toHaveBeenCalled()
+describe('SpendingOverview: sideways swipes belong to the page, not the card', () => {
+  it('does not keep a sideways swipe for itself, so a swipe that starts on it goes on to open the Timeline', () => {
+    render(<SpendingOverview {...base} />)
+    expect(card()).not.toHaveClass('touch-pan-y')
   })
 
-  it('goes to the next month on a swipe to the left', () => {
-    const onPrevMonth = vi.fn()
-    const onNextMonth = vi.fn()
-    render(<SpendingOverview {...base} isCurrent={false} onPrevMonth={onPrevMonth} onNextMonth={onNextMonth} />)
-    swipe(card(), -100)
-    expect(onNextMonth).toHaveBeenCalledOnce()
-    expect(onPrevMonth).not.toHaveBeenCalled()
-  })
-
-  it('does nothing on a swipe left in the month in progress, since there is no next month', () => {
-    const onPrevMonth = vi.fn()
-    render(<SpendingOverview {...base} onPrevMonth={onPrevMonth} />)
-    swipe(card(), -100)
-    expect(onPrevMonth).not.toHaveBeenCalled()
-  })
-
-  it('does not change month for a tap, or for a small movement on a button', () => {
-    const onPrevMonth = vi.fn()
-    const onNextMonth = vi.fn()
-    render(<SpendingOverview {...base} onPrevMonth={onPrevMonth} onNextMonth={onNextMonth} />)
-    swipe(screen.getByRole('button', { name: 'Hide amounts' }), 12)
-    expect(onPrevMonth).not.toHaveBeenCalled()
-    expect(onNextMonth).not.toHaveBeenCalled()
-  })
-
-  it('works when the swipe starts on the figures, not only on the empty parts of the card', () => {
-    const onPrevMonth = vi.fn()
-    render(<SpendingOverview {...base} onPrevMonth={onPrevMonth} />)
-    swipe(screen.getByText('Daily average'), 100)
-    expect(onPrevMonth).toHaveBeenCalledOnce()
-  })
-
-  it('still lets the page scroll up and down from the card', () => {
-    render(<SpendingOverview {...base} onPrevMonth={() => {}} />)
-    expect(card()).toHaveClass('touch-pan-y')
-  })
-
-  it('is fine to use without a way to change month, as in the tests that only look at the card', () => {
+  it('does not take a swipe for a change of month, with or without a way to change it', () => {
     render(<SpendingOverview {...base} />)
     expect(() => swipe(card(), 100)).not.toThrow()
+    expect(() => swipe(screen.getByText(/expenses · about/), -100)).not.toThrow()
   })
 })
 

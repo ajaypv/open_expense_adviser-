@@ -208,8 +208,6 @@ export const Home = memo(function Home({
               onTogglePrivacy={() => setDisplay({ privacy: !display.privacy })}
               onPickPeriod={onPickPeriod}
               monthKey={month}
-              onPrevMonth={() => onMonth(shiftMonth(month, -1))}
-              onNextMonth={isCurrent ? undefined : () => onMonth(shiftMonth(month, 1))}
               ahead={isCurrent ? <PlanAhead ledger={ledger} today={today} /> : null}
             />
 
