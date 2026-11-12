@@ -1,12 +1,20 @@
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import { onHomeViewRequest, takeWaitingHomeView } from './homeView'
 
 export type HomeView = 'overview' | 'timeline'
 
+/** The pages left to right, as they sit: the Timeline is on the left of the Overview, which is where Home opens. */
 const TABS: { id: HomeView; label: string }[] = [
-  { id: 'overview', label: 'Overview' },
   { id: 'timeline', label: 'Timeline' },
+  { id: 'overview', label: 'Overview' },
 ]
+
+/**
+ * The space between the two pages, in pixels. The page next to the one in view shows a slice of its edge in the margin beside it (the
+ * margin is 20px, so the slice is 17px: about 5% of the width of a phone), on whichever side it is: the timeline's on the left of the
+ * overview, and the overview's on the right of the timeline, as if the overview had been pushed aside with the timeline under it.
+ */
+const GAP = 3
 
 /** How long the slide takes, and a little more for the page underneath to settle before the other is folded away. */
 const MOVE_MS = 380
@@ -31,8 +39,36 @@ interface Gesture {
  * so changing one on the track would make the browser work out the style of everything inside both pages again, at every move of the
  * finger. A transform is not inherited, and moves on the graphics card without touching the pages at all.
  */
-const trackTransform = (index: number, px = 0) => `translate3d(calc(${-index * 100}% + ${px}px), 0, 0)`
+const trackTransform = (index: number, px = 0) => `translate3d(calc(${-index * 100}% + ${px - index * GAP}px), 0, 0)`
 const pillTransform = (progress: number) => `translate3d(${progress * 100}%, 0, 0)`
+
+/**
+ * How much of its way the timeline travels while the overview slides off it. The overview is the sheet on top and moves with the
+ * finger, all the way; the timeline is under it, and only moves this share as far, so it seems to be uncovered rather than to arrive
+ * beside it (the way the page behind moves in a stack). The rest of the way it is just under the overview.
+ */
+const UNDER = 0.3
+
+/**
+ * Where the timeline is, written onto it as the pages move: `q` is how far across they are, 0 with the overview in view and 1 with the
+ * timeline. Under the overview it sits a little shrunken and dimmed, and as the overview slides away it comes up to full size and
+ * brightness and settles into its place, where it stays. Like the track, it is a transform and an opacity written straight onto the
+ * element, never a custom property.
+ */
+function placeTimeline(el: HTMLElement | null, q: number, width: number) {
+  if (!el) return
+  const c = Math.min(1, Math.max(0, q))
+  // In full view it has no transform and no opacity at all, rather than ones that change nothing: a transform, even an empty one, keeps
+  // a page this long on a layer of its own, and the page is then scrolled as a picture, which can sit a hair off from the rest of the screen.
+  if (c === 1) {
+    el.style.transform = 'none'
+    el.style.opacity = ''
+    return
+  }
+  const shift = (1 - c) * (width + GAP) * (1 - UNDER)
+  el.style.transform = `translate3d(${shift}px, 0, 0) scale(${0.94 + 0.06 * c})`
+  el.style.opacity = String(0.55 + 0.45 * c)
+}
 
 /**
  * Whether something between the touch and the pager has its own use for a sideways drag: a chart you drag across, the card that
@@ -65,10 +101,12 @@ interface Props {
 }
 
 /**
- * Home as two pages side by side: the overview, and the timeline of the days behind you. A pair of tabs at the top moves
- * between them, and so does dragging the page sideways: the page follows the finger, and lets go to the nearer one (or the
- * way a quick flick was going). The tab's marker slides along with it. Only the page in view takes up room, so the screen is
- * as long as that page, and the other is not laid out or drawn at all; reduced motion swaps them without sliding.
+ * Home as two pages side by side, like the pages of a phone's home screen: the timeline of the days behind you on the left, and the
+ * overview, where Home opens, on the right. A pair of tabs at the top moves between them, and so does dragging the page sideways
+ * (to the right for the timeline): the page follows the finger, and lets go to the nearer one (or the way a quick flick was
+ * going), and it settles with a little spring, going just past its place and back, as if it were on one. The tab's marker slides along with it. The page that is not in view is not drawn in full: it is cut to the height of
+ * the page that is, so the screen is as long as that one, and only a slice of its edge (about 5% of the width) shows in the margin
+ * beside it, on either page, to say there is more that way. Reduced motion swaps them without sliding.
  *
  * It stays smooth because a drag never goes through React: the position is written straight onto the track and the marker, and the
  * component only redraws when a drag starts and when it ends, not at every move of the finger.
@@ -86,7 +124,9 @@ export function HomePager({ overview, timeline }: Props) {
   const gesture = useRef<Gesture | null>(null)
   const swallow = useRef(false)
   const timer = useRef(0)
-  const index = view === 'overview' ? 0 : 1
+  // Where the page in view is, from the left: the timeline is 0 and the overview 1.
+  const index = view === 'timeline' ? 0 : 1
+  const panels = useRef<Record<HomeView, HTMLDivElement | null>>({ overview: null, timeline: null })
 
   useEffect(() => () => window.clearTimeout(timer.current), [])
   // The timeline is made while nothing else is happening, so the first time it is opened it is already there.
@@ -116,11 +156,13 @@ export function HomePager({ overview, timeline }: Props) {
     const beyond = (index === 0 && dx > 0) || (index === 1 && dx < 0)
     const px = beyond ? dx * 0.25 : dx
     if (trackEl.current) trackEl.current.style.transform = trackTransform(index, px)
-    if (pillEl.current) pillEl.current.style.transform = pillTransform(Math.min(1, Math.max(0, index - px / Math.max(width, 1))))
+    if (pillEl.current) pillEl.current.style.transform = pillTransform(Math.min(1, Math.max(0, index - px / Math.max(width + GAP, 1))))
+    placeTimeline(panels.current.timeline, 1 - index + px / Math.max(width + GAP, 1), width)
   }
 
   function onPointerDown(e: PointerEvent) {
-    if (e.pointerType === 'mouse' || !box.current || ownsGesture(e.target, box.current)) return
+    // A touch, a pen, or the left button of a mouse (so the pages can be tried with a mouse on a computer too).
+    if ((e.pointerType === 'mouse' && e.button !== 0) || !box.current || ownsGesture(e.target, box.current)) return
     gesture.current = { x: e.clientX, y: e.clientY, at: e.timeStamp, width: box.current.clientWidth, mode: 'unsure' }
   }
 
@@ -133,11 +175,17 @@ export function HomePager({ overview, timeline }: Props) {
       const ay = Math.abs(e.clientY - g.y)
       if (ax > DECIDE && ax > ay * SLOPE) {
         g.mode = 'sideways'
+        // With a mouse, dragging sideways must not also select the text it crosses, and must go on being followed outside the page.
+        if (e.pointerType === 'mouse') {
+          window.getSelection?.()?.removeAllRanges()
+          if (box.current) box.current.style.userSelect = 'none'
+          box.current?.setPointerCapture?.(e.pointerId)
+        }
         // The easing is switched off by the attribute straight away, in the same frame as the first movement.
         if (trackEl.current) trackEl.current.dataset.dragging = 'true'
         if (pillEl.current) pillEl.current.dataset.dragging = 'true'
         // The other page is drawn and in place before the finger brings it in.
-        if (index === 0) setBuilt(true)
+        if (view === 'overview') setBuilt(true)
         setDragging(true)
       } else if (ay > DECIDE && ay >= ax) g.mode = 'scrolling'
       else return
@@ -148,6 +196,7 @@ export function HomePager({ overview, timeline }: Props) {
   function finish(e: PointerEvent | null) {
     const g = gesture.current
     gesture.current = null
+    if (box.current) box.current.style.userSelect = ''
     if (!g || g.mode !== 'sideways') return
     // The click that follows letting go of a drag must not press the button the finger ended on.
     swallow.current = true
@@ -158,11 +207,12 @@ export function HomePager({ overview, timeline }: Props) {
       const dx = e.clientX - g.x
       const speed = Math.abs(dx) / Math.max(e.timeStamp - g.at, 1)
       const far = Math.abs(dx) > Math.max(56, g.width * 0.22) || (speed > FLICK && Math.abs(dx) > 24)
-      if (far && index === 0 && dx < 0) next = 'timeline'
-      else if (far && index === 1 && dx > 0) next = 'overview'
+      if (far && index === 1 && dx > 0) next = 'timeline'
+      else if (far && index === 0 && dx < 0) next = 'overview'
     }
     // Easing comes back and the pages are sent to where they belong, in the same frame, so they glide there from where the finger left them.
-    const to = next === 'overview' ? 0 : 1
+    const to = next === 'timeline' ? 0 : 1
+    placeTimeline(panels.current.timeline, to === 0 ? 1 : 0, g.width)
     if (trackEl.current) {
       trackEl.current.dataset.dragging = 'false'
       trackEl.current.style.transform = trackTransform(to)
@@ -175,8 +225,34 @@ export function HomePager({ overview, timeline }: Props) {
     if (next !== view) go(next)
   }
 
-  // Folded away once at rest, so the page is as long as the one you are on.
+  // At rest the page that is not in view is cut to the height of the one that is, so the screen is as long as the page you are on.
   const rest = !moving && !dragging
+  // Wherever the page ends up (a tab pressed, the bottom bar swiped, a drag let go), the timeline is put where it belongs: under the
+  // overview, or up in full view; it is carried there by its transition.
+  useLayoutEffect(() => {
+    placeTimeline(panels.current.timeline, view === 'timeline' ? 1 : 0, box.current?.clientWidth ?? 0)
+  }, [view])
+
+  useLayoutEffect(() => {
+    const active = panels.current[view]
+    const other = panels.current[view === 'overview' ? 'timeline' : 'overview']
+    if (!active || !other) return
+    // The page in view is as tall as what is in it (it may have been cut to size while it was the other one), and so is the other
+    // while the pages move.
+    active.style.height = ''
+    if (!rest) {
+      other.style.height = ''
+      return
+    }
+    const fit = () => {
+      other.style.height = `${active.offsetHeight}px`
+    }
+    fit()
+    if (typeof ResizeObserver === 'undefined') return
+    const watch = new ResizeObserver(fit)
+    watch.observe(active)
+    return () => watch.disconnect()
+  }, [view, rest, built])
 
   return (
     <div
@@ -211,11 +287,11 @@ export function HomePager({ overview, timeline }: Props) {
           margin and padded back, so a ring or a shadow reaching past the first column is not cut short on the left. */}
       <div className="-mx-5 overflow-x-clip px-5">
         <div ref={trackEl} className="pager-track" data-dragging={dragging} data-moving={moving} style={{ transform: trackTransform(index) }}>
-          <div data-page="overview" data-rest={rest && index !== 0} inert={rest && index !== 0} className="pager-panel">
-            {overview}
-          </div>
-          <div data-page="timeline" data-rest={rest && index !== 1} inert={rest && index !== 1} className="pager-panel">
+          <div ref={(el) => void (panels.current.timeline = el)} data-page="timeline" data-rest={rest && view !== 'timeline'} inert={rest && view !== 'timeline'} className="pager-panel">
             {built && timeline}
+          </div>
+          <div ref={(el) => void (panels.current.overview = el)} data-page="overview" data-rest={rest && view !== 'overview'} inert={rest && view !== 'overview'} className="pager-panel">
+            {overview}
           </div>
         </div>
       </div>

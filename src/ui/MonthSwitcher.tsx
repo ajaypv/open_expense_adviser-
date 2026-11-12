@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { monthLabel, shiftMonth, type MonthKey } from '../insights/aggregates'
 import { Dialog } from './Dialog'
 import { Icon } from './Icon'
+import { useSwipe } from './useSwipe'
 
 interface Props {
   month: MonthKey
@@ -20,7 +21,9 @@ const arrow = 'flex size-11 items-center justify-center rounded-full hover:bg-su
 
 /**
  * Previous and next month arrows, and a month name that opens a picker so any month is two taps away.
- * A way back to this month shows whenever another month is on screen.
+ * A way back to this month shows whenever another month is on screen. Swiping along this row moves a month too (to the
+ * right for the one before, to the left for the one after, when there is one): the rest of the page keeps its sideways swipe
+ * for the Timeline.
  */
 export function MonthSwitcher({ month, currentMonth, onChange, activeMonths }: Props) {
   const [open, setOpen] = useState(false)
@@ -31,6 +34,8 @@ export function MonthSwitcher({ month, currentMonth, onChange, activeMonths }: P
   let firstYear = Math.min(currentYear, Number(month.slice(0, 4)))
   for (const m of activeMonths ?? []) firstYear = Math.min(firstYear, Number(m.slice(0, 4)))
 
+  const swipe = useSwipe({ onRight: () => onChange(shiftMonth(month, -1)), onLeft: atCurrent ? undefined : () => onChange(shiftMonth(month, 1)) })
+
   const pick = (key: MonthKey) => {
     onChange(key)
     setOpen(false)
@@ -38,7 +43,7 @@ export function MonthSwitcher({ month, currentMonth, onChange, activeMonths }: P
 
   return (
     <div className="py-1">
-      <div className="flex items-center justify-between">
+      <div role="group" aria-label="Month" {...swipe} className="flex touch-pan-y items-center justify-between">
         <button type="button" onClick={() => onChange(shiftMonth(month, -1))} aria-label="Previous month" className={arrow}>
           <Icon name="chevLeft" />
         </button>

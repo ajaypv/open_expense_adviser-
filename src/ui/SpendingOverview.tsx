@@ -3,7 +3,6 @@ import { formatMoney } from '../db/money'
 import { useState, type ReactNode } from 'react'
 import { AnimatedMoney } from './AnimatedMoney'
 import { Icon } from './Icon'
-import { useSwipe } from './useSwipe'
 
 export interface PeriodTile {
   id: string
@@ -37,9 +36,6 @@ interface Props {
   onPickPeriod: (range: { from: string; to: string }) => void
   /** The month in view (YYYY-MM): when it changes, the figures slide in from the side it came from. */
   monthKey?: string
-  /** Swiping to the right goes to the previous month; swiping to the left to the next, when there is one. */
-  onPrevMonth?: () => void
-  onNextMonth?: () => void
   /** Shown at the foot of the card, under the recent figures: what to plan for in the weeks ahead. */
   ahead?: ReactNode
 }
@@ -67,12 +63,9 @@ export function SpendingOverview({
   onTogglePrivacy,
   onPickPeriod,
   monthKey,
-  onPrevMonth,
-  onNextMonth,
   ahead,
 }: Props) {
   const against = `${partial ? 'the same days in ' : ''}${prevName}`
-  const swipe = useSwipe({ onRight: onPrevMonth, onLeft: onNextMonth })
 
   // Which way the month just moved, so the figures can slide in from that side. Worked out as the month changes.
   const [shown, setShown] = useState<{ key: string | undefined; dir: 'next' | 'prev' | null }>({ key: monthKey, dir: null })
@@ -81,7 +74,7 @@ export function SpendingOverview({
   }
 
   return (
-    <section aria-label="Summary" {...swipe} className="relative mt-3 touch-pan-y rounded-3xl bg-surface p-5 shadow-[0_0_0_1px_var(--ring)]">
+    <section aria-label="Summary" className="relative mt-3 rounded-3xl bg-surface p-5 shadow-[0_0_0_1px_var(--ring)]">
       <button
         type="button"
         aria-pressed={privacy}
@@ -120,6 +113,13 @@ export function SpendingOverview({
         </>
       )}
 
+      {totalMinor > 0 && (
+        <p className={`mt-2 text-base text-ink-2 ${budgetMinor !== null ? 'text-center' : ''}`}>
+          {`${expenseCount} ${expenseCount === 1 ? 'expense' : 'expenses'}`}
+          {dailyAverageMinor > 0 && ` · about ${formatMoney(dailyAverageMinor, currency)} a day`}
+        </p>
+      )}
+
       {totalMinor > 0 && deltaPct !== null && (
         <p className={`mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-ink-2 ${budgetMinor !== null ? 'justify-center' : ''}`}>
           {deltaPct === 0 ? (
@@ -140,21 +140,8 @@ export function SpendingOverview({
         </p>
       )}
 
-      {totalMinor > 0 && (
-        <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-line pt-4">
-          <div className="min-w-0">
-            <dt className="text-sm text-ink-2">Daily average</dt>
-            <dd className="mt-0.5 truncate text-xl font-bold tabular-nums">{formatMoney(dailyAverageMinor, currency)}</dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-sm text-ink-2">Expenses logged</dt>
-            <dd className="mt-0.5 text-xl font-bold tabular-nums">{expenseCount}</dd>
-          </div>
-        </dl>
-      )}
-
       {periods.length > 0 && (
-        <section aria-label="Recent spending" className="mt-4 grid grid-cols-3 gap-2">
+        <section aria-label="Recent spending" className="mt-5 grid grid-cols-3 gap-2">
           {periods.map((p) => {
             const spent = formatMoney(p.amountMinor, currency)
             const body = (
