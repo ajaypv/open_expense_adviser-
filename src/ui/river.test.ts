@@ -9,10 +9,10 @@ const points = (d: string) =>
 
 describe('widthFor', () => {
   it('is narrow for a quiet day and broad for the biggest, between a floor and a ceiling', () => {
-    expect(widthFor(0)).toBe(2.5)
-    expect(widthFor(1)).toBe(8)
-    expect(widthFor(-3)).toBe(2.5)
-    expect(widthFor(7)).toBe(8)
+    expect(widthFor(0)).toBe(4)
+    expect(widthFor(1)).toBe(9)
+    expect(widthFor(-3)).toBe(4)
+    expect(widthFor(7)).toBe(9)
   })
 
   it('grows with the day, quickly at first so a small day is still seen', () => {

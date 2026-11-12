@@ -26,6 +26,8 @@ interface Props {
 const STEP = 30
 /** Where the dot sits down the row, so the line runs from dot to dot. */
 const DOT_Y = '1.7rem'
+/** How far below the top of the scrolling area a date stops when its day is scrolled past, and stays until the next day takes its place. */
+const STICK_TOP = '0.5rem'
 
 /**
  * The colour of a day by how much was spent on it, against the biggest day shown: a calm teal for little or nothing, through amber,
@@ -133,6 +135,8 @@ function RiverBase({ from, to, wFrom, wTo, edge, top = DOT_Y, left = '50%' }: { 
 
 let weekdayFormat: Intl.DateTimeFormat | undefined
 const weekdayOf = (date: string) => (weekdayFormat ??= new Intl.DateTimeFormat(undefined, { weekday: 'short' })).format(parseLocalDate(date))
+let longWeekdayFormat: Intl.DateTimeFormat | undefined
+const longWeekdayOf = (date: string) => (longWeekdayFormat ??= new Intl.DateTimeFormat(undefined, { weekday: 'long' })).format(parseLocalDate(date))
 /** The day of the month, as a number. */
 const dateOf = (date: string) => parseLocalDate(date).getDate()
 
@@ -155,12 +159,22 @@ function DateChip({ date }: { date: string }) {
  * it as the page is scrolled, then fills in the colour for how much was spent on it; today's gives out a ring now and then, as a
  * ping. The river runs from this dot to the next, from one colour into the next's, and stops at the foot of the row when a month
  * heading comes next, which carries it on.
+ *
+ * The dot sticks: as the day is scrolled past (a long one, opened, can be taller than the screen) it stays at the top, riding the line,
+ * until the next day's dot comes up and pushes it off. While it is stuck a pill opens out behind it with the date and the weekday in
+ * words, so you can tell which day you are in (a browser that cannot tell when a thing is stuck leaves the dot as it is).
  */
-function Spine({ color, next, wFrom, wTo, today, edge, children }: { color: string; next: string | null; wFrom: number; wTo: number; today?: boolean; edge?: boolean; children: React.ReactNode }) {
+function Spine({ color, next, wFrom, wTo, today, edge, label, children }: { color: string; next: string | null; wFrom: number; wTo: number; today?: boolean; edge?: boolean; label?: { main: string; sub?: string }; children: React.ReactNode }) {
   return (
     <div aria-hidden="true" className="relative">
       {next !== null && <River from={color} to={next} wFrom={wFrom} wTo={wTo} edge={edge} />}
-      <span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ top: DOT_Y }}>
+      <span data-stick className="tl-stick sticky z-10 mx-auto block size-[2.625rem]" style={{ top: STICK_TOP, marginTop: `calc(${DOT_Y} - 1.3125rem)` }}>
+        {label && (
+          <span data-pill className="tl-pill pointer-events-none absolute -inset-y-1 -left-1 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-surface/90 pl-[3.25rem] pr-4 shadow-[0_0_0_1px_var(--ring)] backdrop-blur-md">
+            <span className="font-semibold">{label.main}</span>
+            {label.sub && <span className="text-ink-2">{label.sub}</span>}
+          </span>
+        )}
         {today && <span className="tl-ping absolute inset-0 rounded-full" style={{ color }} />}
         <span data-dot className="tl-dot relative flex size-[2.625rem] flex-col items-center justify-center rounded-full leading-none" style={{ '--c': color } as CSSProperties}>
           {children}
@@ -169,6 +183,9 @@ function Spine({ color, next, wFrom, wTo, today, edge, children }: { color: stri
     </div>
   )
 }
+
+/** What the pill says for a day: the date, then the weekday, like "18 Feb Wednesday". */
+const pillOf = (date: string) => ({ main: shortLabel(date), sub: longWeekdayOf(date) })
 
 interface DayProps {
   day: TimelineDay
@@ -200,7 +217,7 @@ function DayRowBase({ day, look, max, color, next, edge, wFrom, wTo, open, onTog
 
   return (
     <li ref={watch} data-seen={seen} data-day={day.date} className="when-seen grid grid-cols-[3rem_minmax(0,1fr)] gap-x-2" style={delayOf(0)}>
-      <Spine color={color} next={next} edge={edge} wFrom={wFrom} wTo={wTo} today={day.daysAgo === 0}>
+      <Spine color={color} next={next} edge={edge} wFrom={wFrom} wTo={wTo} today={day.daysAgo === 0} label={pillOf(day.date)}>
         <DateChip date={day.date} />
       </Spine>
       <div className="pb-4">
@@ -305,7 +322,7 @@ function QuietRowBase({ row, color, next, edge, wFrom, wTo }: { row: Extract<Tim
   const one = row.count === 1
   return (
     <li data-quiet={row.to} className="grid grid-cols-[3rem_minmax(0,1fr)] gap-x-2">
-      <Spine color={color} next={next} edge={edge} wFrom={wFrom} wTo={wTo}>
+      <Spine color={color} next={next} edge={edge} wFrom={wFrom} wTo={wTo} label={one ? pillOf(row.to) : { main: `${shortLabel(row.from)} – ${shortLabel(row.to)}` }}>
         {one ? <DateChip date={row.to} /> : <Icon name="check" size={18} />}
       </Spine>
       <div className="pb-4 pt-3.5">
