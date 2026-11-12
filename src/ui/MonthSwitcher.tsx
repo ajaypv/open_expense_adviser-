@@ -43,10 +43,7 @@ export function MonthSwitcher({ month, currentMonth, onChange, activeMonths }: P
 
   return (
     <div className="py-1">
-      <div role="group" aria-label="Month" {...swipe} className="flex touch-pan-y items-center justify-between">
-        <button type="button" onClick={() => onChange(shiftMonth(month, -1))} aria-label="Previous month" className={arrow}>
-          <Icon name="chevLeft" />
-        </button>
+      <div role="group" aria-label="Month" {...swipe} className="flex touch-pan-y items-center justify-between gap-3">
         <button
           type="button"
           onClick={() => {
@@ -55,14 +52,20 @@ export function MonthSwitcher({ month, currentMonth, onChange, activeMonths }: P
           }}
           aria-haspopup="dialog"
           aria-label={`${monthLabel(month)}. Choose a month`}
-          className="flex min-h-11 items-center gap-1.5 rounded-full px-3 font-medium hover:bg-surface-2"
+          className="-ml-3 flex min-h-11 min-w-0 items-center gap-1.5 rounded-full px-3 text-lg font-semibold tracking-tight hover:bg-surface-2"
         >
-          {monthLabel(month)}
+          <span className="truncate">{monthLabel(month)}</span>
           <Icon name="chevDown" size={16} />
         </button>
-        <button type="button" onClick={() => onChange(shiftMonth(month, 1))} disabled={atCurrent} aria-label="Next month" className={arrow}>
-          <Icon name="chevRight" />
-        </button>
+        <div className="flex shrink-0 items-center rounded-full bg-surface shadow-[0_0_0_1px_var(--ring)]">
+          <button type="button" onClick={() => onChange(shiftMonth(month, -1))} aria-label="Previous month" className={arrow}>
+            <Icon name="chevLeft" />
+          </button>
+          <span aria-hidden="true" className="h-5 w-px bg-line" />
+          <button type="button" onClick={() => onChange(shiftMonth(month, 1))} disabled={atCurrent} aria-label="Next month" className={arrow}>
+            <Icon name="chevRight" />
+          </button>
+        </div>
       </div>
 
       {!atCurrent && (
