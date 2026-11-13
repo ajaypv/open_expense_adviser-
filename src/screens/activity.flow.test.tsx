@@ -80,6 +80,52 @@ describe('Activity: the list', () => {
   })
 })
 
+describe('Activity: the pattern of the other pages', () => {
+  it('says how many and how much from the start, with the figures in bold, not only when something is filtered', async () => {
+    await tx({ merchant: 'Swiggy', amountMinor: 45_000 })
+    await tx({ merchant: 'Uber', amountMinor: 23_000 })
+    await tx({ merchant: 'Employer', kind: 'income', amountMinor: 500_000, date: daysAgo(1) })
+    mount()
+    const line = (await screen.findByText(/3 transactions:/)).closest('p')!
+    expect(line.textContent).toBe('3 transactions: ₹680 spent, ₹5,000 received')
+    expect(Array.from(line.querySelectorAll('b')).map((b) => b.textContent)).toEqual(['₹680', '₹5,000'])
+    expect(line.querySelector('b.text-good')!.textContent).toBe('₹5,000')
+  })
+
+  it('has no summary line when there is nothing to add up', async () => {
+    mount()
+    await screen.findByText(/Nothing here yet/)
+    expect(screen.queryByText(/transactions?:/)).toBeNull()
+  })
+
+  it('sets the total of each day in the bold number face', async () => {
+    await tx({ merchant: 'Swiggy', amountMinor: 45_000 })
+    mount()
+    const today = await screen.findByRole('region', { name: 'Today' })
+    const total = within(today).getByText('₹450', { selector: 'span.num' })
+    expect(total).toBeInTheDocument()
+  })
+
+  it('gives each category chip a round icon of its category, not a dot', async () => {
+    await tx({ merchant: 'Swiggy', categoryId: await categoryId('Food & Dining') })
+    mount()
+    const chip = await screen.findByRole('button', { name: 'Food & Dining' })
+    const icon = chip.querySelector('[data-icon]')!
+    expect(icon.getAttribute('data-icon')).toBe('utensils')
+    expect(icon.className).toContain('rounded-full')
+    expect(chip.querySelector('[class*="size-2.5"]')).toBeNull()
+  })
+
+  it('does not tell the category twice on a row: the icon says it, the words say its name once', async () => {
+    await tx({ merchant: 'Swiggy', categoryId: await categoryId('Food & Dining') })
+    mount()
+    const rowButton = await row('Edit spent Swiggy')
+    expect(rowButton.querySelector('[data-icon="utensils"]')).not.toBeNull()
+    expect(rowButton.querySelector('.size-2.shrink-0.rounded-full')).toBeNull()
+    expect(within(rowButton).getByText('Food & Dining')).toBeInTheDocument()
+  })
+})
+
 describe('Activity: search and filters', () => {
   const seed = async () => {
     await tx({ merchant: 'Swiggy', amountMinor: 45_000, categoryId: await categoryId('Food & Dining') })

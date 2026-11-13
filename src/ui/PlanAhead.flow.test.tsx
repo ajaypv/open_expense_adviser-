@@ -232,7 +232,7 @@ describe('PlanAhead: colours', () => {
   })
 })
 
-describe('PlanAhead: the sentence picks out its two figures', () => {
+describe('PlanAhead: the sentence picks out its two figures in pills', () => {
   it('sets only the number 30 in bold, and the word days normal', () => {
     mount([emi, rent, salary])
     const days = Array.from(section().querySelectorAll('p b')).find((b) => b.textContent === '30')!
@@ -241,7 +241,7 @@ describe('PlanAhead: the sentence picks out its two figures', () => {
     expect(days.parentElement!.textContent).toMatch(/^In the next 30 days, /)
   })
 
-  it('underlines what goes out and what comes in, each with its own marker', () => {
+  it('sets what goes out and what comes in each in its own pill, in its own colour', () => {
     mount([emi, rent, salary])
     const out = section().querySelector('.mark-out')!
     const inn = section().querySelector('.mark-in')!
@@ -261,7 +261,7 @@ describe('PlanAhead: the sentence picks out its two figures', () => {
     expect(section().querySelector('.mark-out')!.textContent).toMatch(/^₹[\d,]+$/)
   })
 
-  it('has no marker for money in when none comes in', () => {
+  it('has no pill for money in when none comes in', () => {
     mount([emi, rent])
     expect(section().querySelector('.mark-out')).not.toBeNull()
     expect(section().querySelector('.mark-in')).toBeNull()

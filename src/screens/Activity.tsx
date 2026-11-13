@@ -27,6 +27,7 @@ import {
 } from '../insights/filters'
 import { newestFirst } from '../insights/order'
 import { useBackClose } from '../ui/backStack'
+import { categoryIcon } from '../ui/categoryIcon'
 import { Icon } from '../ui/Icon'
 import { PickerField } from '../ui/PickerField'
 import { ScreenSkeleton } from '../ui/ScreenSkeleton'
@@ -190,7 +191,6 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
   }, [filtered, limit])
 
   const activeFilters = countActive(filters)
-  const filtering = query.trim() !== '' || categoryFilter !== null || activeFilters > 0
   const amountConflict = filters.minMinor !== null && filters.maxMinor !== null && filters.minMinor > filters.maxMinor
   const whenNow = presetOf(filters, today)
 
@@ -474,9 +474,16 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
             type="button"
             aria-pressed={categoryFilter === c.id}
             onClick={() => onCategoryFilter(categoryFilter === c.id ? null : c.id)}
-            className={chip}
+            className={`${chip} pl-2`}
           >
-            <span aria-hidden="true" className="size-2.5 rounded-full" style={{ background: c.color }} />
+            <span
+              aria-hidden="true"
+              data-icon={categoryIcon(c.name)}
+              className="flex size-7 items-center justify-center rounded-full text-ink"
+              style={{ background: `color-mix(in oklab, ${c.color} 22%, var(--surface))` }}
+            >
+              <Icon name={categoryIcon(c.name)} size={15} />
+            </span>
             {c.name}
           </button>
         ))}
@@ -500,19 +507,19 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
         </ul>
       )}
 
-      {filtering && (
-        <p className="mt-4 text-ink-2" aria-live="polite">
-          {filtered.length > 0 && filtered.every((t) => t.kind === 'transfer') ? (
+      {filtered.length > 0 && (
+        <p className="mt-4 px-1 text-[1.0625rem] leading-[1.6] text-ink-2" aria-live="polite">
+          {filtered.every((t) => t.kind === 'transfer') ? (
             <>
-              {`${filtered.length} ${filtered.length === 1 ? 'transfer' : 'transfers'}:`} <span className="font-semibold text-ink">{formatMoney(sum(filtered), currency)}</span> moved
+              {`${filtered.length} ${filtered.length === 1 ? 'transfer' : 'transfers'}:`} <b className="num text-ink">{formatMoney(sum(filtered), currency)}</b> moved
             </>
           ) : (
             <>
               {filtered.length} {filtered.length === 1 ? 'transaction' : 'transactions'}:{' '}
-              <span className="font-semibold text-ink">{formatMoney(sentOf(filtered), currency)}</span> spent
+              <b className="num text-ink">{formatMoney(sentOf(filtered), currency)}</b> spent
               {receivedOf(filtered) > 0 && (
                 <>
-                  , <span className="font-semibold text-ink">{formatMoney(receivedOf(filtered), currency)}</span> received
+                  , <b className="num text-good">{formatMoney(receivedOf(filtered), currency)}</b> received
                 </>
               )}
             </>
@@ -545,15 +552,15 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
                     {heading.label}
                     {heading.detail && <span className="ml-2 text-sm font-normal text-ink-2">{heading.detail}</span>}
                   </h2>
-                  <p className="shrink-0 text-[0.9375rem] text-ink-2 tabular-nums">
+                  <p className="shrink-0 text-[0.9375rem] text-ink-2">
                     {sent > 0 && (
                       <>
                         <span className="sr-only">Spent </span>
-                        {formatMoney(sent, currency)}
+                        <span className="num text-ink">{formatMoney(sent, currency)}</span>
                       </>
                     )}
                     {received > 0 && (
-                      <span className={`text-good ${sent > 0 ? 'ml-2' : ''}`}>
+                      <span className={`num text-good ${sent > 0 ? 'ml-2' : ''}`}>
                         <span className="sr-only">Received </span>+{formatMoney(received, currency)}
                       </span>
                     )}

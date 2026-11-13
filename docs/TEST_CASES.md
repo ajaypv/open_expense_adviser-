@@ -728,12 +728,15 @@ The same pattern on every part of Home: a round icon says what a line is about, 
 
 | ID | Case | Do | Expect | Covered by |
 |---|---|---|---|---|
-| PAT-1 | Plan ahead sentence | Look under Plan ahead | "In the next **30** days, ↑ **₹23,445** goes out and ↓ **₹85,000** comes in.": only the number 30 is bold, not "days"; each amount has an arrow (up for what leaves, down for what arrives) and a soft marker stroke under it, blue-tinted for out and green for in; the arrows are for the eye only | Auto: `PlanAhead.flow`; look by eye |
+| PAT-1 | Plan ahead sentence | Look under Plan ahead | "In the next **30** days, ↑ **₹23,445** goes out and ↓ **₹85,000** comes in.": only the number 30 is bold, not "days"; each amount has an arrow (up for what leaves, down for what arrives) and sits in a small pill with an even pale wash all round it, blue-tinted for out and green for in, so nothing crosses the digits; the arrows are for the eye only | Auto: `PlanAhead.flow`; look by eye |
 | PAT-2 | Summary card | Look at the card at the top of Home | A small round up-arrow before "Spent so far in November"; in the line under the amount the expense count, the daily average and the budget are bold; Today, Yesterday and Last 7 days are three even soft tiles | Auto: `SpendingOverview`; look by eye |
 | PAT-3 | Day by day | Look at the Day by day card | "₹450 over 13 days": the amount and the number are bold; in each line under the chart (Biggest day, days with nothing spent, weekends against weekdays) the figures are bold and the words are not | Auto: `Figures`, `days`, `DayChart.flow`; look by eye |
 | PAT-4 | Where it went | Look at the list of categories | Each category has a round icon in a pale wash of its colour in place of the dot; the amount is bold; the bar is as it was | Auto: `categoryMotion.flow`; look by eye |
 | PAT-5 | Understand your spending | Look at the card | A round icon of the top category leads the sentence, and the share ("100%") is bold | Auto: `InsightCard` |
 | PAT-6 | Received and balance | Look under Plan ahead | Two soft tiles side by side, each with a round icon (an arrow down for what was received, a bank for the balance), not two columns split by a line | Auto: `WalletPanel`; look by eye |
+| PAT-7 | Activity summary | Open Activity with some transactions, then search or filter | A line under the filters says how many and how much from the start: "2 transactions: **₹900** spent" (and ", **₹5,000** received" in green when money came in; "moved" for transfers only); the figures are bold; it follows every search and filter; with nothing to add up there is no line | Auto: `activity.flow`; look by eye |
+| PAT-8 | Activity days and rows | Look at a day in the list | The day total in the heading is bold (spent in ink, received in green); a row has its round category icon and the category name once, with no coloured dot beside it | Auto: `activity.flow`, `TxRow`; look by eye |
+| PAT-9 | Activity category chips | Look at the row of category chips | Each chip leads with a small round icon of its category in a pale wash of its colour, not a dot | Auto: `activity.flow`; look by eye |
 
 ## Category bubbles
 

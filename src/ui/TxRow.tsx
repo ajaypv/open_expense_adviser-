@@ -96,10 +96,7 @@ export const TxRow = memo(function TxRow({ tx, category, currency, accountById, 
         <span className="mt-0.5 flex items-center gap-2 text-sm text-ink-2">
           {route && <span className="truncate">{route}</span>}
           {showCategory && (
-            <span className="flex min-w-0 items-center gap-1.5">
-              <span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: color }} />
-              <span className="truncate">{categoryName}</span>
-            </span>
+            <span className="truncate">{categoryName}</span>
           )}
           {delivery && (
             <span
