@@ -117,7 +117,7 @@ describe('PlanAhead: around it', () => {
     expect(strip.className).toContain('overflow-x-auto')
     expect(strip.className).toContain('snap-x')
     expect(strip.querySelectorAll(':scope > li')).toHaveLength(4) // rent, salary, EMI, to pay
-    expect(strip.querySelectorAll('[data-leaf]')).toHaveLength(3) // each payment has its date as a leaf
+    expect(strip.querySelectorAll('[data-icon]')).toHaveLength(3) // each payment has a round icon of what it is for
     const text = strip.textContent!
     expect(text.indexOf('Rent')).toBeLessThan(text.indexOf('Salary'))
     expect(text.indexOf('Salary')).toBeLessThan(text.indexOf('Home loan'))
@@ -218,7 +218,7 @@ describe('PlanAhead: colours', () => {
     cleanup()
     const ledger = makeLedger({ categories: cats, expenseCategories: cats, categoryById: new Map(cats.map((c) => [c.id, c])), recurring: rules })
     render(<PlanAhead ledger={ledger} today={today} />)
-    return Array.from(section().querySelectorAll<HTMLElement>('[data-leaf]')).map((l) => l.getAttribute('data-colour'))
+    return Array.from(section().querySelectorAll<HTMLElement>('[data-soon]')).map((l) => l.getAttribute('data-colour'))
   }
 
   it('gives each card its category colour, for its bar and badge, so they do not all look alike', () => {
@@ -244,17 +244,19 @@ describe('PlanAhead: compact cards and a better scroll', () => {
       expect(c.className).toContain('w-[12.5rem]')
       expect(c.className).not.toContain('w-[16rem]')
     }
-    const leaf = strip().querySelector<HTMLElement>('[data-leaf]')!.parentElement!
-    expect(leaf.style.width).toBe('44px')
-    expect(strip().querySelectorAll('[data-leaf] ~ [data-icon]')).toHaveLength(cards.length)
+    // A round icon leads each card, as in a list; there is no calendar tile with a badge on it, and the date is in words at the foot.
+    const icons = strip().querySelectorAll<HTMLElement>('[data-icon]')
+    expect(icons).toHaveLength(cards.length)
+    expect(icons[0].style.width).toBe('40px')
+    expect(icons[0].className).toContain('rounded-full')
+    expect(strip().querySelector('[data-leaf]')).toBeNull()
   })
 
-  it('keeps the cards plain: no wash of colour on a card or its date leaf, only the thin bar carries the category colour', () => {
+  it('keeps the cards plain: no wash of colour on a card, only the thin bar carries the category colour', () => {
     mount([emi, rent])
     const card = strip().querySelector<HTMLElement>('li[data-kind] > div')!
     expect(card.style.background).toBe('var(--surface)')
     expect(card.style.boxShadow).toBe('0 0 0 1px var(--ring)')
-    expect(strip().querySelector<HTMLElement>('[data-leaf]')!.style.background).toBe('var(--surface-2)')
     expect(card.querySelector<HTMLElement>('.bar-grow')!.style.background).toContain('var(--s1)')
   })
 
