@@ -110,10 +110,11 @@ describe('Timeline: the days', () => {
     const single = document.querySelector('[data-quiet="2026-11-04"]')!
     const run = document.querySelector('[data-quiet="2026-11-02"]')!
     // One plain line, with a tick: no band of colour and no praise.
-    expect(single).toHaveTextContent(/^No spending on .+$/)
-    expect(run).toHaveTextContent(/^2 days with no spending, .+ to .+$/)
+    const line = (li: Element) => li.querySelector('p')!
+    expect(line(single)).toHaveTextContent(/^No spending on .+$/)
+    expect(line(run)).toHaveTextContent(/^2 days with no spending, .+ to .+$/)
     expect(single).not.toHaveTextContent(/done/i)
-    expect(single.querySelector('p')!.getAttribute('style')).toBeNull()
+    expect(line(single).getAttribute('style')).toBeNull()
   })
 
   it('shows each day as a bar of what it went on, as long as the day is against the biggest', () => {
