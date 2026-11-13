@@ -76,11 +76,11 @@ describe('Home', () => {
 
   it('shows suggestions on Home only when it is given some, and only for the current month', () => {
     const html = render(false, 0, [regular])
-    expect(html).toContain('Suggested for now')
+    expect(html).toContain('Add again, one tap')
     expect(html).toContain('Usually on Wednesdays')
     expect(html).toContain('₹450')
-    expect(render(false, 0, [])).not.toContain('Suggested for now') // placement is elsewhere, or off
-    expect(render(false, 0, [regular], '2026-09')).not.toContain('Suggested for now') // a past month
+    expect(render(false, 0, [])).not.toContain('Add again, one tap') // placement is elsewhere, or off
+    expect(render(false, 0, [regular], '2026-09')).not.toContain('Add again, one tap') // a past month
   })
 
   it('does not list the transactions or draw the ribbon of where the money flows: each is a button to its own place', () => {
@@ -213,15 +213,17 @@ describe('Home: the budget invitation', () => {
   it('sits below the suggestions, and above the day-by-day chart', () => {
     const html = renderBudget(null, '2026-10', true)
     const at = (s: string) => html.indexOf(s)
-    expect(at('Suggested for now')).toBeGreaterThan(-1)
-    expect(at('Set a monthly budget')).toBeGreaterThan(at('Suggested for now'))
+    expect(at('Add again, one tap')).toBeGreaterThan(-1)
+    expect(at('Set a monthly budget')).toBeGreaterThan(at('Add again, one tap'))
     expect(at('Set a monthly budget')).toBeLessThan(at('Day by day'))
   })
 
-  it('shows the suggestions as tiles with a line saying what to do', () => {
+  it('shows the suggestions as round pills that add at once, with the reason for a screen reader', () => {
     const html = renderBudget(3_000_000, '2026-10', true)
-    expect(html).toContain('Your usual ones around this time. Tap + to add one now, or tap the tile to check it first.')
-    expect(html).toContain('w-[9.5rem]') // a tile, not a slim chip
+    expect(html).toContain('Add again, one tap')
+    expect(html).toContain('data-quick')
+    expect(html).not.toContain('w-[9.5rem]') // not a tile
+    expect(html).not.toContain('Your usual ones around this time')
     expect(html).toContain('Usually on Wednesdays')
   })
 

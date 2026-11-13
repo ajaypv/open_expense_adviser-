@@ -49,6 +49,8 @@ describe('The budget invitation on Home', () => {
     await open()
     await screen.findByRole('region', { name: 'Summary' })
     expect(screen.queryByRole('region', { name: 'Budget' })).toBeNull()
-    expect(screen.getByRole('meter', { name: 'Monthly budget used' })).toBeInTheDocument()
+    // With a budget the summary leads with what can be spent today, and the bar of the month stands where the meter did.
+    expect(await screen.findByText('You can spend today')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /spent of ₹30,000/ })).toBeInTheDocument()
   })
 })

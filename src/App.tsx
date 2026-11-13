@@ -35,6 +35,7 @@ import { LockScreen } from './security/LockScreen'
 import { useLockState, watchVisibility } from './security/lock'
 import { useTheme } from './theme/useTheme'
 import { AddSheet } from './ui/AddSheet'
+import { QuickAdd, type QuickEntry } from './ui/QuickAdd'
 import { useBackClose } from './ui/backStack'
 import { spendIcon } from './ui/categoryIcon'
 import { BottomNav, TABS, type Tab } from './ui/BottomNav'
@@ -109,6 +110,8 @@ function Shell() {
   const monthRef = useRef(month)
   monthRef.current = month
   const [sheet, setSheet] = useState<Sheet>({ open: false, editing: null, prefill: null, startKind: 'expense' })
+  // The quick way to add an expense; the count starts it afresh each time it is opened, so nothing typed last time is left in it.
+  const [quick, setQuick] = useState({ open: false, n: 0 })
   const [goalsOpen, setGoalsOpen] = useState(false)
   const [cardsOpen, setCardsOpen] = useState(false)
   const [goalSheet, setGoalSheet] = useState<GoalSheetState>({ open: false, goal: null, n: 0 })
@@ -344,7 +347,54 @@ function Shell() {
     (kind: Transaction['kind'] = 'expense') => setSheet({ open: true, editing: null, prefill: null, startKind: kind }),
     [],
   )
-  const openAddDefault = useCallback(() => openAdd('expense'), [openAdd])
+  // The plus on the input bar, and every "add" on a screen, open the quick way to add an expense; the full form is under its "More options".
+  const openAddDefault = useCallback(() => setQuick((q) => ({ open: true, n: q.n + 1 })), [])
+  const closeQuick = useCallback(() => setQuick((q) => ({ ...q, open: false })), [])
+  const moreOptions = useCallback(() => {
+    setQuick((q) => ({ ...q, open: false }))
+    openAdd('expense')
+  }, [openAdd])
+  // What goes in the chips, most used first, so the likely one is within reach.
+  const quickCategories = useMemo(() => {
+    const used = new Map<number, number>()
+    for (const t of ledger.expenses) used.set(t.categoryId, (used.get(t.categoryId) ?? 0) + 1)
+    return [...ledger.expenseCategories].sort((a, b) => (used.get(b.id) ?? 0) - (used.get(a.id) ?? 0))
+  }, [ledger.expenses, ledger.expenseCategories])
+  const learnedFor = useCallback((merchant: string) => learnedCategoryId(merchant, dataRef.current.txs, dataRef.current.categoryById), [])
+  const saveQuick = useCallback(
+    async (e: QuickEntry) => {
+      const { txs, categoryById } = dataRef.current
+      try {
+        const id = await addTransaction({
+          kind: 'expense',
+          amountMinor: e.amountMinor,
+          currency,
+          categoryId: e.categoryId,
+          merchant: e.merchant,
+          note: '',
+          date: e.date,
+          // How you usually pay for this name, as when it is typed in the bar.
+          paymentMethod: e.merchant ? learnedPaymentMethod(e.merchant, 'expense', txs) : '',
+          source: 'manual',
+        })
+        void attachLocation(id) // no-op unless the user turned location recording on
+        setMonth(monthOf(e.date)) // show the month it landed in
+        const cat = categoryById.get(e.categoryId)
+        const when = describeDay(e.date)
+        toast({
+          message: `Added ${formatMoney(e.amountMinor, currency)} to ${cat?.name ?? 'Other'}${when ? `, ${when}` : ''}`,
+          actionLabel: 'Undo',
+          onAction: () => void purgeTransaction(id),
+          icon: spendIcon(e.merchant, cat?.name),
+          color: cat?.color,
+        })
+      } catch (err) {
+        toast({ message: err instanceof Error ? err.message : 'Couldn’t add that. Try again.' })
+        throw err
+      }
+    },
+    [currency, toast],
+  )
   const openEdit = useCallback((tx: LedgerTx) => setSheet({ open: true, editing: tx, prefill: null, startKind: 'expense' }), [])
   const openSuggestion = useCallback((s: Suggestion) => setSheet({ open: true, editing: null, prefill: s, startKind: s.kind }), [])
 
@@ -542,6 +592,8 @@ function Shell() {
         startKind={sheet.startKind}
         onClose={closeSheet}
       />
+
+      <QuickAdd key={`quick-${quick.n}`} open={quick.open} onClose={closeQuick} categories={quickCategories} currency={ledger.currency} today={today} onSave={saveQuick} learned={learnedFor} onMore={moreOptions} />
 
       <CardsSheet open={cardsOpen} onClose={closeCards} ledger={ledger} today={today} onEdit={openEdit} />
 

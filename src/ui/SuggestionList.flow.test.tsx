@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '../test/dom'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Category } from '../db/schema'
 import type { Suggestion } from '../insights/suggestions'
@@ -139,5 +139,60 @@ describe('SuggestionList tiles: once added', () => {
     fireEvent.click(plus('Add Swiggy, ₹450 now'))
     await flush()
     expect(plus('Added Swiggy')).toBeInTheDocument()
+  })
+})
+
+describe('SuggestionList pills: one tap adds', () => {
+  const pill = (name: string | RegExp) => screen.getByRole('button', { name })
+
+  it('is one round button each with the name and the usual amount, and nothing else', () => {
+    mount([swiggy], { variant: 'quick' })
+    expect(screen.getAllByRole('button')).toHaveLength(1)
+    const button = pill(/^Add Swiggy, ₹450 now/)
+    expect(button).toHaveTextContent('Swiggy₹450')
+    expect(button.className).toContain('rounded-full')
+    expect(button.className).toContain('min-h-12')
+  })
+
+  it('says why it is suggested for a screen reader, since the pill itself does not', () => {
+    mount([swiggy], { variant: 'quick' })
+    expect(pill('Add Swiggy, ₹450 now. Usually in the evening')).toBeInTheDocument()
+  })
+
+  it('adds straight away on a tap, without opening the form', async () => {
+    const { onPick, onQuickAdd } = mount([swiggy], { variant: 'quick' })
+    fireEvent.click(pill(/^Add Swiggy/))
+    await flush()
+    expect(onQuickAdd).toHaveBeenCalledWith(swiggy)
+    expect(onPick).not.toHaveBeenCalled()
+  })
+
+  it('shows a tick after it is added, and cannot be added again for a moment', async () => {
+    vi.useFakeTimers()
+    const { onQuickAdd } = mount([swiggy], { variant: 'quick' })
+    fireEvent.click(pill(/^Add Swiggy/))
+    await flush()
+    const done = screen.getByRole('button', { name: 'Added Swiggy' })
+    expect(done).toBeDisabled()
+    expect(done.querySelector('svg')).not.toBeNull()
+    fireEvent.click(done)
+    expect(onQuickAdd).toHaveBeenCalledTimes(1)
+  })
+
+  it('opens the form instead, with nothing to add it with, and for a transfer', () => {
+    const { onPick, onQuickAdd } = mount([{ ...swiggy, kind: 'transfer' }], { variant: 'quick' })
+    fireEvent.click(screen.getByRole('button'))
+    expect(onPick).toHaveBeenCalledTimes(1)
+    expect(onQuickAdd).not.toHaveBeenCalled()
+    cleanup()
+    const alone = render(<SuggestionList items={[swiggy]} categoryById={categories} currency="INR" onPick={onPick} tone="page" variant="quick" />)
+    fireEvent.click(alone.getByRole('button'))
+    expect(onPick).toHaveBeenCalledTimes(2)
+  })
+
+  it('shows money received with a plus and in green', () => {
+    mount([employer], { variant: 'quick' })
+    expect(pill(/^Add Employer, \+₹80,000 now/)).toHaveTextContent('Employer+₹80,000')
+    expect(screen.getByText('+₹80,000')).toHaveClass('text-good')
   })
 })

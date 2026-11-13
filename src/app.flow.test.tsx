@@ -194,10 +194,33 @@ describe('Logging from the input bar', () => {
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
   })
 
-  it('opens the full form from the plus button', async () => {
+  it('opens the quick add from the plus button, and the full form from More options inside it', async () => {
     const user = await open()
-    await user.click(await screen.findByRole('button', { name: 'Add with the full form' }))
+    await user.click(await screen.findByRole('button', { name: 'Add an expense' }))
+    const quick = await screen.findByRole('dialog', { name: 'New expense' })
+    expect(within(quick).getByRole('group', { name: 'Number pad' })).toBeInTheDocument()
+    await user.click(within(quick).getByRole('button', { name: 'More options' }))
     expect(await screen.findByRole('dialog', { name: 'New transaction' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'New expense' })).toBeNull()
+  })
+
+  it('adds an expense from the number pad, with the day, the likely category and an Undo that takes it away', async () => {
+    const user = await open()
+    await user.click(await screen.findByRole('button', { name: 'Add an expense' }))
+    const quick = await screen.findByRole('dialog', { name: 'New expense' })
+    for (const key of ['4', '5', '0']) await user.click(within(quick).getByRole('button', { name: key }))
+    await user.type(within(quick).getByLabelText(/What was it/), 'lunch at Cafe')
+    expect(within(quick).getByTestId('quick-amount')).toHaveTextContent('₹450')
+    await user.click(within(quick).getByRole('button', { name: 'Yesterday' }))
+    await user.click(within(quick).getByRole('button', { name: 'Add ₹450' }))
+    await waitFor(async () => expect((await db.transactions.toArray()).filter((t) => t.merchant === 'lunch at Cafe')).toHaveLength(1))
+    const saved = (await db.transactions.toArray()).find((t) => t.merchant === 'lunch at Cafe')!
+    expect(saved).toMatchObject({ kind: 'expense', amountMinor: 45_000, source: 'manual' })
+    expect(saved.date).not.toBe(localDateString())
+    expect(await screen.findByText(/^Added ₹450 to .*, yesterday$/)).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'New expense' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Undo' }))
+    await waitFor(async () => expect((await db.transactions.toArray()).filter((t) => t.merchant === 'lunch at Cafe')).toHaveLength(0))
   })
 })
 

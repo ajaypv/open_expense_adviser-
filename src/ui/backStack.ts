@@ -8,7 +8,9 @@ import { useEffect, useRef } from 'react'
  * and we close the most recently opened thing. If something is still open underneath, the step is put back, so the
  * next press closes that, and so on. When nothing is open there is no extra step, and back leaves the app as usual.
  *
- * Closing something with its own button gives its place up, and steps back over the extra step quietly.
+ * Closing something with its own button gives its place up, and steps back over the extra step quietly. That step back is made a
+ * moment later, not at once: when one sheet closes as another opens in the same tap (the quick add handing over to the full form),
+ * the new one simply takes over the step that is there, instead of a step back and a new step crossing in the browser.
  */
 
 interface Entry {
@@ -21,6 +23,8 @@ const GUARD = { expenseTrackerBack: true }
 /** Back steps we took ourselves, to remove the extra step: not the person pressing back. */
 let ours = 0
 let listening = false
+/** The extra step is to be removed once the current update has finished, unless something opens meanwhile and takes it over. */
+let removing = false
 
 function onPop(e: PopStateEvent) {
   if (ours > 0) {
@@ -59,15 +63,22 @@ if (typeof window !== 'undefined' && (history.state as { expenseTrackerBack?: bo
 export function pushBackEntry(close: () => void): () => void {
   listen()
   const entry: Entry = { close }
-  if (stack.length === 0) history.pushState(GUARD, '')
+  // Something opening in the same breath as another closed takes over the step that is there.
+  if (removing) removing = false
+  else if (stack.length === 0) history.pushState(GUARD, '')
   stack.push(entry)
   return () => {
     const i = stack.indexOf(entry)
     if (i === -1) return // back already closed it
     stack.splice(i, 1)
     if (stack.length === 0) {
-      ours++
-      history.back()
+      removing = true
+      queueMicrotask(() => {
+        if (!removing || stack.length > 0) return
+        removing = false
+        ours++
+        history.back()
+      })
     }
   }
 }
@@ -79,6 +90,7 @@ export const backDepth = () => stack.length
 export function resetBackStack() {
   stack.length = 0
   ours = 0
+  removing = false
 }
 
 /**

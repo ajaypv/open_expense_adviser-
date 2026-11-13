@@ -114,10 +114,21 @@ describe('The back button closes what is open, and only that', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Goals' })).toBeNull())
   })
 
-  it('closes the add form', async () => {
+  it('closes the quick add', async () => {
     await tx()
     const user = await open()
-    await user.click(await screen.findByRole('button', { name: 'Add with the full form' }))
+    await user.click(await screen.findByRole('button', { name: 'Add an expense' }))
+    expect(await screen.findByRole('dialog', { name: 'New expense' })).toBeInTheDocument()
+    await pressBack()
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New expense' })).toBeNull())
+    expect(current()).toHaveAccessibleName('Home')
+  })
+
+  it('closes the full form opened from More options', async () => {
+    await tx()
+    const user = await open()
+    await user.click(await screen.findByRole('button', { name: 'Add an expense' }))
+    await user.click(within(await screen.findByRole('dialog', { name: 'New expense' })).getByRole('button', { name: 'More options' }))
     expect(await screen.findByRole('dialog', { name: 'New transaction' })).toBeInTheDocument()
     await pressBack()
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New transaction' })).toBeNull())
@@ -127,7 +138,8 @@ describe('The back button closes what is open, and only that', () => {
   it('closes a list opened inside the add form, and leaves the form open', async () => {
     await tx()
     const user = await open()
-    await user.click(await screen.findByRole('button', { name: 'Add with the full form' }))
+    await user.click(await screen.findByRole('button', { name: 'Add an expense' }))
+    await user.click(within(await screen.findByRole('dialog', { name: 'New expense' })).getByRole('button', { name: 'More options' }))
     const form = await screen.findByRole('dialog', { name: 'New transaction' })
     await user.click(within(form).getByRole('button', { name: 'Currency' }))
     expect(await screen.findByRole('dialog', { name: 'Currency' })).toBeInTheDocument()
@@ -152,10 +164,10 @@ describe('The back button closes what is open, and only that', () => {
     await tx()
     const user = await open()
     await user.click(mainNav().getByRole('button', { name: 'Activity' }))
-    await user.click(await screen.findByRole('button', { name: 'Add with the full form' }))
-    expect(await screen.findByRole('dialog', { name: 'New transaction' })).toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: 'Add an expense' }))
+    expect(await screen.findByRole('dialog', { name: 'New expense' })).toBeInTheDocument()
     await pressBack()
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New transaction' })).toBeNull())
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New expense' })).toBeNull())
     expect(current()).toHaveAccessibleName('Activity')
     await pressBack()
     await waitFor(() => expect(current()).toHaveAccessibleName('Home'))

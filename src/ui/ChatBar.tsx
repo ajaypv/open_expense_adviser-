@@ -131,7 +131,7 @@ export const ChatBar = memo(function ChatBar({ initialText = '', onSubmit, onOpe
         <button
           type="button"
           onClick={onOpenForm}
-          aria-label="Add with the full form"
+          aria-label="Add an expense"
           className="flex size-11 shrink-0 items-center justify-center rounded-full text-ink-2 hover:bg-surface-2"
         >
           <Icon name="plus" />

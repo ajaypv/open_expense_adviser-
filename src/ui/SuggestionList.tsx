@@ -15,9 +15,10 @@ interface Props {
   tone: 'page' | 'sheet'
   /**
    * chip: one slim line each, for the strip above the chat box and inside the add form, where height is short.
-   * tile: a taller card with the category's icon, the amount large and the reason in full, for the Home screen.
+   * tile: a taller card with the category's icon, the amount large and the reason in full.
+   * quick: one round pill with the name and the usual amount, and a tap adds it at once (with `onQuickAdd`), for Home's "Add again".
    */
-  variant?: 'chip' | 'tile'
+  variant?: 'chip' | 'tile' | 'quick'
   /**
    * With this, a tile has its own plus button that adds the suggestion at once, while a tap on the rest of the tile
    * still opens the form to look it over first. Without it the plus is only a picture. Tiles only.
@@ -38,6 +39,7 @@ const TICK_MS = 1400
 export function SuggestionList({ items, categoryById, currency, onPick, tone, variant = 'chip', onQuickAdd, className = '-mx-5 scroll-px-5 px-5' }: Props) {
   const [watch, seen] = useSeen()
   const tile = variant === 'tile'
+  const quick = variant === 'quick'
   const fill = tone === 'page' ? 'bg-surface shadow-[0_0_0_1px_var(--ring)]' : 'bg-surface-2'
 
   // The one just added shows a tick for a moment. It cannot be added again while it is being saved or for that moment
@@ -124,6 +126,33 @@ export function SuggestionList({ items, categoryById, currency, onPick, tone, va
                   </span>
                 </button>
               )}
+            </li>
+          )
+        }
+
+        if (quick) {
+          // One tap adds it, as the plus on a tile does; a transfer is not something to repeat in one tap, so it opens the form.
+          const direct = onQuickAdd !== undefined && s.kind !== 'transfer'
+          const done = added === s.key
+          return (
+            <li key={s.key} className="row-in shrink-0 snap-start" style={{ '--d': `${Math.min(i, 5) * 60}ms` } as CSSProperties}>
+              <button
+                type="button"
+                data-quick
+                data-added={done ? 'true' : undefined}
+                disabled={done}
+                onClick={() => (direct ? void quickAdd(s) : onPick(s))}
+                aria-label={direct ? (done ? `Added ${s.merchant}` : `Add ${s.merchant}, ${amount} now. ${s.reason}`) : label}
+                className={`flex min-h-12 items-center gap-2 rounded-full px-4 text-left transition-transform active:scale-[0.97] motion-reduce:transition-none ${fill}`}
+              >
+                <span className="font-semibold">{s.merchant}</span>
+                <span className={`font-medium tabular-nums ${received ? 'text-good' : 'text-ink-2'}`}>{amount}</span>
+                {done && (
+                  <span aria-hidden="true" className="text-good">
+                    <Icon name="check" size={16} />
+                  </span>
+                )}
+              </button>
             </li>
           )
         }

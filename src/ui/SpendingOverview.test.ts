@@ -1,6 +1,7 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
+import { safeToSpend } from '../insights/safeToSpend'
 import { SpendingOverview } from './SpendingOverview'
 
 const base = {
@@ -195,5 +196,71 @@ describe('SpendingOverview: hiding amounts', () => {
     expect(render()).toContain('aria-label="Hide amounts"')
     expect(render({ privacy: true })).toContain('aria-label="Show amounts"')
     expect(render({ privacy: true })).toContain('aria-pressed="true"')
+  })
+})
+
+describe('SpendingOverview: what you can spend today', () => {
+  const rupees = (n: number) => n * 100
+  const nov13 = new Date(2026, 10, 13)
+  const calm = (over: Partial<Parameters<typeof safeToSpend>[0]> = {}, props: Partial<typeof base> = {}) =>
+    render({
+      monthName: 'November',
+      totalMinor: rupees(55_000),
+      budgetMinor: rupees(120_000),
+      safe: safeToSpend({ budgetMinor: rupees(120_000), spentMinor: rupees(55_000), todayMinor: 0, today: nov13, ...over }),
+      ...props,
+    } as never)
+
+  it('leads with how much can be spent today, not with what has been spent', () => {
+    const html = calm()
+    expect(text(html)).toContain('You can spend today')
+    expect(html).toContain('data-testid="safe-today"')
+    expect(html).toContain('₹3,611')
+    expect(text(html)).not.toContain('Spent so far in November')
+  })
+
+  it('says in a line what that means for the month', () => {
+    expect(text(calm())).toContain('Spend up to this each day and you finish November on budget.')
+  })
+
+  it('says what today has already taken, and what is left of its share', () => {
+    const html = calm({ spentMinor: rupees(55_000), todayMinor: rupees(1_100) })
+    expect(text(html)).toContain('About ₹3,672 a day keeps November on budget. You have already spent ₹1,100 today.')
+    expect(html).toContain('₹2,572')
+  })
+
+  it('says so when the day’s share is used', () => {
+    const html = calm({ spentMinor: rupees(60_000), todayMinor: rupees(5_000) })
+    expect(html).toContain('₹0')
+    expect(text(html)).toContain("s ₹3,611 is used. Spending more takes from the days ahead.")
+  })
+
+  it('draws the month as one bar of how much of the budget is spent, with a mark where an even month would be', () => {
+    const html = calm()
+    expect(html).toMatch(/role="img"[^>]*aria-label="₹55,000 spent of ₹120,000\. An even month would be at ₹52,000 by now\."/)
+    expect(html).toContain('width:45.83')
+    expect(html).toContain('data-pace')
+    expect(html).toContain('left:43.33')
+    expect(text(html)).toContain('₹55,000 spent')
+    expect(text(html)).toContain('of ₹120,000')
+  })
+
+  it('says in words where the month stands against that mark: more, less or right on it', () => {
+    expect(text(calm())).toContain('The blue mark is where an even month would be by now. You have spent ₹3,000 more than that.')
+    expect(text(calm({ spentMinor: rupees(40_000) }))).toContain('You have spent ₹12,000 less than that.')
+    expect(text(calm({ spentMinor: rupees(52_500) }))).toContain('You are right on it.')
+  })
+
+  it('keeps Today, Yesterday and Last 7 days under it', () => {
+    expect(text(calm())).toContain('Today')
+    expect(text(calm())).toContain('Last 7 days')
+  })
+
+  it('is the old headline when the month is over, when there is no budget or when the budget is used up', () => {
+    expect(text(calm({}, { isCurrent: false }))).toContain('Spent in November')
+    expect(text(render({ budgetMinor: null, safe: null }))).toContain('Spent so far in October')
+    const over = render({ safe: safeToSpend({ budgetMinor: rupees(10_000), spentMinor: rupees(12_000), todayMinor: 0, today: nov13 }), budgetMinor: rupees(10_000) })
+    expect(text(over)).toContain('Spent so far in October')
+    expect(over).toContain('role="meter"')
   })
 })

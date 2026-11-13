@@ -17,6 +17,7 @@ import {
   type MonthKey,
 } from '../insights/aggregates'
 import { isCard } from '../insights/cards'
+import { safeToSpend } from '../insights/safeToSpend'
 import { ScreenSkeleton } from '../ui/ScreenSkeleton'
 import type { Suggestion } from '../insights/suggestions'
 import { BackupNudge, DueCard, LogNudge } from '../ui/HomeCards'
@@ -208,6 +209,7 @@ export const Home = memo(function Home({
               expenseCount={expenseCount}
               budgetMinor={budgetMinor}
               currency={currency}
+              safe={isCurrent && budgetMinor !== null ? safeToSpend({ budgetMinor, spentMinor: total, todayMinor: recentlySpent.todayMinor, today }) : null}
               periods={
                 isCurrent
                   ? [
@@ -240,11 +242,10 @@ export const Home = memo(function Home({
             {onOpenCards && <CardsCard ledger={ledger} today={today} onOpen={onOpenCards} />}
 
             {isCurrent && suggestions.length > 0 && (
-              <section aria-labelledby="suggest-h" className="mt-8">
-                <h2 id="suggest-h" className="type-title px-1">
-                  Suggested for now
+              <section aria-labelledby="suggest-h" className="mt-6">
+                <h2 id="suggest-h" className="mb-2 px-1 text-[0.9375rem] font-semibold text-ink-2">
+                  Add again, one tap
                 </h2>
-                <p className="mb-3 mt-0.5 px-1 text-[0.9375rem] text-ink-2 text-pretty">Your usual ones around this time. Tap + to add one now, or tap the tile to check it first.</p>
                 <SuggestionList
                   items={suggestions}
                   categoryById={categoryById}
@@ -252,7 +253,7 @@ export const Home = memo(function Home({
                   onPick={onSuggestion}
                   onQuickAdd={onQuickAddSuggestion}
                   tone="page"
-                  variant="tile"
+                  variant="quick"
                 />
               </section>
             )}
