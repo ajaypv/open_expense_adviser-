@@ -164,3 +164,42 @@ describe('TrendBars wording', () => {
     expect(render2()).toContain('Oldest to newest')
   })
 })
+
+describe('the pattern of the other pages', () => {
+  const rows = [...october, tx('2026-10-12', 4000, 1, { merchant: 'Big Bazaar' }), salary('2026-10-01', 5000)]
+  const page = render(rows, '2026-10', { budgetMinor: 3_000_000, categoryBudgets: new Map([[1, 150_000]]) })
+
+  it('shows the three numbers under the headline as three soft tiles, not a row split by lines', () => {
+    expect(page).not.toContain('divide-x')
+    expect(page).toMatch(/<dl class="mt-8 grid grid-cols-3 gap-2">/)
+    expect((page.match(/flex min-w-0 flex-col-reverse justify-center rounded-2xl bg-surface-2/g) ?? []).length).toBe(3)
+  })
+
+  it('shows the daily average in whole rupees, not as ₹959.1', () => {
+    // 4,680 over 28 days is 167.14 a day.
+    const t = text(render(rows, '2026-10'))
+    expect(t).toContain('Daily average₹167Biggest expense')
+  })
+
+  it('tells money in and out as two tiles with a round arrow each', () => {
+    const html = render(rows, '2026-10')
+    expect(html).toMatch(/data-icon="arrowDown"[^>]*class="[^"]*rounded-full/)
+    expect(html).toMatch(/data-icon="arrowUp"[^>]*class="[^"]*rounded-full/)
+    expect(html).toMatch(/<dd class="num mt-2 truncate text-xl text-good">₹5,000<\/dd>/)
+  })
+
+  it('sets the figures of the headline sentences in bold', () => {
+    expect(page).toMatch(/Food &amp; Dining was the biggest part, <b class="num text-ink">\d+%<\/b>/)
+  })
+
+  it('gives each category budget the round icon of its category, not a dot', () => {
+    const budgets = page.slice(page.indexOf('Budgets by category'))
+    expect(budgets).toMatch(/data-icon="utensils"[^>]*class="[^"]*rounded-full/)
+    expect(budgets.slice(0, budgets.indexOf('</ul>'))).not.toContain('size-2.5')
+  })
+
+  it('sets every section title in the one title size', () => {
+    expect(page).toMatch(/<h2 id="cats-h" class="type-title">Where it went<\/h2>/)
+    expect(page).toMatch(/<h2 id="pace-h" class="type-title mb-3">Spending pace<\/h2>/)
+  })
+})

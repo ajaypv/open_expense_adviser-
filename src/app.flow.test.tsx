@@ -650,7 +650,7 @@ describe('Regular payments in Insights', () => {
     const section = await screen.findByRole('region', { name: 'Regular payments' })
     expect(section).toHaveTextContent('Every month₹6,000')
     expect(section).toHaveTextContent('A year₹72,000')
-    expect(within(section).getByText(/Next: Rent, ₹6,000/)).toBeInTheDocument()
+    expect(section).toHaveTextContent(/Next: Rent, ₹6,000/)
 
     await user.click(within(section).getByRole('button', { name: 'See all regular payments' }))
     const upcoming = await screen.findByRole('dialog', { name: 'Upcoming payments' })

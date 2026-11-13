@@ -105,7 +105,7 @@ export function DayChart({ txs, categoryById, monthKey, lastDay, currency, budge
               </>
             ) : (
               <>
-                <p className="text-2xl font-bold tabular-nums tracking-tight">{money(averageMinor)}</p>
+                <p className="text-2xl font-bold tabular-nums tracking-tight">{money(Math.round(averageMinor / 100) * 100)}</p>
                 <p className="text-[0.9375rem] text-ink-2">a day on average</p>
                 <p className="text-[0.9375rem] text-ink-2">
                   <Figures text={`${money(view.totalMinor)} over ${elapsed} ${elapsed === 1 ? 'day' : 'days'}`} figures={[money(view.totalMinor), String(elapsed)]} />

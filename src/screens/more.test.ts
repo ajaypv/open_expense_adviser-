@@ -84,7 +84,7 @@ describe('Insights additions', () => {
     expect(out).toContain('Money in and out')
     expect(out).toContain('₹2,000') // received
     expect(out).toContain('₹1,600') // sent this month: 100 + 900 + 600
-    expect(out).toContain('So far this month you kept <b class="font-semibold">₹400</b>.') // the month is not over, so no rate yet
+    expect(out).toContain('So far this month you kept <b class="num">₹400</b>.') // the month is not over, so no rate yet
   })
 
   it('says so plainly when more went out than came in', () => {

@@ -37,6 +37,8 @@ import { describeWhen, forecast, TAG_LABELS, tagOf, upcomingPayments, type Upcom
 import { repeatingSpend, type RepeatingSpend } from '../insights/repeats'
 import { categoryBudgetStatus, categoryTrends, monthlyTotals, savingsFor, unusualExpenses } from '../insights/trends'
 import { AiEntry } from '../ui/AiEntry'
+import { categoryIcon, spendIcon } from '../ui/categoryIcon'
+import { Figures } from '../ui/Figures'
 import { Icon } from '../ui/Icon'
 import { PaymentBadge } from '../ui/PaymentBadge'
 import { paymentName, shortDay, shortfallPhrase, signedAmount } from '../ui/upcomingText'
@@ -82,6 +84,9 @@ function StatusPill({ payment }: { payment: UpcomingPayment }) {
   )
 }
 
+/** An amount in the smallest unit, to a whole currency unit, so a daily average does not show as ₹959.1. */
+const wholeUnit = (minor: number) => Math.round(minor / 100) * 100
+
 /** "11 times, almost every day, usually ₹20": how often, and what it usually costs. */
 function repeatDetail(r: RepeatingSpend, money: (minor: number) => string): string {
   const how = { daily: 'almost every day', weekly: 'about every week', monthly: 'every month', regular: null }[r.pattern]
@@ -92,7 +97,7 @@ function repeatDetail(r: RepeatingSpend, money: (minor: number) => string): stri
 function Section({ id, title, intro, className = 'mt-10', children }: { id: string; title: string; intro?: string; className?: string; children: React.ReactNode }) {
   return (
     <section aria-labelledby={id} className={className}>
-      <h2 id={id} className="text-xl font-bold tracking-tight">
+      <h2 id={id} className="type-title">
         {title}
       </h2>
       {intro && <p className="mt-0.5 text-ink-2">{intro}</p>}
@@ -215,8 +220,17 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
     pace = 'A month-end estimate appears after a few days of expenses.'
   }
 
+  // The figures in the pace sentence, to set in bold.
+  const paceFigures: string[] = []
+  if (projected !== null) {
+    paceFigures.push(money(projected))
+    if (budgetMinor !== null) paceFigures.push(money(Math.abs(projected - budgetMinor)))
+  } else if (!isCurrent && cmp.deltaPct !== null) {
+    paceFigures.push(money(total), `${Math.abs(cmp.deltaPct)}%`)
+  }
+
   const stats = [
-    { label: 'Daily average', value: formatMoneyCompact(Math.round(total / elapsed), currency), full: money(Math.round(total / elapsed)) },
+    { label: 'Daily average', value: formatMoneyCompact(wholeUnit(total / elapsed), currency), full: money(wholeUnit(total / elapsed)) },
     { label: 'Biggest expense', value: formatMoneyCompact(biggest?.amountMinor ?? 0, currency), full: money(biggest?.amountMinor ?? 0) },
     { label: 'Expenses logged', value: String(monthTxs.length), full: String(monthTxs.length) },
   ]
@@ -227,31 +241,41 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
   const moneyInOut =
     savings.receivedMinor > 0 ? (
       <Section id="savings-h" title="Money in and out">
-        <dl className="mt-3 grid grid-cols-2 gap-3 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]">
-          <div className="flex flex-col-reverse">
-            <dt className="text-sm text-ink-2">Received</dt>
-            <dd className="text-xl font-semibold tabular-nums">{money(savings.receivedMinor)}</dd>
+        <dl className="mt-3 grid grid-cols-2 gap-2 rounded-3xl bg-surface p-3 shadow-[0_0_0_1px_var(--ring)]">
+          <div className="min-w-0 rounded-2xl bg-surface-2 p-3">
+            <dt className="flex items-center gap-2 text-sm font-medium text-ink-2">
+              <span aria-hidden="true" data-icon="arrowDown" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-good">
+                <Icon name="arrowDown" size={15} weight={2.25} />
+              </span>
+              Received
+            </dt>
+            <dd className="num mt-2 truncate text-xl text-good">{money(savings.receivedMinor)}</dd>
           </div>
-          <div className="flex flex-col-reverse">
-            <dt className="text-sm text-ink-2">Spent</dt>
-            <dd className="text-xl font-semibold tabular-nums">{money(savings.sentMinor)}</dd>
+          <div className="min-w-0 rounded-2xl bg-surface-2 p-3">
+            <dt className="flex items-center gap-2 text-sm font-medium text-ink-2">
+              <span aria-hidden="true" data-icon="arrowUp" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-ink">
+                <Icon name="arrowUp" size={15} weight={2.25} />
+              </span>
+              Spent
+            </dt>
+            <dd className="num mt-2 truncate text-xl">{money(savings.sentMinor)}</dd>
           </div>
         </dl>
         <p className="mt-2 text-lg">
           {savings.savedMinor >= 0 ? (
             isCurrent ? (
               <>
-                So far this month you kept <b className="font-semibold">{money(savings.savedMinor)}</b>.
+                So far this month you kept <b className="num">{money(savings.savedMinor)}</b>.
               </>
             ) : (
               <>
-                You kept <b className="font-semibold">{money(savings.savedMinor)}</b>
+                You kept <b className="num">{money(savings.savedMinor)}</b>
                 {savings.ratePct !== null && `, ${savings.ratePct}% of what came in`}.
               </>
             )
           ) : (
             <>
-              You spent <b className="font-semibold text-critical">{money(-savings.savedMinor)} more</b> than came in
+              You spent <b className="num text-critical">{money(-savings.savedMinor)} more</b> than came in
               {isCurrent ? ' so far' : ''}.
             </>
           )}
@@ -270,23 +294,26 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
     >
       {regular && (
         <>
-          <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-4 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]">
+          <dl className="mt-3 grid grid-cols-2 gap-2 rounded-3xl bg-surface p-3 shadow-[0_0_0_1px_var(--ring)]">
             {[
               { label: 'Every month', value: regular.monthlyMinor },
               { label: 'A year', value: regular.yearlyMinor },
               { label: `Still to pay in ${name}`, value: regular.leftThisMonth.outMinor },
               { label: 'Next 30 days', value: regular.next30.outMinor },
             ].map((s) => (
-              <div key={s.label} className="flex flex-col-reverse">
+              <div key={s.label} className="flex min-w-0 flex-col-reverse justify-end rounded-2xl bg-surface-2 p-3">
                 <dt className="text-sm text-ink-2">{s.label}</dt>
-                <dd className="text-xl font-semibold tabular-nums">{money(s.value)}</dd>
+                <dd className="num truncate text-xl">{money(s.value)}</dd>
               </div>
             ))}
           </dl>
 
           {regular.next && (
             <p className="mt-3 text-lg">
-              {`Next: ${lookNames(regular.next)}, ${money(regular.next.amountMinor)} on ${shortDay(regular.next.date, today)}, ${describeWhen(regular.next.daysLeft).toLowerCase()}.`}
+              <Figures
+                text={`Next: ${lookNames(regular.next)}, ${money(regular.next.amountMinor)} on ${shortDay(regular.next.date, today)}, ${describeWhen(regular.next.daysLeft).toLowerCase()}.`}
+                figures={[money(regular.next.amountMinor)]}
+              />
             </p>
           )}
           {lateCount > 0 && (
@@ -294,12 +321,17 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
               <span aria-hidden="true" className="mt-0.5 shrink-0">
                 <Icon name="warn" size={18} />
               </span>
-              {`${lateCount} payment${lateCount === 1 ? ' is' : 's are'} late and ${lateCount === 1 ? 'has' : 'have'} not been added.`}
+              <span>
+                <Figures text={`${lateCount} payment${lateCount === 1 ? ' is' : 's are'} late and ${lateCount === 1 ? 'has' : 'have'} not been added.`} figures={[String(lateCount)]} />
+              </span>
             </p>
           )}
           {regular.incomeMonthlyMinor > 0 && (
             <p className="mt-2 text-ink-2">
-              {`Regular payments take ${Math.round((regular.monthlyMinor / regular.incomeMonthlyMinor) * 100)}% of the ${money(regular.incomeMonthlyMinor)} you expect each month.`}
+              <Figures
+                text={`Regular payments take ${Math.round((regular.monthlyMinor / regular.incomeMonthlyMinor) * 100)}% of the ${money(regular.incomeMonthlyMinor)} you expect each month.`}
+                figures={[`${Math.round((regular.monthlyMinor / regular.incomeMonthlyMinor) * 100)}%`, money(regular.incomeMonthlyMinor)]}
+              />
             </p>
           )}
           {balanceCheck &&
@@ -309,7 +341,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
               </p>
             ) : (
               <p className="mt-2 text-ink-2">
-                {`Your estimated balance covers all of it, with about ${money(balanceCheck.endMinor)} left after 30 days.`}
+                <Figures text={`Your estimated balance covers all of it, with about ${money(balanceCheck.endMinor)} left after 30 days.`} figures={[money(balanceCheck.endMinor)]} />
               </p>
             ))}
           {regular.unconverted.length > 0 && (
@@ -344,7 +376,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
                   <span className="block text-sm text-ink-2">{`${TAG_LABELS[tagOf(p.rule)]}, ${shortDay(p.date, today)}`}</span>
                 </span>
                 <span className="shrink-0 text-right">
-                  <span className={`block font-semibold tabular-nums ${p.kind === 'income' ? 'text-good' : ''}`}>{signedAmount(p, currency)}</span>
+                  <span className={`num block ${p.kind === 'income' ? 'text-good' : ''}`}>{signedAmount(p, currency)}</span>
                   <StatusPill payment={p} />
                 </span>
               </li>
@@ -363,12 +395,15 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
                   <span className="block truncate font-medium">{d.merchant}</span>
                   <span className="block text-sm text-ink-2">{`Every month for ${d.count} months, next about ${shortDay(d.nextDue, today)}`}</span>
                 </span>
-                <span className="shrink-0 font-semibold tabular-nums">{money(d.amountMinor)}</span>
+                <span className="num shrink-0">{money(d.amountMinor)}</span>
               </li>
             ))}
           </ul>
           <p className="mt-2 text-ink-2">
-            {`If these carry on, that is about ${money(looksRegular.reduce((s, d) => s + d.amountMinor, 0))} more a month. Set them up to see when each falls due.`}
+            <Figures
+              text={`If these carry on, that is about ${money(looksRegular.reduce((s, d) => s + d.amountMinor, 0))} more a month. Set them up to see when each falls due.`}
+              figures={[money(looksRegular.reduce((s, d) => s + d.amountMinor, 0))]}
+            />
           </p>
         </>
       )}
@@ -456,15 +491,24 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
               You spent <b>{money(total)}</b>
               {` in ${name}.`}
             </p>
-            <p className="mt-2 text-xl">{`${categoryById.get(cats[0].categoryId)?.name ?? 'One category'} was the biggest part, ${Math.round((cats[0].totalMinor / total) * 100)}%.`}</p>
-            {pace && <p className="mt-3 text-lg text-ink-2">{pace}</p>}
+            <p className="mt-2 text-xl">
+              <Figures
+                text={`${categoryById.get(cats[0].categoryId)?.name ?? 'One category'} was the biggest part, ${Math.round((cats[0].totalMinor / total) * 100)}%.`}
+                figures={[`${Math.round((cats[0].totalMinor / total) * 100)}%`]}
+              />
+            </p>
+            {pace && (
+              <p className="mt-3 text-lg text-ink-2">
+                <Figures text={pace} figures={paceFigures} />
+              </p>
+            )}
           </section>
 
           <section
             aria-labelledby="pace-h"
             className="mt-8 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]"
           >
-            <h2 id="pace-h" className="mb-3 text-lg font-semibold">
+            <h2 id="pace-h" className="type-title mb-3">
               Spending pace
             </h2>
             <MonthStrip months={stripMonths} selected={month} currency={currency} onSelect={onMonth} />
@@ -483,11 +527,11 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
             />
           </section>
 
-          <dl className="mt-8 grid grid-cols-3 divide-x divide-line">
+          <dl className="mt-8 grid grid-cols-3 gap-2">
             {stats.map((s) => (
-              <div key={s.label} className="flex flex-col-reverse px-3 first:pl-0 last:pr-0" aria-label={`${s.label}: ${s.full}`}>
+              <div key={s.label} className="flex min-w-0 flex-col-reverse justify-center rounded-2xl bg-surface-2 px-3 py-3" aria-label={`${s.label}: ${s.full}`}>
                 <dt className="text-sm text-ink-2">{s.label}</dt>
-                <dd className="text-[clamp(1.125rem,5.4vw,1.5rem)] font-semibold tracking-tight">{s.value}</dd>
+                <dd className="num text-[clamp(1.125rem,5.4vw,1.5rem)] tracking-tight">{s.value}</dd>
               </div>
             ))}
           </dl>
@@ -550,8 +594,15 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
                   const cat = categoryById.get(b.categoryId)
                   return (
                     <li key={b.categoryId}>
-                      <p className="mb-1.5 flex items-center gap-2 font-medium">
-                        <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: cat?.color ?? 'var(--other)' }} />
+                      <p className="mb-1.5 flex items-center gap-2.5 font-medium">
+                        <span
+                          aria-hidden="true"
+                          data-icon={categoryIcon(cat?.name)}
+                          className="flex size-8 shrink-0 items-center justify-center rounded-full text-ink"
+                          style={{ background: `color-mix(in oklab, ${cat?.color ?? 'var(--other)'} 20%, var(--surface))` }}
+                        >
+                          <Icon name={categoryIcon(cat?.name)} size={16} />
+                        </span>
                         {cat?.name ?? 'Other'}
                       </p>
                       <Meter spentMinor={b.spentMinor} limitMinor={b.limitMinor} currency={currency} />
@@ -574,6 +625,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
                   key: m.name.toLowerCase(),
                   label: m.name,
                   color: 'var(--accent)',
+                  icon: spendIcon(m.name, categoryById.get(monthTxs.find((t) => t.merchant.trim().toLowerCase() === m.name.toLowerCase())?.categoryId ?? -1)?.name),
                   valueMinor: m.totalMinor,
                   detail: `${m.count} ${m.count === 1 ? 'time' : 'times'}`,
                 }))}
@@ -593,7 +645,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
                       <p className="truncate font-medium">{r.name}</p>
                       <p className="text-sm text-ink-2">{repeatDetail(r, money)}</p>
                     </div>
-                    <span className="shrink-0 font-semibold tabular-nums">{money(r.totalMinor)}</span>
+                    <span className="num shrink-0">{money(r.totalMinor)}</span>
                   </li>
                 ))}
               </ul>
@@ -608,8 +660,13 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
               <ul className="mt-3 divide-y divide-line rounded-3xl bg-surface px-4 shadow-[0_0_0_1px_var(--ring)]">
                 {unusual.map((u) => (
                   <li key={u.tx.id} className="flex items-start gap-3 py-3">
-                    <span aria-hidden="true" className="mt-0.5 shrink-0" style={{ color: 'var(--warn-ui)' }}>
-                      <Icon name="warn" size={20} />
+                    <span
+                      aria-hidden="true"
+                      data-icon="warn"
+                      className="flex size-9 shrink-0 items-center justify-center rounded-full"
+                      style={{ color: 'var(--warn-ui)', background: 'color-mix(in oklab, var(--warn-ui) 16%, var(--surface))' }}
+                    >
+                      <Icon name="warn" size={18} />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">
@@ -620,7 +677,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
                         spend of {money(u.typicalMinor)}.
                       </p>
                     </div>
-                    <span className="shrink-0 font-semibold tabular-nums">{money(u.tx.amountMinor)}</span>
+                    <span className="num shrink-0">{money(u.tx.amountMinor)}</span>
                   </li>
                 ))}
               </ul>

@@ -29,7 +29,7 @@ const txs = [
   spend('2026-10-12', 50, 1, 'Snack'),
 ]
 // ₹1,090 over 12 days.
-const average = formatMoney(9083, 'INR')
+const average = formatMoney(9100, 'INR') // the average day, 90.83, to a whole rupee
 
 const label = (d: number) => new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(2026, 9, d))
 
