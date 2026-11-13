@@ -183,7 +183,7 @@ export const Home = memo(function Home({
   const elapsedDays = isCurrent ? today.getDate() : daysInMonth(month)
 
   return (
-    <div className="pb-4">
+    <div className="font-text pb-4">
       <HomeHeader today={today} goals={ledger.goals} onOpenGoals={onOpenGoals} />
       <HomePager
         overview={

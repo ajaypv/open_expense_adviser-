@@ -304,10 +304,10 @@ describe('Home: what comes first', () => {
   })
 
   describe('type: two voices, not one weight for everything', () => {
-    // The greeting, the title of each section and the figures that matter are in the serif; what is read in small type is in the theme's sans.
+    // The words on Home, the greeting and the title of each section included, are in Figtree; the figures are in the theme's bold sans.
     const classes = (html: string, name: string) => (html.match(new RegExp(`class="[^"]*\\b${name}\\b[^"]*"`, 'g')) ?? []).length
 
-    it('sets the greeting in the serif, and every section title in the same one size', () => {
+    it('sets the greeting in the Home voice, and every section title in the same one size', () => {
       const html = renderFull()
       expect(classes(html, 'type-greeting')).toBe(1)
       // Plan ahead, Day by day, Where it went, Goals and the insights card.
@@ -317,15 +317,18 @@ describe('Home: what comes first', () => {
       }
     })
 
-    it('sets the numbers in the theme’s sans, bold and level, and only the words in the serif', () => {
+    it('sets the numbers in the theme’s sans, bold and level, and only the words in Figtree', () => {
       const html = renderFull()
       expect(classes(html, 'type-display')).toBe(1)
       expect(classes(html, 'type-figure')).toBeGreaterThanOrEqual(2)
-      // No figure is set in the serif.
+      // No figure is set in the words' face.
       expect(html).not.toMatch(/class="[^"]*type-(headline|title|greeting)[^"]*"[^>]*>[^<]*₹/)
       const css = readFileSync('src/index.css', 'utf8')
       expect(css).toMatch(/\.type-display,\s*\.type-figure \{\s*font-family: var\(--font-ui, var\(--font-sans\)\);\s*font-variant-numeric: tabular-nums/)
       expect(css).toMatch(/\.type-greeting,\s*\.type-headline,\s*\.type-title \{\s*font-family: var\(--font-voice\)/)
+      expect(css).toMatch(/--font-voice:\s*'Figtree Variable'/)
+      // The whole page takes it for its words, so the small text is in it too.
+      expect(html).toMatch(/<div class="font-text pb-4"/)
     })
 
     it('does not give any section a sans of its own: Plan ahead is in the theme font like the rest', () => {

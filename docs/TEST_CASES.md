@@ -713,12 +713,12 @@ The plus on the input bar opens a sheet built for one thumb; the full form is un
 
 ## Home type
 
-How Home is set in type: a serif (a Google font, Newsreader, shipped with the app) for the words that say what the page is about, and the theme's own sans for everything else, all the numbers included.
+How Home is set in type: Figtree (a Google font shipped with the app) for all the words, the greeting and section titles in bold, and the theme's own bold sans for the numbers.
 
 | ID | Case | Do | Expect | Covered by |
 |---|---|---|---|---|
-| TYP-1 | Greeting and titles | Open Home | The greeting ("Good evening") and the title of every section (Plan ahead, Day by day, Where it went, Goals, Understand your spending) are in the serif (words only), in one size that runs from 24 to 28 px with the screen, balanced across lines if one wraps; none is the old bold sans | Auto: `Home` (type); look by eye |
-| TYP-2 | Numbers | Look at the summary, Plan ahead cards, the balance and received figures, a credit-card card and a suggestion | Every number is in the theme's sans, as before, not the serif: the big amount bold at 36 to 40 px, the figures in cards bold at about 20 to 24 px, all tabular so they stand level and do not jump as they count; the words around them are small and in the same sans | Auto: `Home` (type), `SpendingOverview`; look by eye |
+| TYP-1 | Greeting and titles | Open Home | The greeting ("Good evening") and the title of every section (Plan ahead, Day by day, Where it went, Goals, Understand your spending) are in Figtree, bold (words only), in one size that runs from 24 to 28 px with the screen, balanced across lines if one wraps; none is the old bold sans | Auto: `Home` (type); look by eye |
+| TYP-2 | Numbers | Look at the summary, Plan ahead cards, the balance and received figures, a credit-card card and a suggestion | Every number is in the theme's sans, as before, not Figtree: the big amount bold at 36 to 40 px, the figures in cards bold at about 20 to 24 px, all tabular so they stand level and do not jump as they count; the words around them are small and in the same sans | Auto: `Home` (type), `SpendingOverview`; look by eye |
 | TYP-3 | One sans | Look at Plan ahead beside the sections above and below it | Plan ahead is in the theme's sans like everything else, not a different one of its own; a theme with its own typeface (Exo 2, Space Grotesk, Plus Jakarta Sans, Geist) changes the small type, and the serif stays | Auto: `Home` (type); look by eye in each theme |
 | TYP-4 | Reads at any size | Make the text larger (browser zoom to 200%, a large text size) and look at 320 px wide | Sizes are in rem, so they grow with it; nothing is cut off or runs off the side, and the big amount still fits on one line up to eleven characters at the default size | Look by eye |
 

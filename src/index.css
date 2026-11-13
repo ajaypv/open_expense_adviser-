@@ -124,6 +124,27 @@
 }
 
 /*
+ * Figtree (SIL Open Font License, the licence beside the file): the face of the words on Home, a friendly, clear sans. Numbers stay in the theme's own bold sans.
+ */
+@font-face {
+  font-family: 'Figtree Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 900;
+  src: url('./assets/fonts/figtree-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Figtree Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 900;
+  src: url('./assets/fonts/figtree-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/*
  * Design tokens. Surfaces, ink and the eight categorical hues come from the validated
  * data-viz palette (both modes pass the adjacent-pair CVD and normal-vision checks).
  * In the classic theme, color is reserved for data and buttons and chrome are monochrome ink; the colour themes
@@ -2280,15 +2301,19 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 
 /* ---------- Home's type ---------- */
 
-/* Two voices. A serif from Google Fonts (Newsreader, shipped with the app, so it is the same offline and nothing is fetched from anywhere)
-   says what the page is about in words: the greeting, the title of each section and the big line of a welcome. The theme's own sans says
-   everything else, and all of the numbers: the figures are bold, tabular and level so amounts line up and do not jump as they count.
+/* Two voices. Figtree from Google Fonts (shipped with the app, so it is the same offline and nothing is fetched from anywhere) sets
+   the words on Home: the greeting, the title of each section and everything that is read. The theme's own sans sets the numbers: the
+   figures are bold, tabular and level so amounts line up and do not jump as they count.
    Each size runs between two rem bounds with the screen's width between, so it follows the person's text size. Titles are balanced
    across their lines. */
 :root {
-  --font-voice: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
+  --font-voice: 'Figtree Variable', 'Manrope Variable', system-ui, sans-serif;
 }
 @layer components {
+  /* The words of a screen: set on its root, so what is not a figure takes Figtree. */
+  .font-text {
+    font-family: var(--font-voice);
+  }
   .type-greeting,
   .type-headline,
   .type-title {
@@ -2298,21 +2323,21 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   /* The big line of a welcome. */
   .type-headline {
     font-size: clamp(2.5rem, 2rem + 3.4vw, 3.25rem);
-    font-weight: 500;
-    line-height: 1;
-    letter-spacing: -0.02em;
+    font-weight: 700;
+    line-height: 1.02;
+    letter-spacing: -0.03em;
   }
   .type-greeting {
     font-size: clamp(1.75rem, 1.5rem + 1.2vw, 2rem);
-    font-weight: 500;
-    line-height: 1.2;
-    letter-spacing: -0.015em;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
   }
   .type-title {
-    font-size: clamp(1.5rem, 1.3rem + 1vw, 1.75rem);
-    font-weight: 600;
+    font-size: clamp(1.375rem, 1.2rem + 0.9vw, 1.625rem);
+    font-weight: 700;
     line-height: 1.15;
-    letter-spacing: -0.012em;
+    letter-spacing: -0.02em;
     text-wrap: balance;
   }
   /* The numbers: in the theme's sans, as they were. */
