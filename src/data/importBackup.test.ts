@@ -474,3 +474,33 @@ describe('credit cards in a backup', () => {
     expect(parseBackup(backupText({ accounts: [{ id: 1, name: 'Main', openingMinor: null }] })).ok).toBe(true)
   })
 })
+
+describe('the look of a credit card in a backup', () => {
+  const card = { id: 5, name: 'HDFC card', openingMinor: 0, type: 'credit', creditLimitMinor: 500_000, statementDay: 15, dueDay: 3 }
+
+  it('comes back with the card', async () => {
+    const { db, parseBackup, importBackup } = await load()
+    const parsed = parseBackup(backupText({ accounts: [{ id: 1, name: 'Main', openingMinor: null }, { ...card, cardStyle: 'salmon-strip' }] }))
+    if (!parsed.ok) throw new Error(parsed.error)
+    await importBackup(parsed.backup, 'merge')
+    expect((await db.accounts.toArray()).find((a) => a.name === 'HDFC card')).toMatchObject({ type: 'credit', cardStyle: 'salmon-strip' })
+  })
+
+  it('is left out, not refused, when this app does not know it, and when an older file has none', async () => {
+    const { db, parseBackup, importBackup } = await load()
+    const parsed = parseBackup(backupText({ accounts: [{ id: 1, name: 'Main', openingMinor: null }, { ...card, cardStyle: 'neon' }] }))
+    if (!parsed.ok) throw new Error(parsed.error)
+    await importBackup(parsed.backup, 'merge')
+    const saved = (await db.accounts.toArray()).find((a) => a.name === 'HDFC card')!
+    expect(saved.type).toBe('credit')
+    expect('cardStyle' in saved).toBe(false)
+  })
+
+  it('is not put on an account that is not a card', async () => {
+    const { db, parseBackup, importBackup } = await load()
+    const parsed = parseBackup(backupText({ accounts: [{ id: 7, name: 'Savings', openingMinor: 5, cardStyle: 'gray-dark' }] }))
+    if (!parsed.ok) throw new Error(parsed.error)
+    await importBackup(parsed.backup, 'merge')
+    expect('cardStyle' in (await db.accounts.toArray()).find((a) => a.name === 'Savings')!).toBe(false)
+  })
+})

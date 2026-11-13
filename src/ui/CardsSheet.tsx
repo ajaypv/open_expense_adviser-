@@ -5,6 +5,8 @@ import type { useLedger } from '../data/useLedger'
 import { categoryIdByName, addTransaction, purgeTransaction } from '../db/repo'
 import { formatMoney, localDateString, parseLocalDate, toMinor } from '../db/money'
 import { cardLog, cardSpend, cardSummaries, isCard, type CardSummary } from '../insights/cards'
+import { defaultCardStyle } from '../db/cardStyles'
+import { CreditCardArt } from './CreditCardArt'
 import { Dialog } from './Dialog'
 import { Icon } from './Icon'
 import { useToast } from './toast'
@@ -276,6 +278,16 @@ export function CardsSheet({ open, onClose, ledger, today, onEdit }: Props) {
             </div>
           )}
 
+          {/* The card, as a card: its name, what it owes and when the bill is due, in the look chosen for it in Settings. */}
+          <div className="mt-4">
+            <CreditCardArt
+              type={summary.account.cardStyle ?? defaultCardStyle(summary.account.id)}
+              company={summary.account.name}
+              cardHolder={summary.owedMinor < 0 ? 'In credit' : 'You owe'}
+              cardNumber={formatMoney(Math.abs(summary.owedMinor), ledger.currency)}
+              cardExpiration={summary.due ? `Due ${shortDay(summary.due.date)}` : ''}
+            />
+          </div>
           <Standing summary={summary} currency={ledger.currency} />
           <Spending summary={summary} ledger={ledger} today={today} />
           <PayBill key={summary.account.id} summary={summary} ledger={ledger} today={today} onDone={() => {}} />

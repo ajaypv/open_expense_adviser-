@@ -6,7 +6,8 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { reloadDisplay } from '../../data/display'
 import { useLedger } from '../../data/useLedger'
-import { addCreditCard } from '../../db/repo'
+import { cardStyleName, defaultCardStyle } from '../../db/cardStyles'
+import { addCreditCard, setCardStyle } from '../../db/repo'
 import { db, type Category, type Transaction } from '../../db/schema'
 import { makeLedger } from '../../test/ledger'
 import { ToastProvider } from '../../ui/toast'
@@ -170,5 +171,66 @@ describe('Settings: the balance trail leaves out the card', () => {
     const latest = screen.getByRole('list', { name: 'Latest changes' })
     expect(latest).toHaveTextContent('Cash lunch')
     expect(latest).not.toHaveTextContent('Card shopping')
+  })
+})
+
+describe('Settings: choosing how a card looks', () => {
+  const rowOf = async (name: string) => (await screen.findByText(name)).closest('li') as HTMLElement
+  const looks = (row: HTMLElement) => within(within(row).getByRole('radiogroup', { name: /look$/ })).getAllByRole('radio')
+
+  it('shows a card in its list row as a small card of its own look, not a round icon', async () => {
+    const id = await addCreditCard('HDFC card')
+    mount()
+    const row = await rowOf('HDFC card')
+    expect(row.querySelector('[data-card-style]')).not.toBeNull()
+    expect(row.querySelector('[data-icon="card"]')).toBeNull()
+    expect(id).toBeGreaterThan(0)
+  })
+
+  it('keeps a plain account’s round bank icon', async () => {
+    mount()
+    const row = await rowOf('Main')
+    expect(row.querySelector('[data-icon="bank"]')).not.toBeNull()
+    expect(row.querySelector('[data-card-style]')).toBeNull()
+  })
+
+  it('offers ten looks, none see-through, with the card’s own marked', async () => {
+    const id = await addCreditCard('HDFC card')
+    const user = userEvent.setup()
+    mount()
+    const row = await rowOf('HDFC card')
+    await user.click(within(row).getByRole('button', { name: /Edit/ }))
+    const radios = looks(row)
+    expect(radios).toHaveLength(10)
+    expect(radios.map((r) => r.getAttribute('aria-label'))).not.toContain('Transparent')
+    expect(radios.filter((r) => (r as HTMLInputElement).checked)).toHaveLength(1)
+    expect(radios.find((r) => (r as HTMLInputElement).checked)!.getAttribute('aria-label')).toBe(cardStyleName(defaultCardStyle(id)))
+  })
+
+  it('saves the look that is chosen, and draws the row in it', async () => {
+    const id = await addCreditCard('HDFC card')
+    const user = userEvent.setup()
+    mount()
+    const row = await rowOf('HDFC card')
+    await user.click(within(row).getByRole('button', { name: /Edit/ }))
+    await user.click(within(row).getByRole('radio', { name: 'Gray dark' }))
+    await waitFor(async () => expect((await db.accounts.get(id))!.cardStyle).toBe('gray-dark'))
+    await waitFor(() => expect(row.querySelector('[data-card-style="gray-dark"]')).not.toBeNull())
+    expect(within(row).getByRole('radio', { name: 'Gray dark' })).toBeChecked()
+  })
+
+  it('has no choice of look for an ordinary account', async () => {
+    const user = userEvent.setup()
+    mount()
+    const row = await rowOf('Main')
+    await user.click(within(row).getByRole('button', { name: /Edit/ }))
+    expect(within(row).queryByRole('radiogroup')).toBeNull()
+  })
+
+  it('refuses a look for something that is not a credit card, and a look that does not exist', async () => {
+    const mainId = (await db.accounts.toArray()).find((a) => a.type === undefined)!.id
+    await expect(setCardStyle(mainId, 'gray-dark')).rejects.toThrow('That is not a credit card')
+    const card = await addCreditCard('HDFC card')
+    await expect(setCardStyle(card, 'neon' as never)).rejects.toThrow('Choose one of the card looks')
   })
 })

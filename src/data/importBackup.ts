@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isCardStyle } from '../db/cardStyles'
 import { isRealDate, isValidCurrency, MAX_AMOUNT_MINOR } from '../db/money'
 import { db, type Recurring, type Transaction } from '../db/schema'
 
@@ -90,6 +91,8 @@ const backupSchema = z.object({
         creditLimitMinor: amount.optional(),
         statementDay: z.number().int().min(1).max(28).optional(),
         dueDay: z.number().int().min(1).max(28).optional(),
+        /** How a card is drawn, added later; older files have none, and one this app does not know is left out. */
+        cardStyle: z.string().optional(),
       }),
     )
     .default([]),
@@ -113,6 +116,7 @@ function cardFields(a: Backup['accounts'][number]) {
     ...(a.creditLimitMinor !== undefined ? { creditLimitMinor: a.creditLimitMinor } : {}),
     ...(a.statementDay !== undefined ? { statementDay: a.statementDay } : {}),
     ...(a.dueDay !== undefined ? { dueDay: a.dueDay } : {}),
+    ...(isCardStyle(a.cardStyle) ? { cardStyle: a.cardStyle } : {}),
   }
 }
 

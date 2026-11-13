@@ -1,3 +1,4 @@
+import { isCardStyle, type CardStyle } from './cardStyles'
 import { isValidCurrency, localDateString, MAX_AMOUNT_MINOR, parseLocalDate } from './money'
 import { db, type Account, type Goal, type Person, type Recurring, type Transaction } from './schema'
 
@@ -166,6 +167,14 @@ export async function updateCardDetails(id: number, details: CardDetails): Promi
   if ('statementDay' in details) changes.statementDay = cleanDay(details.statementDay, 'statement day')
   if ('dueDay' in details) changes.dueDay = cleanDay(details.dueDay, 'due day')
   await db.accounts.update(id, changes)
+}
+
+/** Choose how a credit card is drawn. */
+export async function setCardStyle(id: number, style: CardStyle): Promise<void> {
+  const card: Account | undefined = await db.accounts.get(id)
+  if (!card || card.type !== 'credit') throw new Error('That is not a credit card')
+  if (!isCardStyle(style)) throw new Error('Choose one of the card looks')
+  await db.accounts.update(id, { cardStyle: style })
 }
 
 export async function renameAccount(id: number, name: string): Promise<void> {

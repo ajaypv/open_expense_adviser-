@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { formatMoney, toMinor } from '../../db/money'
-import { addAccount, addCreditCard, deleteAccount, renameAccount, setAccountArchived, setAccountOpening, updateCardDetails } from '../../db/repo'
+import { CARD_CHOICES, cardStyleName, defaultCardStyle } from '../../db/cardStyles'
+import { addAccount, addCreditCard, deleteAccount, renameAccount, setAccountArchived, setAccountOpening, setCardStyle, updateCardDetails } from '../../db/repo'
 import type { Account } from '../../db/schema'
 import { isCard } from '../../insights/cards'
+import { CreditCardArt } from '../../ui/CreditCardArt'
 import { useToast } from '../../ui/toast'
 import { BalanceTrail } from './BalanceTrail'
 import { card as card_, cardTitle, dangerLink, field, Group, IconCircle, saveButton, secondaryButton, Status, type Ledger } from './parts'
@@ -85,7 +87,7 @@ function AccountRow({ account, ledger }: { account: Account; ledger: Ledger }) {
         aria-expanded={open}
         className="flex min-h-11 w-full items-center gap-3 text-left"
       >
-        <IconCircle icon={card ? 'card' : 'bank'} />
+        {card ? <CreditCardArt type={account.cardStyle ?? defaultCardStyle(account.id)} company="" width={56} className="shrink-0" /> : <IconCircle icon="bank" />}
         <span className="min-w-0 flex-1">
           <span className="block truncate font-semibold">{account.name}</span>
           <span className="block text-sm text-ink-2">
@@ -165,6 +167,23 @@ function AccountRow({ account, ledger }: { account: Account; ledger: Ledger }) {
                 The statement day is when your bill is made; the due day is when it must be paid.
               </p>
             </form>
+          )}
+
+          {card && (
+            <fieldset>
+              <legend className="text-sm text-ink-2">Card look</legend>
+              <div role="radiogroup" aria-label={`${account.name} look`} className="mt-2 grid grid-cols-5 gap-2">
+                {CARD_CHOICES.map((style) => {
+                  const chosen = (account.cardStyle ?? defaultCardStyle(account.id)) === style
+                  return (
+                    <label key={style} className="relative block cursor-pointer rounded-lg has-[:checked]:shadow-[0_0_0_2px_var(--surface),0_0_0_4px_var(--ink)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2">
+                      <input type="radio" name={`look-${account.id}`} className="sr-only" aria-label={cardStyleName(style)} checked={chosen} onChange={() => void setCardStyle(account.id, style)} />
+                      <CreditCardArt type={style} company="" width={52} />
+                    </label>
+                  )
+                })}
+              </div>
+            </fieldset>
           )}
 
           <form onSubmit={(e) => void saveName(e)}>

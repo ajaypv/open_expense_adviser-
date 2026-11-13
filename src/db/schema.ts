@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
+import type { CardStyle } from './cardStyles'
 import { DEFAULT_CATEGORIES, INCOME_CATEGORY } from './defaultCategories'
 
 /** Where a transaction was added. Coordinates are rounded to 4 decimals (about 11 m). */
@@ -70,6 +71,8 @@ export interface Account {
   statementDay?: number
   /** The day of the month (1 to 28) a card's bill falls due. */
   dueDay?: number
+  /** How the card is drawn. Missing means the look it is given by its number. */
+  cardStyle?: CardStyle
 }
 
 /** A transaction that repeats, such as rent or a subscription. */
