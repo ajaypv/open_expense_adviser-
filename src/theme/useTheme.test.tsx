@@ -26,10 +26,10 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('useTheme: the colour theme', () => {
-  it('starts on the classic colours, with the system choice of light or dark', () => {
+  it('starts on the classic colours, in the light theme', () => {
     const { result } = renderHook(() => useTheme())
     expect(result.current.palette).toBe('classic')
-    expect(result.current.pref).toBe('system')
+    expect(result.current.pref).toBe('light')
   })
 
   it('starts on the colours that were saved', () => {
@@ -96,9 +96,28 @@ describe('useTheme: the colour theme', () => {
 })
 
 describe('useTheme: the browser bars', () => {
-  it('takes the page colour of the theme, for light and for dark', () => {
+  it('takes the light page colour for both, since the page is light whatever the phone is set to', () => {
     addMetas()
     const { result } = renderHook(() => useTheme())
+    expect(metaColor('light')).toBe('#f2f1ed')
+    expect(metaColor('dark')).toBe('#f2f1ed')
+    act(() => result.current.setPalette('ocean'))
+    expect(metaColor('light')).toBe('#eaf3f9')
+    expect(metaColor('dark')).toBe('#eaf3f9')
+  })
+
+  it('takes the dark page colour for both when dark is chosen', () => {
+    addMetas()
+    const { result } = renderHook(() => useTheme())
+    act(() => result.current.setPref('dark'))
+    expect(metaColor('light')).toBe('#121314')
+    expect(metaColor('dark')).toBe('#121314')
+  })
+
+  it('takes each scheme its own colour when the system decides', () => {
+    addMetas()
+    const { result } = renderHook(() => useTheme())
+    act(() => result.current.setPref('system'))
     expect(metaColor('light')).toBe('#f2f1ed')
     expect(metaColor('dark')).toBe('#121314')
     act(() => result.current.setPalette('ocean'))

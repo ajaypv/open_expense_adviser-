@@ -563,7 +563,7 @@ function Shell() {
       <GoalMoneySheet key={`money-${moneySheet.n}`} open={moneySheet.open} goal={moneySheet.goal} currency={ledger.currency} onClose={closeMoneySheet} />
 
       {/* A new person sees the cards and the ask for notifications first, then the three questions. */}
-      <Intro open={notice === 'welcome' && introSeen === false} onDone={() => void markIntroSeen()} />
+      <Intro open={notice === 'welcome' && introSeen === false} onDone={() => void markIntroSeen()} theme={theme.pref} onTheme={theme.setPref} />
       <Welcome open={notice === 'welcome' && introSeen === true} currency={ledger.currency} accounts={ledger.accounts} />
       <WhatsNew open={notice === 'whats-new' || whatsNewByHand} onClose={closeWhatsNew} />
     </div>

@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useId, useRef, type CSSProperties } from 'react'
+import { useCallback, useId, useRef, type CSSProperties } from 'react'
 import type { Category } from '../db/schema'
 import { formatMoney, formatMoneyCompact } from '../db/money'
 import type { CategoryTotal } from '../insights/aggregates'
 import { categoryIcon } from '../ui/categoryIcon'
 import { Icon, type IconName } from '../ui/Icon'
 import { useSeen } from '../ui/motion'
-import { tilt, watchTilt } from '../ui/useTilt'
+import { useSway } from '../ui/useSway'
 import { formatShare } from './share'
 
 interface Props {
@@ -46,8 +46,6 @@ const SOURCE_W = 150
 const MAX_COLUMNS = 5
 
 const num = (n: number) => Math.round(n * 100) / 100
-const clamp = (n: number, low: number, high: number) => Math.min(high, Math.max(low, n))
-const motionAllowed = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: no-preference)').matches === true
 
 /** How far the middle of a line is swung sideways, and up or down, at a full tilt, in the units of the picture. */
 const SWAY_X = 24
@@ -94,73 +92,25 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
   const nonZero = totals.filter((t) => t.totalMinor > 0)
   const grand = nonZero.reduce((a, t) => a + t.totalMinor, 0)
   const drawn = grand > 0
-  // The lines are looked up once, so they are looked up again whenever the categories drawn are not the same ones.
-  const lineKeys = nonZero.map((t) => t.key ?? t.categoryId).join(",")
+  const lineKeys = nonZero.map((t) => t.key ?? t.categoryId).join(',')
 
-  // The sway: while the chart is on screen, read the sensors every frame and swing the lines and the chest to match.
-  useEffect(() => {
-    const el = box.current
-    if (!drawn || !el || !motionAllowed()) return
-    const paths = Array.from(el.querySelectorAll<SVGGElement>('[data-ribbon]')).map((g) => Array.from(g.querySelectorAll<SVGPathElement>('path')))
-    let visible = typeof IntersectionObserver === 'undefined'
-    let frame = 0
-    let last = 0
-    let x = 0
-    let y = 0
-    let shake = 0
-    const unwatch = watchTilt()
-
-    const draw = (now: number) => {
-      frame = requestAnimationFrame(draw)
-      const seconds = now / 1000
-      const dt = last ? Math.min(seconds - last, 0.1) : 1 / 60
-      last = seconds
-      // Where the phone says to swing: against the roll, and against a push (a rope hangs back), or by itself without a sensor.
-      const aimX = tilt.live ? clamp(-tilt.roll / 0.5 - tilt.push / 14, -1.2, 1.2) : Math.sin(seconds * 0.7) * 0.35
-      const aimY = tilt.live ? clamp(tilt.pitch / 0.5, -1, 1) : Math.cos(seconds * 0.5) * 0.2
-      const ease = Math.min(1, dt * 6)
-      x += (aimX - x) * ease
-      y += (aimY - y) * ease
-      // A shake is a jolt well above carrying the phone about; it throws the chest and fades.
-      if (tilt.jolt > 9 && now - tilt.movedAt < 250) shake = Math.max(shake, clamp((tilt.jolt - 9) / 10, 0.3, 1))
-      shake *= Math.pow(0.05, dt)
-      if (shake < 0.01) shake = 0
-      el.style.setProperty('--tx', x.toFixed(3))
-      el.style.setProperty('--ty', y.toFixed(3))
-      el.style.setProperty('--shake', shake.toFixed(3))
-      el.style.setProperty('--jx', (Math.sin(seconds * 70) * shake * 4).toFixed(2))
-      const lines = geometry.current
-      for (let i = 0; i < paths.length && i < lines.length; i++) {
-        // The lines swing most in the middle and not at all where they leave the chest or land; the longer the swing, the more it lags.
-        const d = linePath(lines[i].from, lines[i].to, x * SWAY_X + shake * Math.sin(seconds * 40 + i) * 5, y * SWAY_Y)
-        for (const p of paths[i]) p.setAttribute('d', d)
+  // The sway: while the chart is on screen, the sensors swing the lines like ropes (the chest and its glow are moved by CSS, from the
+  // same readings). The lines are looked up once, and again when the categories drawn are not the same ones.
+  useSway(box, {
+    active: drawn,
+    key: lineKeys,
+    setup: (el) => {
+      const paths = Array.from(el.querySelectorAll<SVGGElement>('[data-ribbon]')).map((g) => Array.from(g.querySelectorAll<SVGPathElement>('path')))
+      return ({ x, y, shake, seconds }) => {
+        const lines = geometry.current
+        for (let i = 0; i < paths.length && i < lines.length; i++) {
+          // The lines swing most in the middle and not at all where they leave the chest or land.
+          const d = linePath(lines[i].from, lines[i].to, x * SWAY_X + shake * Math.sin(seconds * 40 + i) * 5, y * SWAY_Y)
+          for (const p of paths[i]) p.setAttribute('d', d)
+        }
       }
-    }
-
-    const run = () => {
-      if (!frame && visible) frame = requestAnimationFrame(draw)
-    }
-    const stop = () => {
-      cancelAnimationFrame(frame)
-      frame = 0
-      last = 0
-    }
-    const watcher =
-      typeof IntersectionObserver === 'undefined'
-        ? null
-        : new IntersectionObserver((entries) => {
-            visible = entries.some((e) => e.isIntersecting)
-            if (visible) run()
-            else stop()
-          })
-    watcher?.observe(el)
-    run()
-    return () => {
-      stop()
-      watcher?.disconnect()
-      unwatch()
-    }
-  }, [drawn, lineKeys])
+    },
+  })
 
   if (!drawn) return null
 

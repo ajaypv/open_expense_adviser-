@@ -1219,8 +1219,11 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 
 /* ---------- The first screen a new person sees ---------- */
 
-/* Little cards drift along in three lanes, each at its own pace (--t) and two the same way, one against; the lane's content is the same
-   sequence drawn four times, so moving a quarter of it along lands exactly where it began. Each card also bobs a little on its own. */
+/* Little cards flow from the right to the left in three lanes, each at its own pace (--t), the one behind slower and smaller; a lane's content
+   is the same sequence drawn four times, so moving a quarter of it along lands exactly where it began, and each lane starts part of the way
+   round (--o, a share of the cycle) so the cards are not in step. Each card also bobs a little on its own. When the screen opens each lane
+   slides in from the right, one after another (--e), and the mark pops. The arrow button leans into its arrow now and then, and a ring
+   spreads from it, to say it is the way on. */
 @keyframes intro-drift {
   to {
     transform: translateX(-25%);
@@ -1237,7 +1240,12 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 @keyframes intro-in {
   from {
     opacity: 0;
-    transform: scale(0.94) translateY(1rem);
+  }
+}
+@keyframes intro-enter {
+  from {
+    opacity: 0;
+    transform: translateX(70%);
   }
 }
 @keyframes intro-rise {
@@ -1246,26 +1254,73 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
     transform: translateY(1rem);
   }
 }
-.intro-lane {
-  animation: intro-drift var(--t, 90s) linear infinite;
+@keyframes intro-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-25deg);
+  }
 }
-.intro-lane[data-reverse='true'] {
-  animation-direction: reverse;
+@keyframes intro-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(6px);
+  }
+}
+@keyframes intro-halo {
+  from {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.65);
+  }
+}
+.intro-lane {
+  animation: intro-drift var(--t, 90s) linear calc(var(--t, 90s) * var(--o, 0)) infinite;
 }
 .intro-card {
   animation: intro-bob var(--b, 7s) ease-in-out var(--bd, 0s) infinite alternate;
 }
 .intro-field {
-  animation: intro-in 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: intro-in 0.8s ease-out both;
+}
+.intro-enter {
+  animation: intro-enter 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) var(--e, 0ms) both;
+  /* The phone moves the lanes: the field has --tx and --ty (about -1 to 1) and --jx (a shaking jitter) written on it, and each lane takes
+     them in proportion to its depth (--k), so the nearest slides furthest. The separate translate does not meet the flowing and arriving. */
+  translate: calc((var(--tx, 0) * 16px + var(--jx, 0) * 1px) * var(--k, 1)) calc(var(--ty, 0) * 9px * var(--k, 1));
 }
 .intro-rise {
   animation: intro-rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both;
+}
+.intro-mark {
+  animation: intro-pop 0.7s cubic-bezier(0.2, 1.3, 0.3, 1) 0.15s both;
+}
+.intro-go::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid var(--btn);
+  pointer-events: none;
+  animation: intro-halo 2.4s ease-out 1.4s infinite backwards;
+}
+.intro-go > svg {
+  animation: intro-nudge 1.6s ease-in-out 1.4s infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .intro-lane,
   .intro-card,
   .intro-field,
-  .intro-rise {
+  .intro-enter,
+  .intro-rise,
+  .intro-mark,
+  .intro-go::after,
+  .intro-go > svg {
     animation: none;
   }
 }

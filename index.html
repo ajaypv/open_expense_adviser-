@@ -22,7 +22,14 @@
       // Apply a saved theme and colours before first paint to avoid a flash of the wrong ones.
       try {
         var t = localStorage.getItem('theme')
-        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
+        // Light unless a choice was made; 'system' is a choice, and leaves the phone to decide.
+        if (t !== 'system') {
+          var dark = t === 'dark'
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+          // The browser's bars match the page, whatever the phone is set to.
+          var bars = document.querySelectorAll('meta[name="theme-color"]')
+          for (var i = 0; i < bars.length; i++) bars[i].setAttribute('content', dark ? '#121314' : '#f2f1ed')
+        }
         var p = localStorage.getItem('palette')
         if (/^(ocean|forest|sunset|lavender|rose|liquid|pearl|aurora|neon|obsidian)$/.test(p)) document.documentElement.dataset.palette = p
       } catch (e) {}

@@ -46,7 +46,7 @@ describe('First launch', () => {
   it('shows a new person the cards first, and the welcome questions after them', async () => {
     const user = userEvent.setup()
     render(<App />)
-    expect(await screen.findByRole('dialog', { name: /Simple spending/ })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: /Know where your money goes/ })).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: /Welcome/ })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Continue' }))
     // A browser with no notifications has nothing to ask for, so it goes straight on to the questions.

@@ -23,9 +23,9 @@ afterEach(() => {
 })
 
 describe('useTheme', () => {
-  it('follows the system until a choice is made', () => {
+  it('is light until a choice is made', () => {
     const { result } = renderHook(() => useTheme())
-    expect(result.current.pref).toBe('system')
+    expect(result.current.pref).toBe('light')
   })
 
   it('applies and remembers a light or dark choice', () => {
@@ -38,12 +38,13 @@ describe('useTheme', () => {
     expect(document.documentElement.dataset.theme).toBe('light')
   })
 
-  it('goes back to following the system, forgetting the choice', () => {
+  it('goes back to following the system, and remembers that as a choice, since light is what there is with none', () => {
     const { result } = renderHook(() => useTheme())
     act(() => result.current.setPref('dark'))
     act(() => result.current.setPref('system'))
     expect(document.documentElement.dataset.theme).toBeUndefined()
-    expect(localStorage.getItem('theme')).toBeNull()
+    expect(localStorage.getItem('theme')).toBe('system')
+    expect(renderHook(() => useTheme()).result.current.pref).toBe('system')
   })
 
   it('starts from the remembered choice', () => {
@@ -53,7 +54,7 @@ describe('useTheme', () => {
 
   it('ignores a remembered value it does not know', () => {
     localStorage.setItem('theme', 'purple')
-    expect(renderHook(() => useTheme()).result.current.pref).toBe('system')
+    expect(renderHook(() => useTheme()).result.current.pref).toBe('light')
   })
 
   it('still applies the choice for this visit when storage is blocked', () => {
