@@ -217,11 +217,12 @@ describe('Settings sections', () => {
     expect((out.match(/name="number-format"/g) ?? []).length).toBe(3)
   })
 
-  it('Your data: backs up, restores and shows the trash', () => {
+  it('Your data: exports and shows the trash, and leaves backup and restore to the top of Settings', () => {
     const trashed = { id: 9, kind: 'expense' as const, amountMinor: 45000, currency: 'INR', categoryId: 1, merchant: 'Swiggy', note: '', date: '2026-10-05', paymentMethod: '', source: 'manual' as const, createdAt: 1, deletedAt: Date.now() - 2 * 86_400_000 }
     const out = html(createElement(DataSection, { ledger: makeLedger({ ...ledger, txs: [tx('2026-10-05', 10)], trash: [trashed] }) }))
-    for (const text of ['Back up everything', 'Restore from a backup', 'Export transactions', 'Recently deleted', '1 kept for 30 days', 'Swiggy', '28 days left', 'Restore']) {
+    for (const text of ['Export transactions', 'Recently deleted', '1 kept for 30 days', 'Swiggy', '28 days left', 'Restore']) {
       expect(out).toContain(text)
     }
+    for (const text of ['Back up everything', 'Restore from a backup']) expect(out).not.toContain(text)
   })
 })

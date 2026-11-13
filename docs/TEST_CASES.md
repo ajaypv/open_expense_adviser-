@@ -138,8 +138,8 @@ I checked that the tests can fail by planting ten bugs one at a time. All ten we
 | AHD-12 | What has gone this month | Add a payment from the Due now card, then open the page | It counts as already paid (a payment counts once it has been added); entries typed by hand, imported ones and earlier months do not; a payment due today counts as still to pay until it is added, then as paid, never both; a weekly payment counts every time it falls in the days left | Auto: `monthPlan`, `PlanAheadPage.flow` |
 | AHD-13 | The balance, in plain words | Open the page with a balance set, and try a big, a medium, a small and too small a balance | Under the two numbers one bar shows how much of the balance the payments use, and a sentence says how to feel: "Comfortable: these payments use only 21%" (up to half), "These payments use 62%", "Tight: these payments use 93%" (over 80%, in amber), "These payments are more than your balance." (in red, with the amount after in red); money coming in is added to what is left after | Auto: `PlanAheadPage.flow`; look by eye |
 | AHD-14 | When it goes out | Open the page with payments in different weeks | A bar for each of overdue (red), this week, next week and later, as long as what goes out in it with its amount and how many payments, the biggest full length; money coming in is not in it | Auto: `PlanAheadPage.flow` |
-| SET-1 | A short list | Open Settings | A title, a Backup card (when it was last backed up, and Back up now), an App update card (version, Check for updates or Update now, What is new), then four rows: Money, Automatic, Appearance, Privacy and data, each with a line saying what is on it | Auto: `Settings`, `settingsNav.flow` |
-| SET-2 | A page of its own | Tap a row | That page slides in with its title and a back button, and holds only its own settings: Money (currency, accounts and balance, budget), Automatic (regular payments, reminders, suggestions), Appearance (theme, text size, hide amounts, number format), Privacy and data (backup, export, restore, recently deleted, app lock, location) | Auto: `Settings`, `settingsNav.flow` |
+| SET-1 | A short list | Open Settings | A title, a Backup and restore card (when it was last backed up, Back up now, and Restore from a backup, with the choice of what to restore shown inside it), an App update card (version, Check for updates or Update now, What is new), then four rows: Money, Automatic, Appearance, Privacy and data, each with a line saying what is on it | Auto: `Settings`, `settingsNav.flow` |
+| SET-2 | A page of its own | Tap a row | That page slides in with its title and a back button, and holds only its own settings: Money (currency, accounts and balance, budget), Automatic (regular payments, reminders, suggestions), Appearance (theme, text size, hide amounts, number format), Privacy and data (export, recently deleted, app lock, location) | Auto: `Settings`, `settingsNav.flow` |
 | SET-3 | Back | On a page, tap the back button, or press the phone back button | Back to the list; pressing back again goes to Home; nothing is left behind in the history when closed with the button | Auto: `settingsNav.flow` |
 | SET-4 | Straight to Money | Tap Set budget or Set balance on Home or Insights | Settings opens on the Money page; opening Settings from the tab bar later shows the list again | Auto: `settingsNav.flow` |
 | SET-5 | Backup and update at hand | Open Settings on a fresh install | Backup says Never backed up and the button works; an update that is waiting shows Update ready and Update now without opening anything | Auto: `Settings`, `settings.flow` |
@@ -428,12 +428,12 @@ See INS-4 to INS-8.
 
 | ID | Check | Steps | Expected | Auto |
 |---|---|---|---|---|
-| DAT-1 | Back up | Back up everything | The phone's share sheet opens (Files, Drive, WhatsApp). The message says "Backup shared" | Auto (file contents): `data.flow`. **Device** (the share sheet) |
+| DAT-1 | Back up | On the Settings page, tap Back up now | The phone's share sheet opens (Files, Drive, WhatsApp). The message says "Backup shared" | Auto (file contents): `data.flow`. **Device** (the share sheet) |
 | DAT-2 | Closing the sheet | Close the share sheet | Not recorded as a backup | Auto: `data.flow` |
 | DAT-3 | Download fallback | On desktop | The file downloads | Auto: `data.flow` |
 | DAT-4 | File contents | Open the JSON | Version 2, entries (not trashed), accounts, categories, goals, rates | Auto: `data.flow`, `importBackup.test` |
 | DAT-5 | Export | Export transactions | A CSV with a header and one row per entry | Auto: `data.flow`, `exporters.test` |
-| DAT-6 | Both off when empty | With no entries | Back up and Export are dimmed | Auto: `data.flow` |
+| DAT-6 | Both off when empty | With no entries | Back up now and Export are dimmed | Auto: `data.flow` |
 | DAT-7 | Restore: preview | Choose a backup file | Shows the file name and "n transactions in this file, m new" before changing anything | Auto: `data.flow` |
 | DAT-8 | Add what's missing | Tap it | Adds only missing entries; "Restored n transactions" | Auto: `data.flow` |
 | DAT-9 | Restore twice | Restore the same file again | "none of them new"; nothing duplicated | Auto: `data.flow`, `importBackup.test` |
@@ -446,6 +446,7 @@ See INS-4 to INS-8.
 | DAT-16 | 30 days | Leave a deleted entry for over 30 days | It is removed for good when the app opens | Auto: `trash.test` |
 | DAT-17 | Last backup date | After a backup | Settings shows "Last backup today" | Auto: `data.flow` |
 | DAT-18 | Backup reminder | See HOM-7 | Reappears after 30 days; "Later" waits 7 days | Auto: `backupState.test`, `parts.flow` |
+| DAT-19 | Backup and restore only on the Settings page | Open Settings, then Privacy and data | Back up now and Restore from a backup are in the card at the top of Settings; Privacy and data has only the export and Recently deleted | Auto: `Settings`, `data.flow` |
 
 ## 13. App lock
 

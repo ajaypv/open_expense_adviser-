@@ -10,6 +10,7 @@ import { localDateString } from '../../db/money'
 import { db } from '../../db/schema'
 import { ToastProvider } from '../../ui/toast'
 import { DataSection } from './DataSection'
+import { BackupCard } from './EssentialCards'
 import type { Ledger } from './parts'
 
 afterEach(() => {
@@ -23,7 +24,14 @@ function Live({ children }: { children: (ledger: Ledger) => ReactNode }) {
 const mount = () =>
   render(
     <ToastProvider>
-      <Live>{(l) => <DataSection ledger={l} />}</Live>
+      <Live>
+        {(l) => (
+          <>
+            <BackupCard ledger={l} />
+            <DataSection ledger={l} />
+          </>
+        )}
+      </Live>
     </ToastProvider>,
   )
 
@@ -68,7 +76,7 @@ const backupFile = (over: Record<string, unknown> = {}, name = 'backup.json') =>
 describe('Back up and export', () => {
   it('keeps backing up and exporting off until there is something to save', async () => {
     mount()
-    expect(await screen.findByRole('button', { name: /Back up everything/ })).toBeDisabled()
+    expect(await screen.findByRole('button', { name: /Back up now/ })).toBeDisabled()
     expect(screen.getByRole('button', { name: /Export transactions/ })).toBeDisabled()
   })
 
@@ -81,7 +89,7 @@ describe('Back up and export', () => {
     const shared = shareSheet()
     const user = userEvent.setup()
     mount()
-    await user.click(await screen.findByRole('button', { name: /Back up everything/ }))
+    await user.click(await screen.findByRole('button', { name: /Back up now/ }))
     await waitFor(() => expect(shared).toHaveLength(1))
 
     expect(shared[0].name).toBe(`expenses-backup-${localDateString()}.json`)
@@ -99,7 +107,7 @@ describe('Back up and export', () => {
     shareSheet('cancel')
     const user = userEvent.setup()
     mount()
-    await user.click(await screen.findByRole('button', { name: /Back up everything/ }))
+    await user.click(await screen.findByRole('button', { name: /Back up now/ }))
     await waitFor(() => expect(navigator.share).toHaveBeenCalled())
     expect(screen.queryByRole('status')?.textContent ?? '').toBe('')
     expect(await getLastBackup()).toBeNull()
@@ -112,7 +120,7 @@ describe('Back up and export', () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
     const user = userEvent.setup()
     mount()
-    await user.click(await screen.findByRole('button', { name: /Back up everything/ }))
+    await user.click(await screen.findByRole('button', { name: /Back up now/ }))
     await waitFor(() => expect(click).toHaveBeenCalled())
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Backup saved to your downloads'))
     expect(await getLastBackup()).toBeTypeOf('number')

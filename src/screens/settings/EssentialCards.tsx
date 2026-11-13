@@ -1,12 +1,15 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { backUpNow } from '../../data/backupNow'
 import { describeAge, getLastBackup } from '../../data/backupState'
+import type { Backup, ImportSummary } from '../../data/importBackup'
 import type { UpdateCheck } from '../../pwa/checkForUpdate'
 import { APP_VERSION } from '../../pwa/version'
 import { Icon, type IconName } from '../../ui/Icon'
 import { useToast } from '../../ui/toast'
-import { card, Status, type Ledger } from './parts'
+import { card, secondaryButton, Status, type Ledger } from './parts'
+
+const MAX_BACKUP_BYTES = 25 * 1024 * 1024
 
 const UPDATE_MESSAGES: Record<UpdateCheck | 'idle' | 'checking', string> = {
   idle: 'New versions download in the background. Check now to get the latest one.',
@@ -33,11 +36,53 @@ function CardHead({ icon, title, detail, status }: { icon: IconName; title: stri
   )
 }
 
-/** The one thing that matters most here, kept at the top: when the data was last copied off this device, and a button to do it. */
+/**
+ * The one thing that matters most here, kept at the top: when the data was last copied off this device, a button to do it,
+ * and the way back, restoring from a file saved earlier. Backup and restore live here and nowhere else in Settings.
+ */
 export function BackupCard({ ledger }: { ledger: Ledger }) {
   const toast = useToast()
+  const picker = useRef<HTMLInputElement>(null)
   const last = useLiveQuery(getLastBackup, [])
   const empty = ledger.txs.length === 0
+  const [pending, setPending] = useState<{ name: string; backup: Backup; summary: ImportSummary } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function choose(file: File | undefined) {
+    setError(null)
+    setPending(null)
+    if (!file) return
+    if (file.size > MAX_BACKUP_BYTES) {
+      setError('That file is too large to be a backup.')
+      return
+    }
+    // Loaded on demand: the validation library is only needed here, so it stays out of the main bundle.
+    const { parseBackup, summarizeImport } = await import('../../data/importBackup')
+    const parsed = parseBackup(await file.text())
+    if (!parsed.ok) {
+      setError(parsed.error)
+      return
+    }
+    setPending({ name: file.name, backup: parsed.backup, summary: await summarizeImport(parsed.backup) })
+  }
+
+  async function restore(mode: 'merge' | 'replace') {
+    if (!pending) return
+    if (mode === 'replace' && !window.confirm('Replace everything in the app with this backup? Your current transactions will be removed.')) return
+    setBusy(true)
+    try {
+      const { importBackup } = await import('../../data/importBackup')
+      const { added, skipped } = await importBackup(pending.backup, mode)
+      toast({ message: `Restored ${added} transaction${added === 1 ? '' : 's'}${skipped ? `, ${skipped} already here` : ''}` })
+      setPending(null)
+    } catch {
+      setError('Something went wrong while restoring. Nothing was changed.')
+    } finally {
+      setBusy(false)
+      if (picker.current) picker.current.value = ''
+    }
+  }
 
   async function backUp() {
     const result = await backUpNow()
@@ -46,15 +91,47 @@ export function BackupCard({ ledger }: { ledger: Ledger }) {
   }
 
   return (
-    <section aria-label="Backup" className={`${card} p-4`}>
+    <section aria-label="Backup and restore" className={`${card} p-4`}>
       <CardHead
         icon="download"
-        title="Backup"
+        title="Backup and restore"
         detail={empty ? 'Nothing to back up yet' : last === undefined ? ' ' : last === null ? 'Never backed up' : `Last backup ${describeAge(last)}`}
       />
       <button type="button" onClick={() => void backUp()} disabled={empty} className="mt-3 min-h-12 w-full rounded-full bg-btn font-semibold text-btn-ink disabled:opacity-40">
         Back up now
       </button>
+      <button type="button" onClick={() => picker.current?.click()} className={`mt-2 w-full ${secondaryButton}`}>
+        Restore from a backup
+      </button>
+      <input ref={picker} type="file" accept=".json,application/json" className="sr-only" tabIndex={-1} aria-label="Backup file" onChange={(e) => void choose(e.target.files?.[0])} />
+
+      {error && (
+        <p role="alert" className="mt-3 rounded-2xl bg-surface-2 px-4 py-3 text-sm text-critical">
+          {error}
+        </p>
+      )}
+
+      {pending && (
+        <div className="mt-3 rounded-2xl bg-surface-2 p-4">
+          <p className="font-semibold">{pending.name}</p>
+          <p className="mt-1 text-ink-2">
+            {pending.summary.total} transaction{pending.summary.total === 1 ? '' : 's'} in this file,{' '}
+            {pending.summary.newCount === 0 ? 'none of them new' : `${pending.summary.newCount} new`}.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" disabled={busy} onClick={() => void restore('merge')} className="min-h-12 rounded-full bg-btn px-5 font-semibold text-btn-ink disabled:opacity-50">
+              Add what’s missing
+            </button>
+            <button type="button" disabled={busy} onClick={() => void restore('replace')} className="min-h-12 rounded-full bg-surface px-5 font-medium disabled:opacity-50">
+              Replace everything
+            </button>
+            <button type="button" disabled={busy} onClick={() => setPending(null)} className="min-h-12 rounded-full px-4 font-medium">
+              Cancel
+            </button>
+          </div>
+          <p className="mt-2 text-sm text-ink-2">“Add what’s missing” keeps what you have and skips anything already here.</p>
+        </div>
+      )}
     </section>
   )
 }

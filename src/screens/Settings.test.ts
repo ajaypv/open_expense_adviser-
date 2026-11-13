@@ -17,7 +17,7 @@ describe('Settings: the list', () => {
   it('is a short list: a backup, the app update, and five pages to go to', () => {
     const html = render()
     expect(html).toMatch(/<h1[^>]*>Settings<\/h1>/)
-    expect(html).toContain('aria-label="Backup"')
+    expect(html).toContain('aria-label="Backup and restore"')
     expect(html).toContain('aria-label="App update"')
     const nav = html.slice(html.indexOf('aria-label="Settings pages"'))
     for (const page of ['Money', 'Automatic', 'Suggestions', 'Appearance', 'Privacy and data']) expect(nav).toContain(`>${page}</span>`)
@@ -26,7 +26,7 @@ describe('Settings: the list', () => {
 
   it('says in a line what is on each page', () => {
     const html = render()
-    for (const line of ['Currency, accounts and balance, people, monthly budget', 'Regular payments, reminders, widget', 'Your regulars, on Home or above the input bar', 'Colour theme, light or dark, text size, hide amounts', 'App lock, location, export, restore, recently deleted']) {
+    for (const line of ['Currency, accounts and balance, people, monthly budget', 'Regular payments, reminders, widget', 'Your regulars, on Home or above the input bar', 'Colour theme, light or dark, text size, hide amounts', 'App lock, location, export, recently deleted']) {
       expect(html).toContain(line)
     }
   })
@@ -41,7 +41,7 @@ describe('Settings: the list', () => {
   it('puts the backup first, then the update, then the pages', () => {
     const html = render()
     const at = (s: string) => html.indexOf(s)
-    expect(at('aria-label="Backup"')).toBeLessThan(at('aria-label="App update"'))
+    expect(at('aria-label="Backup and restore"')).toBeLessThan(at('aria-label="App update"'))
     expect(at('aria-label="App update"')).toBeLessThan(at('aria-label="Settings pages"'))
   })
 
@@ -87,7 +87,7 @@ describe('Settings: a page', () => {
     expect(html).toMatch(/<h1[^>]*>Money<\/h1>/)
     expect(html).toContain('aria-label="Back to Settings"')
     expect(html).not.toContain('aria-label="Settings pages"')
-    expect(html).not.toContain('aria-label="Backup"')
+    expect(html).not.toContain('aria-label="Backup and restore"')
   })
 
   it('Money: the currency, accounts and balance, and monthly budget', () => {
@@ -148,9 +148,10 @@ describe('Settings: a page', () => {
     expect(at('App lock')).toBeLessThan(at('Location'))
   })
 
-  it('Privacy and data: backup, export, restore and the trash', () => {
+  it('Privacy and data: export and the trash, with backup and restore left to the top of Settings', () => {
     const html = page('privacy')
-    for (const text of ['Back up everything', 'Export transactions', 'Restore from a backup', 'Recently deleted']) expect(html, text).toContain(text)
+    for (const text of ['Export transactions', 'Recently deleted']) expect(html, text).toContain(text)
+    for (const text of ['Back up everything', 'Restore from a backup']) expect(html, text).not.toContain(text)
   })
 
   it('shows each page only its own settings', () => {

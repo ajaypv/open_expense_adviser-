@@ -48,7 +48,7 @@ const PAGES: { id: SettingsPage; title: string; summary: string; icon: IconName 
   { id: 'auto', title: 'Automatic', summary: 'Regular payments, reminders, widget', icon: 'autopay' },
   { id: 'suggestions', title: 'Suggestions', summary: 'Your regulars, on Home or above the input bar', icon: 'spark' },
   { id: 'look', title: 'Appearance', summary: 'Colour theme, light or dark, text size, hide amounts', icon: 'palette' },
-  { id: 'privacy', title: 'Privacy and data', summary: 'App lock, location, export, restore, recently deleted', icon: 'shield' },
+  { id: 'privacy', title: 'Privacy and data', summary: 'App lock, location, export, recently deleted', icon: 'shield' },
 ]
 
 /** The pages, in groups under a quiet title each. */

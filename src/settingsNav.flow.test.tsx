@@ -78,7 +78,7 @@ describe('Settings: going to a page and back', () => {
   it('keeps the backup and the update at hand on the list, and a backup button works from there', async () => {
     const user = await open()
     await toSettings(user)
-    expect(screen.getByRole('region', { name: 'Backup' })).toHaveTextContent('Never backed up')
+    expect(screen.getByRole('region', { name: 'Backup and restore' })).toHaveTextContent('Never backed up')
     expect(screen.getByRole('region', { name: 'App update' })).toHaveTextContent(`Version ${APP_VERSION}`)
     expect(screen.getByRole('button', { name: 'Back up now' })).toBeEnabled()
   })
