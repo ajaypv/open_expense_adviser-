@@ -3,7 +3,17 @@ import type { NumberFormat } from '../../db/money'
 import { DEFAULT_PALETTE, FLAT_PALETTES, fontStack, GLASS_PALETTES, PALETTES, type Palette, type PaletteId } from '../../theme/palettes'
 import type { ThemePref } from '../../theme/useTheme'
 import { Icon, type IconName } from '../../ui/Icon'
-import { card, Group, RadioList, Switch } from './parts'
+import { card, Group, IconCircle, RadioList, Switch } from './parts'
+
+/** A setting's name with its round icon above the choices. */
+function Label({ icon, children }: { icon: IconName; children: string }) {
+  return (
+    <p className="mb-2 flex items-center gap-2.5 font-semibold">
+      <IconCircle icon={icon} size={32} />
+      {children}
+    </p>
+  )
+}
 
 const THEMES: { id: ThemePref; label: string; icon: IconName }[] = [
   { id: 'system', label: 'System', icon: 'monitor' },
@@ -147,6 +157,7 @@ export function DisplaySection({
       <Group id="look-h" title="Mode, text and numbers">
         <div className={`${card} space-y-5 p-4`}>
           <div>
+            <Label icon="sun">Mode</Label>
             <Segmented label="Mode" name="theme" value={theme} options={THEMES} onChange={onTheme} />
             {darkOnly && (
               <p data-note="dark-only" className="mt-2 text-ink-2">
@@ -156,12 +167,13 @@ export function DisplaySection({
           </div>
 
           <div>
-            <p className="mb-2 font-medium">Text size</p>
+            <Label icon="sliders">Text size</Label>
             <Segmented label="Text size" name="text-size" value={display.textSize} options={TEXT_SIZES} onChange={(textSize) => setDisplay({ textSize })} />
             <p className="mt-2 text-ink-2">The whole app follows this size.</p>
           </div>
 
           <Switch
+            icon="eyeOff"
             label="Hide amounts"
             detail="Replaces every amount with dots, so you can show your screen. Turn it off to see them again."
             checked={display.privacy}
@@ -170,6 +182,7 @@ export function DisplaySection({
         </div>
 
         <div className="mt-3">
+          <Label icon="swap">Number format</Label>
           <RadioList name="number-format" label="Number format" value={display.numberFormat} options={NUMBER_FORMATS} onChange={(numberFormat) => setDisplay({ numberFormat })} />
         </div>
       </Group>

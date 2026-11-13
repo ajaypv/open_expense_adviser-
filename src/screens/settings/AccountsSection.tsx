@@ -5,7 +5,7 @@ import type { Account } from '../../db/schema'
 import { isCard } from '../../insights/cards'
 import { useToast } from '../../ui/toast'
 import { BalanceTrail } from './BalanceTrail'
-import { card as card_, dangerLink, field, Group, saveButton, secondaryButton, Status, type Ledger } from './parts'
+import { card as card_, cardTitle, dangerLink, field, Group, IconCircle, saveButton, secondaryButton, Status, type Ledger } from './parts'
 
 /**
  * The balance field is deliberately never prefilled: showing the current estimate here would
@@ -83,10 +83,11 @@ function AccountRow({ account, ledger }: { account: Account; ledger: Ledger }) {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex min-h-11 w-full items-center justify-between gap-3 text-left"
+        className="flex min-h-11 w-full items-center gap-3 text-left"
       >
-        <span className="min-w-0">
-          <span className="block truncate font-medium">{account.name}</span>
+        <IconCircle icon={card ? 'card' : 'bank'} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-semibold">{account.name}</span>
           <span className="block text-sm text-ink-2">
             {card ? 'Credit card. ' : ''}
             {account.archived ? 'Archived' : card ? (set ? 'Amount owed set' : 'Amount owed not set') : set ? 'Balance set' : 'Balance not set'}
@@ -245,7 +246,8 @@ export function AccountsSection({ ledger }: { ledger: Ledger }) {
     <Group
       id="accounts-h"
       title="Accounts and balance"
-      hint="Tell the app what each account holds today. It then adds money you receive and subtracts money you send to estimate your balance. The total stays hidden on Home until you tap Show balance."
+      hint="What each account holds today. The total stays hidden on Home until you tap Show balance."
+      more={<p>Tell the app what each account holds today. It then adds money you receive and subtracts money you send to estimate your balance.</p>}
       status={<Status on={ledger.balanceSet}>{ledger.balanceSet ? 'Set' : 'Not set'}</Status>}
     >
       <ul className={`${card_} divide-y divide-line`}>
@@ -255,7 +257,7 @@ export function AccountsSection({ ledger }: { ledger: Ledger }) {
       </ul>
       <BalanceTrail ledger={ledger} />
       <form onSubmit={(e) => void add(e)} className={`${card_} mt-3 p-4`}>
-        <label htmlFor="new-account" className="text-sm text-ink-2">
+        <label htmlFor="new-account" className={cardTitle}>
           Add an account
         </label>
         <div className="mt-1.5 flex gap-2">
@@ -280,10 +282,8 @@ export function AccountsSection({ ledger }: { ledger: Ledger }) {
       </form>
 
       <form onSubmit={(e) => void addCard(e)} aria-label="Add a credit card" className={`${card_} mt-3 p-4`}>
-        <p className="font-medium">Add a credit card</p>
-        <p className="mt-0.5 text-sm text-ink-2">
-          What you spend on a card is owed, not gone, until you pay the bill. It stays out of your balance, and has a log of its own on Home.
-        </p>
+        <p className={cardTitle}>Add a credit card</p>
+        <p className="mt-0.5 text-sm text-ink-2">What you spend on a card is owed until you pay the bill, so it stays out of your balance.</p>
         <label htmlFor="new-card" className="mt-3 block text-sm text-ink-2">
           Card name
         </label>

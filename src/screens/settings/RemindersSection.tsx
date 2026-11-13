@@ -3,7 +3,7 @@ import { notificationPermission, requestNotificationPermission, schedulePeriodic
 import { setReminderPrefs, useReminderPrefs } from '../../reminders/store'
 import { TimeField } from '../../ui/TimeField'
 import { useToast } from '../../ui/toast'
-import { card, field, Group, Status, Switch } from './parts'
+import { card, field, Group, HowItWorks, Status, Switch } from './parts'
 
 const PERMISSION_TEXT: Record<Permission, string> = {
   granted: 'Notifications are allowed.',
@@ -80,10 +80,12 @@ export function RemindersSection() {
             </p>
           )}
           {any && (
-            <p className="mt-2 text-sm text-ink-2">
-              Phones decide when a closed app may run. If a notification doesn’t arrive, the reminder still appears on the
-              Home screen, and a number shows on the app icon where supported.
-            </p>
+            <HowItWorks className="mt-1">
+              <p>
+                Phones decide when a closed app may run. If a notification doesn’t arrive, the reminder still appears on the
+                Home screen, and a number shows on the app icon where supported.
+              </p>
+            </HowItWorks>
           )}
         </div>
       </div>

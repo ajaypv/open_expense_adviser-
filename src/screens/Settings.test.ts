@@ -171,10 +171,37 @@ describe('Settings: the list, set in the reference style', () => {
     expect(html.indexOf('Make it work for you')).toBeLessThan(html.indexOf('Safe and private'))
   })
 
-  it('gives each row a thin line icon of its own: bank, circling A, palette, shield', () => {
+  it('gives each row a round icon of its own: bank, circling A, palette, shield', () => {
     const html = render()
-    for (const icon of ['bank', 'autopay', 'palette', 'shield']) expect(html, icon).toContain('data-icon="' + icon + '"')
-    expect(html).toContain('stroke-width="1.4"')
+    for (const icon of ['bank', 'autopay', 'palette', 'shield']) expect(html, icon).toMatch(new RegExp('data-icon="' + icon + '" class="[^"]*rounded-full'))
+  })
+
+  it('keeps each group of pages in one card, divided by hairlines, with the summary allowed two lines', () => {
+    const html = render()
+    expect(html).toContain('divide-y divide-line overflow-hidden rounded-3xl')
+    expect(html).toContain('line-clamp-2')
+    expect(html.slice(html.indexOf('aria-label="Settings pages"'))).not.toContain('truncate')
+  })
+
+  it('sets the page title in the one title size, and each group title too', () => {
+    expect(render()).toMatch(/<h1 class="type-greeting pt-4">Settings<\/h1>/)
+    expect(render({ initialPage: 'money' })).toMatch(/<h3 id="currency-h" class="type-title">Currency<\/h3>/)
+  })
+
+  it('folds the long explanations away under How this works, so a page opens on the settings', () => {
+    const html = render({ initialPage: 'money' })
+    expect(html).toContain('How this works')
+    expect(html).toContain('<details class="group')
+    expect(html).toContain('What each account holds today. The total stays hidden on Home until you tap Show balance.')
+  })
+
+  it('shows each account with a round bank icon', () => {
+    expect(render({ initialPage: 'money' })).toMatch(/data-icon="bank" class="[^"]*rounded-full/)
+  })
+
+  it('gives the Appearance settings a round icon each', () => {
+    const html = render({ initialPage: 'look' })
+    for (const icon of ['sun', 'sliders', 'eyeOff', 'swap']) expect(html, icon).toMatch(new RegExp('data-icon="' + icon + '" class="[^"]*rounded-full'))
   })
 
   it('says at a glance, on the right, the currency', () => {
