@@ -2286,6 +2286,58 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   transform-origin: center;
   animation: flow-twinkle 2.4s ease-in-out var(--d, 0ms) infinite;
 }
+/* The chest opens: the lid, drawn from the front, folds away flat over its hinge (its front edge) while the inside of the lid stands up
+   behind, the inside of the chest is lit and the coins show. All of it keys off data-open on the chart, set by the tap. */
+.flow-lid,
+.flow-lid-in,
+.flow-inside,
+.flow-coins {
+  transform-box: view-box;
+}
+.flow-lid {
+  transition:
+    transform 0.34s cubic-bezier(0.55, 0.05, 0.9, 0.4),
+    opacity 0.08s linear 0.3s;
+}
+[data-flow][data-open='true'] .flow-lid {
+  transform: scaleY(0.03);
+  opacity: 0;
+}
+/* The inside of the lid rises from the back of the chest, and settles with a small overshoot, as a lid does. */
+.flow-lid-in {
+  transform: scaleY(0.03);
+  opacity: 0;
+  transition:
+    transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.25) 0.28s,
+    opacity 0.08s linear 0.26s;
+}
+[data-flow][data-open='true'] .flow-lid-in {
+  transform: none;
+  opacity: 1;
+}
+.flow-inside,
+.flow-coins {
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+[data-flow][data-open='true'] .flow-inside,
+[data-flow][data-open='true'] .flow-coins {
+  opacity: 1;
+  transition-delay: 0.26s;
+}
+/* What the chest is of is written on the lid; as the lid goes it slides down to the front of the chest, above the total. */
+.flow-label {
+  transform-box: view-box;
+  transform-origin: 180px 80px;
+  transition: transform 0.4s cubic-bezier(0.3, 0.8, 0.3, 1) 0.2s;
+}
+[data-flow][data-open='true'] .flow-label {
+  transform: translateY(42px) scale(0.92);
+}
+/* The glow behind the chest quickens when it is open. */
+[data-flow][data-open='true'] .flow-glow {
+  animation-duration: 2.2s;
+}
 @media (prefers-reduced-motion: reduce) {
   .flow-draw,
   .flow-cap,
@@ -2296,6 +2348,13 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   }
   .flow-pulse {
     display: none;
+  }
+  .flow-lid,
+  .flow-lid-in,
+  .flow-inside,
+  .flow-coins,
+  .flow-label {
+    transition: none;
   }
 }
 

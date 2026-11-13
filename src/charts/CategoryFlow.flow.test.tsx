@@ -120,13 +120,14 @@ describe('CategoryFlow: the total splitting into each category', () => {
     expect(Number(lineOf(ribbons()[1]).getAttribute('data-width'))).toBeGreaterThanOrEqual(3.5)
   })
 
-  it('opens a category from its label, and nothing from the folded one', () => {
+  it('opens a category from its label; the folded one opens a list of what is in it, not an expense list of its own', () => {
     const onPick = vi.fn()
     const many: CategoryTotal[] = [1, 2, 3, 4, 5, 6, 7].map((id) => ({ categoryId: id, totalMinor: (8 - id) * 100_00 }))
     mount({ totals: many, onPick })
     fireEvent.click(screen.getByRole('button', { name: /^Cat 2, ₹600.*Show these expenses/ }))
     expect(onPick).toHaveBeenCalledWith(2)
-    expect(screen.queryByRole('button', { name: /Everything else/ })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Everything else, ₹600, 21.4%' }))
+    expect(onPick).toHaveBeenCalledTimes(1)
   })
 
   it('draws nothing when nothing was spent', () => {

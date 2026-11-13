@@ -477,7 +477,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
             id="flow-h"
             className="mt-5"
             title="Money flow"
-            intro={`Your ${name} spending, from the chest to each category.${onPickCategory ? ' Tap one to see those expenses.' : ''}`}
+            intro={`Your ${name} spending, from the chest to each category. Tap the chest to open it.${onPickCategory ? ' Tap one to see those expenses.' : ''}`}
           >
             <div className="mt-4">
               <CategoryFlow totals={catParts} categoryById={categoryById} currency={currency} sourceLabel={`Spent in ${name}`} onPick={onPickCategory} />
