@@ -16,8 +16,8 @@ export const TONE_COLOUR: Record<Tone, string> = { out: 'var(--accent)', in: 'va
 const tint = (colour: string, percent = 24) => `color-mix(in oklab, ${colour} ${percent}%, var(--surface))`
 
 /**
- * The colour of a payment's card: its category's own colour, as on the suggestion tiles, so a bill, a subscription and a salary do not
- * all look alike. A late payment is red whatever its category, and one with no colour falls back to blue for money out, green for in.
+ * The colour of a payment's bar and badge: its category's own colour, so a bill, a subscription and a salary are told apart without
+ * washing the whole card. A late payment is red whatever its category, and one with no colour falls back to blue for money out, green for in.
  */
 export const paymentColour = (p: UpcomingPayment, categoryColour?: string): string => (p.overdue ? TONE_COLOUR.late : (categoryColour ?? TONE_COLOUR[toneOf(p)]))
 
@@ -25,12 +25,12 @@ export const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
 
 let monthFormat: Intl.DateTimeFormat | undefined
 
-/** A little calendar leaf: the month over the day of the month, tinted in the payment's colour. Decoration; the date is also written out. */
+/** A little calendar leaf: the month over the day of the month, plain, and a pale red when the payment is late. Decoration; the date is also written out. */
 export function DateLeaf({ date, tone, colour, size = 56, badge }: { date: string; tone: Tone; colour: string; size?: number; badge?: IconName }) {
   const d = parseLocalDate(date)
   return (
     <span aria-hidden="true" className="relative flex shrink-0" style={{ width: size, height: size }}>
-      <span data-leaf className="flex size-full flex-col items-center justify-center rounded-2xl leading-none" data-colour={colour} style={{ background: tint(colour, 30) }}>
+      <span data-leaf className="flex size-full flex-col items-center justify-center rounded-2xl leading-none" data-colour={colour} style={{ background: tone === 'late' ? tint(colour, 16) : 'var(--surface-2)' }}>
         <span className={`${size < 50 ? 'text-[0.6875rem]' : 'text-xs'} font-semibold uppercase tracking-wide`} style={{ color: tone === 'late' ? 'var(--critical-text)' : 'var(--ink-2)' }}>
           {(monthFormat ??= new Intl.DateTimeFormat(undefined, { month: 'short' })).format(d)}
         </span>
@@ -60,7 +60,8 @@ const LABELS = (r: AheadRow) => (r.kind === 'emi' ? (r.alsoBiggest ? 'Next EMI, 
 /**
  * One payment, as a compact card: the date as a calendar leaf (with a small badge of what it is for), the name and what kind of payment it
  * is (or, for the ones worth pointing out, why: the next EMI, the biggest payment, money coming in), the amount, and how close it is. The
- * whole card takes a pale wash of its category's colour, as the suggestion tiles do. A late payment is red in words as well as colour.
+ * card itself is plain, with a thin outline; the only colour is the bar of how close it is, in its category's colour, and a late payment is
+ * pale red in words as well as colour.
  * Fixed width, to sit in a row that scrolls sideways, with the next card showing at the edge.
  */
 export function PaymentCard({
@@ -91,7 +92,7 @@ export function PaymentCard({
     <li data-kind={highlight?.kind ?? 'payment'} className={`row-in shrink-0 snap-start ${wide ? 'w-full' : 'w-[12.5rem]'}`} style={{ '--d': `${Math.min(index, 5) * 70}ms` } as CSSProperties}>
       <div
         className="flex h-full flex-col rounded-[1.375rem] p-3"
-        style={{ background: tint(colour, 11), boxShadow: `0 0 0 1px ${tint(colour, 32)}` }}
+        style={p.overdue ? { background: tint(colour, 9), boxShadow: `0 0 0 1px ${tint(colour, 30)}` } : { background: 'var(--surface)', boxShadow: '0 0 0 1px var(--ring)' }}
       >
         <div className="flex items-center gap-2.5">
           <DateLeaf date={p.date} tone={tone} colour={colour} size={44} badge={icon} />
@@ -125,7 +126,7 @@ export function SetAsideCard({ setAside, today, currency, horizon = HORIZON_DAYS
     >
       <div
         className={`flex h-full flex-col rounded-[1.375rem] ${wide ? 'p-3.5' : 'p-3'}`}
-        style={{ background: short ? 'color-mix(in oklab, var(--critical) 11%, var(--surface))' : 'var(--surface-2)', boxShadow: short ? '0 0 0 1px color-mix(in oklab, var(--critical) 35%, transparent)' : 'none' }}
+        style={{ background: short ? 'var(--surface)' : 'var(--surface-2)', boxShadow: short ? '0 0 0 1.5px color-mix(in oklab, var(--critical) 45%, transparent)' : 'none' }}
       >
         <span
           aria-hidden="true"

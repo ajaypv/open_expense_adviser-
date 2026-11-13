@@ -221,7 +221,7 @@ describe('PlanAhead: colours', () => {
     return Array.from(section().querySelectorAll<HTMLElement>('[data-leaf]')).map((l) => l.getAttribute('data-colour'))
   }
 
-  it('colours each card with its category, as the suggestion tiles are, so they do not all look alike', () => {
+  it('gives each card its category colour, for its bar and badge, so they do not all look alike', () => {
     const colours = leaves([rule({ merchant: 'Rent', categoryId: 1, nextDue: '2026-10-31' }), rule({ merchant: 'Netflix', categoryId: 2, nextDue: '2026-11-02' })])
     expect(colours).toEqual(['var(--s1)', 'var(--s4)'])
   })
@@ -249,11 +249,19 @@ describe('PlanAhead: compact cards and a better scroll', () => {
     expect(strip().querySelectorAll('[data-leaf] ~ [data-icon]')).toHaveLength(cards.length)
   })
 
-  it('washes each card in the colour of its category, so they do not all look alike', () => {
+  it('keeps the cards plain: no wash of colour on a card or its date leaf, only the thin bar carries the category colour', () => {
     mount([emi, rent])
     const card = strip().querySelector<HTMLElement>('li[data-kind] > div')!
-    expect(card.style.background).toContain('var(--s1)')
-    expect(card.style.boxShadow).toContain('var(--s1)')
+    expect(card.style.background).toBe('var(--surface)')
+    expect(card.style.boxShadow).toBe('0 0 0 1px var(--ring)')
+    expect(strip().querySelector<HTMLElement>('[data-leaf]')!.style.background).toBe('var(--surface-2)')
+    expect(card.querySelector<HTMLElement>('.bar-grow')!.style.background).toContain('var(--s1)')
+  })
+
+  it('tints only a late payment, pale red', () => {
+    mount([rule({ merchant: 'Rent', categoryId: 1, nextDue: '2026-10-25' }), salary])
+    const late = strip().querySelector<HTMLElement>('li[data-kind] > div')!
+    expect(late.style.background).toContain('var(--critical)')
   })
 
   it('is a row that settles on a card, lets the next one show, and does not pass the swipe on', () => {
