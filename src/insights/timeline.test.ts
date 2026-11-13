@@ -102,3 +102,42 @@ describe('timelineRows', () => {
     ])
   })
 })
+
+describe('buildTimeline: money received', () => {
+  const salary = (date: string, rupees: number, over: Partial<Transaction> = {}) => tx(date, rupees, 1, { kind: 'income', merchant: 'Employer', ...over })
+
+  it('tells what was received on each day, and keeps it out of the bars and the scale', () => {
+    const t = buildTimeline([tx('2026-11-06', 100)], today, 5, [salary('2026-11-05', 80_000), salary('2026-11-06', 500)])
+    expect(t.days[0].receivedMinor).toBe(50_000)
+    expect(t.days[1].receivedMinor).toBe(8_000_000)
+    expect(t.days[1].received.map((x) => x.merchant)).toEqual(['Employer'])
+    expect(t.days[1].totalMinor).toBe(0)
+    expect(t.maxMinor).toBe(10_000)
+  })
+
+  it('counts only money received, and nothing from the future or the trash', () => {
+    const t = buildTimeline([tx('2026-11-06', 100)], today, 5, [
+      salary('2026-11-06', 10),
+      tx('2026-11-06', 900), // money sent, not received
+      salary('2026-11-07', 500),
+      salary('2026-11-06', 70, { deletedAt: 1 }),
+    ])
+    expect(t.days[0].receivedMinor).toBe(1_000)
+  })
+
+  it('reaches back to the first day money came in', () => {
+    const t = buildTimeline([tx('2026-11-06', 10)], today, 30, [salary('2026-11-01', 100)])
+    expect(t.days).toHaveLength(6)
+  })
+
+  it('has nothing received on a day when nothing was', () => {
+    const t = buildTimeline([tx('2026-11-06', 10)], today, 30)
+    expect(t.days[0].receivedMinor).toBe(0)
+    expect(t.days[0].received).toEqual([])
+  })
+
+  it('makes a day with only money received a row of its own, not part of a run of quiet days', () => {
+    const t = buildTimeline([tx('2026-11-06', 10), tx('2026-11-01', 10)], today, 30, [salary('2026-11-03', 100)])
+    expect(timelineRows(t.days).map((r) => r.kind)).toEqual(['month', 'day', 'quiet', 'day', 'quiet', 'day'])
+  })
+})

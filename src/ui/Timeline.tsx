@@ -15,6 +15,8 @@ import { Bottle } from './Water'
 interface Props {
   /** Money sent, in the main currency. */
   expenses: Transaction[]
+  /** Money received, told on its day. */
+  received?: Transaction[]
   categoryById: Map<number, Category>
   currency: string
   today: Date
@@ -35,6 +37,10 @@ const STICK_TOP = '0.5rem'
  * written out, so the colour only backs the words up.
  */
 const LOW = 'var(--heat-low)'
+/** The line between days is one calm grey; only the ring of each date carries the colour of the day. */
+const LINE = 'color-mix(in oklab, var(--ink-2) 45%, var(--bg))'
+/** No money received, when none is given. */
+const NONE: Transaction[] = []
 const mix = (from: string, to: string, share: number) => `color-mix(in oklab, ${to} ${Math.round(share * 100)}%, ${from})`
 function spendColor(share: number): string {
   if (share <= 0) return LOW
@@ -144,7 +150,7 @@ const dateOf = (date: string) => parseLocalDate(date).getDate()
 function DateChip({ date }: { date: string }) {
   return (
     <>
-      <span data-weekday className="text-[0.6875rem] font-medium opacity-80">
+      <span data-weekday className="text-xs font-medium opacity-80">
         {weekdayOf(date)}
       </span>
       <span data-date className="mt-0.5 text-[1.0625rem] font-semibold tabular-nums">
@@ -167,7 +173,7 @@ function DateChip({ date }: { date: string }) {
 function Spine({ color, next, wFrom, wTo, today, edge, label, children }: { color: string; next: string | null; wFrom: number; wTo: number; today?: boolean; edge?: boolean; label?: { main: string; sub?: string }; children: React.ReactNode }) {
   return (
     <div aria-hidden="true" className="relative">
-      {next !== null && <River from={color} to={next} wFrom={wFrom} wTo={wTo} edge={edge} />}
+      {next !== null && <River from={LINE} to={LINE} wFrom={wFrom} wTo={wTo} edge={edge} />}
       <span data-stick className="tl-stick sticky z-10 mx-auto block size-[2.625rem]" style={{ top: STICK_TOP, marginTop: `calc(${DOT_Y} - 1.3125rem)` }}>
         {label && (
           <span data-pill className="tl-pill pointer-events-none absolute -inset-y-1 -left-1 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-surface/90 pl-[3.25rem] pr-4 shadow-[0_0_0_1px_var(--ring)] backdrop-blur-md">
@@ -208,7 +214,9 @@ interface DayProps {
 function DayRowBase({ day, look, max, color, next, edge, wFrom, wTo, open, onToggle, onPickDay, categoryById }: DayProps) {
   const [watch, seen] = useSeen(0.2)
   const money = (m: number) => formatMoney(m, look.currency)
-  const empty = day.totalMinor === 0
+  const empty = day.totalMinor === 0 && day.receivedMinor === 0
+  const onlyReceived = day.totalMinor === 0 && day.receivedMinor > 0
+  const from = [...new Set(day.received.map((t) => t.merchant || 'Money received'))].slice(0, 2).join(', ')
   const title = titleOf(day)
   const ago = agoOf(day.daysAgo)
   const lead = day.parts[0]
@@ -224,7 +232,18 @@ function DayRowBase({ day, look, max, color, next, edge, wFrom, wTo, open, onTog
         {empty ? (
           <div className="rounded-3xl bg-surface px-4 py-3.5 shadow-[0_0_0_1px_var(--ring)]">
             <p className="font-semibold">{title}</p>
-            <p className="text-sm text-ink-2">Nothing spent yet today. A good start.</p>
+            <p className="text-sm text-ink-2">Nothing spent yet today.</p>
+          </div>
+        ) : onlyReceived ? (
+          <div role="group" aria-label={`${title}, received ${money(day.receivedMinor)}`} className="flex items-center gap-3 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]">
+            <span aria-hidden="true" data-received-icon className="flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-2 text-good">
+              <Icon name="arrowDown" size={20} weight={2} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold leading-tight">{title}</span>
+              <span className="block truncate text-sm text-ink-2">{from}</span>
+            </span>
+            <span className="num shrink-0 text-xl text-good">{`+${money(day.receivedMinor)}`}</span>
           </div>
         ) : (
           <div className="overflow-hidden rounded-3xl bg-surface shadow-[0_0_0_1px_var(--ring)]">
@@ -232,7 +251,7 @@ function DayRowBase({ day, look, max, color, next, edge, wFrom, wTo, open, onTog
               type="button"
               aria-expanded={open}
               aria-controls={`tl-${day.date}`}
-              aria-label={`${title}${ago ? `, ${ago}` : ''}, ${money(day.totalMinor)}, ${plural(day.count, 'expense')}`}
+              aria-label={`${title}${ago ? `, ${ago}` : ''}, ${money(day.totalMinor)}, ${plural(day.count, 'expense')}${day.receivedMinor > 0 ? `, received ${money(day.receivedMinor)}` : ''}`}
               onClick={() => onToggle(day.date)}
               className="block w-full p-4 text-left active:bg-surface-2 [@media(hover:hover)]:hover:bg-surface-2"
             >
@@ -242,10 +261,13 @@ function DayRowBase({ day, look, max, color, next, edge, wFrom, wTo, open, onTog
                   <span className="block text-sm text-ink-2">{ago ?? dayLabel(day.date)}</span>
                 </span>
                 <span className="shrink-0 text-right">
-                  <span className="block text-xl font-semibold tabular-nums leading-tight">
+                  <span className="num block text-xl leading-tight">
                     <Amount minor={day.totalMinor} currency={look.currency} seen={seen} delay={150} />
                   </span>
-                  <span className="block text-sm text-ink-2">{plural(day.count, 'expense')}</span>
+                  <span className="block text-sm text-ink-2">
+                    <b className="num text-ink">{day.count}</b>
+                    {day.count === 1 ? ' expense' : ' expenses'}
+                  </span>
                 </span>
               </span>
 
@@ -261,14 +283,30 @@ function DayRowBase({ day, look, max, color, next, edge, wFrom, wTo, open, onTog
 
               <span className="mt-3 flex flex-wrap gap-1.5">
                 {shown.map((p) => (
-                  <span key={p.categoryId} data-chip={p.categoryId} className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-surface-2 py-1 pl-2 pr-2.5 text-sm">
-                    <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: look.colorOf(p.categoryId) }} />
+                  <span key={p.categoryId} data-chip={p.categoryId} className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-surface-2 py-1 pl-1 pr-2.5 text-sm">
+                    <span
+                      aria-hidden="true"
+                      data-icon={categoryIcon(look.nameOf(p.categoryId))}
+                      className="flex size-5 shrink-0 items-center justify-center rounded-full text-ink"
+                      style={{ background: `color-mix(in oklab, ${look.colorOf(p.categoryId)} 26%, var(--surface))` }}
+                    >
+                      <Icon name={categoryIcon(look.nameOf(p.categoryId))} size={12} />
+                    </span>
                     <span className="truncate">{look.nameOf(p.categoryId)}</span>
-                    <span className="shrink-0 font-semibold tabular-nums">{money(p.minor)}</span>
+                    <span className="num shrink-0">{money(p.minor)}</span>
                   </span>
                 ))}
                 {more > 0 && <span className="inline-flex items-center rounded-full px-2 py-1 text-sm text-ink-2">{`+${more} more`}</span>}
               </span>
+              {day.receivedMinor > 0 && (
+                <span className="mt-3 flex items-center gap-2 text-sm text-ink-2">
+                  <span aria-hidden="true" data-received-icon className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-2 text-good">
+                    <Icon name="arrowDown" size={13} weight={2.25} />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{`Received · ${from}`}</span>
+                  <b className="num shrink-0 text-good">{`+${money(day.receivedMinor)}`}</b>
+                </span>
+              )}
               <span className="sr-only">{`Mostly ${look.nameOf(lead.categoryId)}, ${formatShare(lead.minor / day.totalMinor)}.`}</span>
             </button>
 
@@ -289,7 +327,7 @@ function DayRowBase({ day, look, max, color, next, edge, wFrom, wTo, open, onTog
                         </span>
                         <span className="min-w-0 flex-1 truncate">{look.nameOf(p.categoryId)}</span>
                         <span className="shrink-0 tabular-nums text-ink-2">{formatShare(p.minor / day.totalMinor)}</span>
-                        <span className="w-20 shrink-0 text-right font-semibold tabular-nums">{money(p.minor)}</span>
+                        <span className="num w-20 shrink-0 text-right">{money(p.minor)}</span>
                       </li>
                     ))}
                   </ul>
@@ -300,7 +338,7 @@ function DayRowBase({ day, look, max, color, next, edge, wFrom, wTo, open, onTog
                           <Icon name={spendIcon(t.merchant, categoryById.get(t.categoryId)?.name)} size={16} />
                         </span>
                         <span className="min-w-0 flex-1 truncate">{t.merchant || look.nameOf(t.categoryId)}</span>
-                        <span className="shrink-0 font-medium tabular-nums">{money(t.amountMinor)}</span>
+                        <span className="num shrink-0">{money(t.amountMinor)}</span>
                       </li>
                     ))}
                   </ul>
@@ -317,7 +355,7 @@ function DayRowBase({ day, look, max, color, next, edge, wFrom, wTo, open, onTog
   )
 }
 
-/** Days with nothing spent are good news, and are said so: one day has its date in the dot, a run of them a tick. */
+/** Days with nothing spent are told in one plain line: one day has its date in the dot, a run of them a tick. */
 function QuietRowBase({ row, color, next, edge, wFrom, wTo }: { row: Extract<TimelineRow, { kind: 'quiet' }>; color: string; next: string | null; edge: boolean; wFrom: number; wTo: number }) {
   const one = row.count === 1
   return (
@@ -326,14 +364,11 @@ function QuietRowBase({ row, color, next, edge, wFrom, wTo }: { row: Extract<Tim
         {one ? <DateChip date={row.to} /> : <Icon name="check" size={18} />}
       </Spine>
       <div className="pb-4 pt-3.5">
-        <p className="rounded-2xl px-3 py-2 text-[0.9375rem] leading-snug" style={{ background: `color-mix(in oklab, ${LOW} 10%, var(--surface))` }}>
-          <span className="text-ink-2">{one ? `No spending on ${dayLabel(row.to)}. ` : `${row.count} days with no spending, ${shortLabel(row.from)} to ${shortLabel(row.to)}. `}</span>
-          <span className="inline-flex items-center gap-1 font-medium">
-            <span aria-hidden="true" style={{ color: LOW }}>
-              <Icon name="spark" size={14} />
-            </span>
-            {one ? 'Nicely done.' : 'Well done.'}
+        <p className="flex items-center gap-2 px-1 text-[0.9375rem] leading-snug text-ink-2">
+          <span aria-hidden="true" className="text-good">
+            <Icon name="check" size={16} />
           </span>
+          {one ? `No spending on ${dayLabel(row.to)}` : `${row.count} days with no spending, ${shortLabel(row.from)} to ${shortLabel(row.to)}`}
         </p>
       </div>
     </li>
@@ -356,13 +391,13 @@ const QuietRow = memo(QuietRowBase)
  * of one day into the next, and as each is reached the dot lands, the line draws, a pulse of light runs down it, the bar fills
  * and the amount counts up. Quiet days fold into a single line.
  */
-export function Timeline({ expenses, categoryById, currency, today, onPickDay }: Props) {
+export function Timeline({ expenses, received = NONE, categoryById, currency, today, onPickDay }: Props) {
   useDisplay() // amounts are masked or regrouped by display settings, so redraw when they change
   const [span, setSpan] = useState(STEP)
   const [open, setOpen] = useState<string | null>(null)
   const listRef = useRef<HTMLOListElement>(null)
 
-  const tl = useMemo(() => buildTimeline(expenses, today, span), [expenses, today, span])
+  const tl = useMemo(() => buildTimeline(expenses, today, span, received), [expenses, received, today, span])
   const rows = useMemo(() => timelineRows(tl.days), [tl.days])
   const monthTotals = useMemo(() => {
     const m = new Map<string, number>()
@@ -423,10 +458,13 @@ export function Timeline({ expenses, categoryById, currency, today, onPickDay }:
               <li key={r.key} className="relative flex items-baseline justify-between gap-3 pb-3 pl-[3.5rem] pr-1 pt-2">
                 {/* The river goes on behind the heading, from one day's colour and width to the next's. */}
                 {before !== -1 && after !== -1 && (
-                  <River from={colors[before]} to={colors[after]} wFrom={widths[before]} wTo={widths[after]} top="0px" left="1.5rem" />
+                  <River from={LINE} to={LINE} wFrom={widths[before]} wTo={widths[after]} top="0px" left="1.5rem" />
                 )}
                 <h3 className="text-lg font-bold tracking-tight">{label}</h3>
-                <span className="text-sm text-ink-2">{`${formatMoney(monthTotals.get(r.month) ?? 0, currency)} spent`}</span>
+                <span className="text-sm text-ink-2">
+                  <b className="num text-ink">{formatMoney(monthTotals.get(r.month) ?? 0, currency)}</b>
+                  {' spent'}
+                </span>
               </li>
             )
           }

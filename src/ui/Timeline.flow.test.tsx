@@ -109,8 +109,11 @@ describe('Timeline: the days', () => {
     mount()
     const single = document.querySelector('[data-quiet="2026-11-04"]')!
     const run = document.querySelector('[data-quiet="2026-11-02"]')!
-    expect(single).toHaveTextContent(/No spending on .+\. Nicely done\./)
-    expect(run).toHaveTextContent(/2 days with no spending, .+ to .+\. Well done\./)
+    // One plain line, with a tick: no band of colour and no praise.
+    expect(single).toHaveTextContent(/^No spending on .+$/)
+    expect(run).toHaveTextContent(/^2 days with no spending, .+ to .+$/)
+    expect(single).not.toHaveTextContent(/done/i)
+    expect(single.querySelector('p')!.getAttribute('style')).toBeNull()
   })
 
   it('shows each day as a bar of what it went on, as long as the day is against the biggest', () => {
@@ -134,13 +137,16 @@ describe('Timeline: the days', () => {
     mount()
     const headings = within(screen.getByRole('list', { name: 'Spending, day by day' })).getAllByRole('heading', { level: 3 })
     expect(headings.map((h) => h.textContent)).toEqual(['November', 'October'])
-    expect(days().getByText('₹2,370 spent')).toBeInTheDocument()
-    expect(days().getByText('₹80 spent')).toBeInTheDocument()
+    const totals = headings.map((h) => h.parentElement!.textContent)
+    expect(totals[0]).toContain('₹2,370 spent')
+    expect(totals[1]).toContain('₹80 spent')
+    // The amount is the bold figure, the word after it is not.
+    expect(headings[0].parentElement!.querySelector('b')!.textContent).toBe('₹2,370')
   })
 
   it('keeps today as a row even before anything is spent', () => {
     mount([tx('2026-11-04', 100, 1, 'Cafe')])
-    expect(within(dayRow('2026-11-06')).getByText('Nothing spent yet today. A good start.')).toBeInTheDocument()
+    expect(within(dayRow('2026-11-06')).getByText('Nothing spent yet today.')).toBeInTheDocument()
     expect(dayRow('2026-11-06').querySelector('[data-dot]')).toHaveTextContent('6')
   })
 })
@@ -439,5 +445,55 @@ describe('Timeline: the dates stick', () => {
     expect(css).toMatch(/\.tl-pill \{\s*display: none/)
     expect(css).toMatch(/@supports \(container-type: scroll-state\) \{[\s\S]*?\.tl-stick \{\s*container-type: scroll-state/)
     expect(css).toMatch(/@container scroll-state\(stuck: top\) \{\s*\.tl-pill \{\s*opacity: 1/)
+  })
+})
+
+describe('Timeline: money received', () => {
+  const salary = (date: string, rupees: number): Transaction => ({ ...tx(date, rupees, 1, 'Employer'), kind: 'income' })
+  const mountWith = (received: Transaction[]) =>
+    render(<Timeline expenses={expenses()} received={received} categoryById={categoryById} currency="INR" today={today} onPickDay={vi.fn()} />)
+
+  it('shows a day with only money received as a card of its own, not as a day of no spending', () => {
+    mountWith([salary('2026-11-04', 800)])
+    const row = dayRow('2026-11-04')
+    expect(row).not.toBeNull()
+    expect(within(row).getByRole('group', { name: /received ₹800/ })).toBeInTheDocument()
+    expect(row).toHaveTextContent('+₹800')
+    expect(row).toHaveTextContent('Employer')
+    expect(row.querySelector('[data-received-icon]')).not.toBeNull()
+    expect(document.querySelector('[data-quiet="2026-11-04"]')).toBeNull()
+  })
+
+  it('adds a line of what came in to a day that also had spending, and says it in the label', () => {
+    mountWith([salary('2026-11-05', 500)])
+    const button = days().getByRole('button', { name: /^Yesterday, ₹750, 2 expenses, received ₹500$/ })
+    expect(button).toHaveTextContent('+₹500')
+    expect(button.querySelector('[data-received-icon]')).not.toBeNull()
+  })
+
+  it('has no such line on a day when nothing came in', () => {
+    mountWith([salary('2026-11-04', 800)])
+    expect(dayRow('2026-11-05').querySelector('[data-received-icon]')).toBeNull()
+  })
+})
+
+describe('Timeline: the pattern of the other pages', () => {
+  it('gives each category chip a round icon of its category, not a dot', () => {
+    mount()
+    const chip = dayRow('2026-11-05').querySelector('[data-chip]')!
+    expect(chip.querySelector('[data-icon="utensils"]')!.className).toContain('rounded-full')
+    expect(chip.querySelector('[class*="size-2.5"]')).toBeNull()
+  })
+
+  it('sets the figures of a day in the bold number face: the count of expenses and the amounts on the chips', () => {
+    mount()
+    const button = days().getByRole('button', { name: 'Yesterday, ₹750, 2 expenses' })
+    expect(button.querySelector('b.num')!.textContent).toBe('2')
+    expect(Array.from(button.querySelectorAll('[data-chip] .num')).map((n) => n.textContent)).toEqual(['₹450', '₹300'])
+  })
+
+  it('sets the weekday in a date at a comfortable size', () => {
+    mount()
+    expect(dayRow('2026-11-05').querySelector('[data-weekday]')!.className).toContain('text-xs')
   })
 })

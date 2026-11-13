@@ -299,7 +299,7 @@ export const Home = memo(function Home({
             <GoalsSummary goals={ledger.goals} currency={currency} today={today} onOpen={onOpenGoals} />
           </>
         }
-        timeline={<Timeline expenses={expenses} categoryById={categoryById} currency={currency} today={today} onPickDay={pickDay} />}
+        timeline={<Timeline expenses={expenses} received={income} categoryById={categoryById} currency={currency} today={today} onPickDay={pickDay} />}
       />
     </div>
   )
