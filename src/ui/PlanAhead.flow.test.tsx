@@ -232,6 +232,42 @@ describe('PlanAhead: colours', () => {
   })
 })
 
+describe('PlanAhead: the sentence picks out its two figures', () => {
+  it('sets only the number 30 in bold, and the word days normal', () => {
+    mount([emi, rent, salary])
+    const days = Array.from(section().querySelectorAll('p b')).find((b) => b.textContent === '30')!
+    expect(days).toBeDefined()
+    expect(days.className).toContain('font-bold')
+    expect(days.parentElement!.textContent).toMatch(/^In the next 30 days, /)
+  })
+
+  it('underlines what goes out and what comes in, each with its own marker', () => {
+    mount([emi, rent, salary])
+    const out = section().querySelector('.mark-out')!
+    const inn = section().querySelector('.mark-in')!
+    expect(out.tagName).toBe('B')
+    expect(inn.tagName).toBe('B')
+    expect(out.textContent).toMatch(/^₹/)
+    expect(inn.textContent).toMatch(/^₹/)
+    expect(inn.className).toContain('text-good')
+  })
+
+  it('points an arrow up at what leaves and down at what arrives, for the eye only', () => {
+    mount([emi, rent, salary])
+    const arrow = (sel: string) => section().querySelector(sel)!.querySelector('span[aria-hidden="true"] svg')
+    expect(arrow('.mark-out')!.querySelector('path')!.getAttribute('d')).toBe('M12 19V6M6 12l6-6 6 6')
+    expect(arrow('.mark-in')!.querySelector('path')!.getAttribute('d')).toBe('M12 5v13M6 12l6 6 6-6')
+    // The figure is still read as the plain amount.
+    expect(section().querySelector('.mark-out')!.textContent).toMatch(/^₹[\d,]+$/)
+  })
+
+  it('has no marker for money in when none comes in', () => {
+    mount([emi, rent])
+    expect(section().querySelector('.mark-out')).not.toBeNull()
+    expect(section().querySelector('.mark-in')).toBeNull()
+  })
+})
+
 describe('PlanAhead: compact cards and a better scroll', () => {
   const strip = () => section().querySelector('ul')!
   const outer = () => strip().parentElement as HTMLElement

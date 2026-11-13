@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { formatMoney } from '../db/money'
+import { Icon, type IconName } from '../ui/Icon'
 import { useSeen } from '../ui/motion'
 
 export interface BarRow {
@@ -9,6 +10,8 @@ export interface BarRow {
   valueMinor: number
   /** Secondary text beside the amount, e.g. "38%" or "3 visits". */
   detail?: string
+  /** A round icon of what the row is, in its colour, in place of the dot. */
+  icon?: IconName
   onPick?: () => void
 }
 
@@ -31,11 +34,22 @@ export function BarList({ rows, currency }: { rows: BarRow[]; currency: string }
           <>
             <span className="flex items-baseline justify-between gap-3">
               <span className="flex min-w-0 items-center gap-2">
-                <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: r.color }} />
+                {r.icon ? (
+                  <span
+                    aria-hidden="true"
+                    data-icon={r.icon}
+                    className="flex size-8 shrink-0 items-center justify-center rounded-full text-ink"
+                    style={{ background: `color-mix(in oklab, ${r.color} 20%, var(--surface))` }}
+                  >
+                    <Icon name={r.icon} size={16} />
+                  </span>
+                ) : (
+                  <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: r.color }} />
+                )}
                 <span className="truncate">{r.label}</span>
               </span>
               <span className="shrink-0 tabular-nums">
-                {formatMoney(r.valueMinor, currency)}
+                <span className="num">{formatMoney(r.valueMinor, currency)}</span>
                 {r.detail && <span className="ml-2 text-ink-2">{r.detail}</span>}
               </span>
             </span>

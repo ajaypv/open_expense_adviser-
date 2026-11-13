@@ -35,21 +35,26 @@ export function WalletPanel({
 }: Props) {
   return (
     <section aria-label="Money received and your balance" className={`${card} mt-3 p-4`}>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="min-w-0">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="min-w-0 rounded-2xl bg-surface-2 p-3">
           <p className="flex items-center gap-2 text-sm font-medium text-ink-2">
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-2 text-good">
-              <Icon name="arrowDown" size={14} />
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-good">
+              <Icon name="arrowDown" size={15} weight={2.25} />
             </span>
             {`Received in ${monthName}`}
           </p>
-          <p className="type-figure mt-1 truncate text-good">
+          <p className="type-figure mt-2 truncate text-good">
             <AnimatedMoney minor={receivedMinor} currency={currency} id="received" />
           </p>
         </div>
-        <div className="min-w-0 border-l border-line pl-4">
-          <p className="text-sm font-medium text-ink-2">Estimated balance</p>
-          <p id="balance-value" className="type-figure mt-1 truncate">
+        <div className="min-w-0 rounded-2xl bg-surface-2 p-3">
+          <p className="flex items-center gap-2 text-sm font-medium text-ink-2">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-ink">
+              <Icon name="bank" size={15} />
+            </span>
+            Estimated balance
+          </p>
+          <p id="balance-value" className="type-figure mt-2 truncate">
             {shown ? (
               formatMoney(balanceMinor, currency)
             ) : (

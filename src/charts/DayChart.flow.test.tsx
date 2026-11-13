@@ -82,7 +82,8 @@ describe('DayChart: the columns', () => {
   it('labels the first of each week and marks the axis top', () => {
     mount()
     expect(within(plot().parentElement!.parentElement!).getByText('15')).toBeInTheDocument()
-    expect(screen.getByText('₹400')).toBeInTheDocument()
+    // The axis top is the small label; the same amount may also stand, in bold, in a sentence below.
+    expect(screen.getAllByText('₹400').some((e) => e.className.includes('text-xs'))).toBe(true)
   })
 })
 
@@ -114,7 +115,10 @@ describe('DayChart: reading a day', () => {
     mount()
     expect(screen.getByText('a day on average')).toBeInTheDocument()
     expect(screen.getByText(average)).toBeInTheDocument()
-    expect(screen.getByText(`${formatMoney(109_000, 'INR')} over 12 days`)).toBeInTheDocument()
+    const total = screen.getByText('a day on average').nextElementSibling!
+    expect(total.textContent).toBe(`${formatMoney(109_000, 'INR')} over 12 days`)
+    // The amount and the number of days are in bold; the words are not.
+    expect(Array.from(total.querySelectorAll('b')).map((b) => b.textContent)).toEqual([formatMoney(109_000, 'INR'), '12'])
   })
 
   it('moves through the days with the arrow keys, starting from today', () => {
@@ -287,7 +291,7 @@ describe('DayChart: a finished month', () => {
   it('treats every day as having happened, with no marker for today', () => {
     mount({ monthKey: '2026-10', lastDay: null })
     expect(bar(31)).not.toBeNull()
-    expect(screen.getByText(/over 31 days/)).toBeInTheDocument()
+    expect(screen.getByText('a day on average').nextElementSibling!.textContent).toMatch(/over 31 days/)
     key('End')
     expect(screen.queryByText(/, today/)).toBeNull()
   })

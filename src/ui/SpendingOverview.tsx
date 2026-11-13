@@ -85,7 +85,12 @@ export function SpendingOverview({
         <p className="type-title pr-10">{`Nothing spent in ${monthName} yet.`}</p>
       ) : (
         <>
-          <p className="font-medium text-ink-2">{isCurrent ? `Spent so far in ${monthName}` : `Spent in ${monthName}`}</p>
+          <p className="flex items-center gap-2 pr-10 font-medium text-ink-2">
+            <span aria-hidden="true" data-icon="arrowUp" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink">
+              <Icon name="arrowUp" size={15} weight={2.25} />
+            </span>
+            {isCurrent ? `Spent so far in ${monthName}` : `Spent in ${monthName}`}
+          </p>
           <p className="type-display mt-1 whitespace-nowrap">
             <AnimatedMoney minor={totalMinor} currency={currency} id="hero" />
           </p>
@@ -100,10 +105,23 @@ export function SpendingOverview({
       )}
 
       {totalMinor > 0 && (
-        <p className="mt-3 text-base text-ink-2">
-          {budgetMinor !== null && `Budget ${formatMoney(budgetMinor, currency)} · `}
-          {`${expenseCount} ${expenseCount === 1 ? 'expense' : 'expenses'}`}
-          {dailyAverageMinor > 0 && ` · about ${formatMoney(dailyAverageMinor, currency)} a day`}
+        <p className="mt-3 text-[1.0625rem] leading-[1.6] text-ink-2">
+          {budgetMinor !== null && (
+            <>
+              {'Budget '}
+              <b className="num text-ink">{formatMoney(budgetMinor, currency)}</b>
+              {' · '}
+            </>
+          )}
+          <b className="num text-ink">{expenseCount}</b>
+          {` ${expenseCount === 1 ? 'expense' : 'expenses'}`}
+          {dailyAverageMinor > 0 && (
+            <>
+              {' · about '}
+              <b className="num text-ink">{formatMoney(dailyAverageMinor, currency)}</b>
+              {' a day'}
+            </>
+          )}
         </p>
       )}
 
@@ -128,7 +146,7 @@ export function SpendingOverview({
       )}
 
       {periods.length > 0 && (
-        <section aria-label="Recent spending" className="mt-5 grid grid-cols-3 divide-x divide-line border-t border-line pt-4">
+        <section aria-label="Recent spending" className="mt-5 grid grid-cols-3 gap-2 border-t border-line pt-4">
           {periods.map((p) => {
             const spent = formatMoney(p.amountMinor, currency)
             const body = (
@@ -146,12 +164,12 @@ export function SpendingOverview({
                 type="button"
                 aria-label={`${p.label}: ${spent}. See these transactions`}
                 onClick={() => onPickPeriod({ from: p.from, to: p.to })}
-                className="flex min-h-12 min-w-0 flex-col justify-center px-3 text-left first:pl-0 active:opacity-60 [@media(hover:hover)]:hover:opacity-75"
+                className="flex min-h-14 min-w-0 flex-col justify-center rounded-2xl bg-surface-2 px-3 py-2 text-left active:opacity-60 [@media(hover:hover)]:hover:opacity-75"
               >
                 {body}
               </button>
             ) : (
-              <div key={p.id} role="group" aria-label={`${p.label}: ${spent}`} className="flex min-h-12 min-w-0 flex-col justify-center px-3 first:pl-0">
+              <div key={p.id} role="group" aria-label={`${p.label}: ${spent}`} className="flex min-h-14 min-w-0 flex-col justify-center rounded-2xl bg-surface-2 px-3 py-2">
                 {body}
               </div>
             )

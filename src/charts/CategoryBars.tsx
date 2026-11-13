@@ -1,5 +1,6 @@
 import type { Category } from '../db/schema'
 import type { CategoryTotal } from '../insights/aggregates'
+import { categoryIcon } from '../ui/categoryIcon'
 import { BarList, type BarRow } from './BarList'
 
 interface Props {
@@ -28,6 +29,7 @@ export function CategoryBars({ totals, categoryById, currency, limit, onPick }: 
       color: t.color ?? cat?.color ?? 'var(--other)',
       valueMinor: t.totalMinor,
       detail: share(t.totalMinor),
+      icon: categoryIcon(t.name ?? cat?.name),
       onPick: onPick ? () => onPick(t.categoryId) : undefined,
     }
   })

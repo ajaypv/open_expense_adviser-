@@ -165,7 +165,7 @@ describe('dayInsights', () => {
 
   it('names the biggest day, tied to that day so it can be shown', () => {
     const [first] = insights([spend('2026-10-06', 500), spend('2026-10-02', 100)])
-    expect(first).toEqual({ key: 'peak', text: 'Biggest day: 2026-10-06, ₹500', day: 6 })
+    expect(first).toEqual({ key: 'peak', text: 'Biggest day: 2026-10-06, ₹500', day: 6, figures: ['₹500'] })
   })
 
   it('says how many days were above the budget share, or that none were', () => {
@@ -220,5 +220,17 @@ describe('dayInsights: a big gap between weekends and weekdays', () => {
     expect(small).toBe('Weekend days cost you about 3.5× what weekdays do')
     const back = dayInsights({ ...view, weekendRatio: 1 / 4 } as typeof view, (m) => String(m), (d) => d).find((i) => i.key === 'weekday')?.text
     expect(back).toBe('Weekdays cost you about 4× what weekend days do')
+  })
+})
+
+describe('dayInsights: the figures to set in bold', () => {
+  const money = (m: number) => `₹${m / 100}`
+  const label = (d: string) => d
+  const insights = (txs: Transaction[], last = 12, budget: number | null = null) => dayInsights(dayView(txs, MONTH, last, budget), money, label)
+
+  it('lists the figures as they are written in the text', () => {
+    const list = insights([spend('2026-10-06', 500), spend('2026-10-02', 100)])
+    for (const item of list) for (const figure of item.figures ?? []) expect(item.text).toContain(figure)
+    expect(list[0].figures).toEqual(['₹500'])
   })
 })

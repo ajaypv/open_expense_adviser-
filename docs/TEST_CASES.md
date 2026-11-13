@@ -722,6 +722,19 @@ How Home is set in type: Figtree (a Google font shipped with the app) for all th
 | TYP-3 | One sans | Look at Plan ahead beside the sections above and below it | Plan ahead is in the theme's sans like everything else, not a different one of its own; a theme with its own typeface (Exo 2, Space Grotesk, Plus Jakarta Sans, Geist) changes the small type, and the serif stays | Auto: `Home` (type); look by eye in each theme |
 | TYP-4 | Reads at any size | Make the text larger (browser zoom to 200%, a large text size) and look at 320 px wide | Sizes are in rem, so they grow with it; nothing is cut off or runs off the side, and the big amount still fits on one line up to eleven characters at the default size | Look by eye |
 
+## Home: figures, icons and tiles
+
+The same pattern on every part of Home: a round icon says what a line is about, the figures in a sentence are bold (in the theme's bold sans) and the words around them are not, and groups of figures sit in soft tiles, not in a row split by lines.
+
+| ID | Case | Do | Expect | Covered by |
+|---|---|---|---|---|
+| PAT-1 | Plan ahead sentence | Look under Plan ahead | "In the next **30** days, ↑ **₹23,445** goes out and ↓ **₹85,000** comes in.": only the number 30 is bold, not "days"; each amount has an arrow (up for what leaves, down for what arrives) and a soft marker stroke under it, blue-tinted for out and green for in; the arrows are for the eye only | Auto: `PlanAhead.flow`; look by eye |
+| PAT-2 | Summary card | Look at the card at the top of Home | A small round up-arrow before "Spent so far in November"; in the line under the amount the expense count, the daily average and the budget are bold; Today, Yesterday and Last 7 days are three even soft tiles | Auto: `SpendingOverview`; look by eye |
+| PAT-3 | Day by day | Look at the Day by day card | "₹450 over 13 days": the amount and the number are bold; in each line under the chart (Biggest day, days with nothing spent, weekends against weekdays) the figures are bold and the words are not | Auto: `Figures`, `days`, `DayChart.flow`; look by eye |
+| PAT-4 | Where it went | Look at the list of categories | Each category has a round icon in a pale wash of its colour in place of the dot; the amount is bold; the bar is as it was | Auto: `categoryMotion.flow`; look by eye |
+| PAT-5 | Understand your spending | Look at the card | A round icon of the top category leads the sentence, and the share ("100%") is bold | Auto: `InsightCard` |
+| PAT-6 | Received and balance | Look under Plan ahead | Two soft tiles side by side, each with a round icon (an arrow down for what was received, a bank for the balance), not two columns split by a line | Auto: `WalletPanel`; look by eye |
+
 ## Category bubbles
 
 The Where it went section of Insights, shown as bubbles.

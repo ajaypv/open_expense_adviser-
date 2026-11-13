@@ -3,6 +3,7 @@ import { formatMoney, formatMoneyCompact, parseLocalDate } from '../db/money'
 import type { Category, Transaction } from '../db/schema'
 import { monthLabel, type MonthKey } from '../insights/aggregates'
 import { dayInsights, dayView, versusAverage, type DayInfo, type DaySlice } from '../insights/days'
+import { Figures } from '../ui/Figures'
 import { Icon, type IconName } from '../ui/Icon'
 import { useSeen } from '../ui/motion'
 import { niceCeil } from './scale'
@@ -105,8 +106,10 @@ export function DayChart({ txs, categoryById, monthKey, lastDay, currency, budge
             ) : (
               <>
                 <p className="text-2xl font-bold tabular-nums tracking-tight">{money(averageMinor)}</p>
-                <p className="text-sm text-ink-2">a day on average</p>
-                <p className="text-sm text-ink-2">{`${money(view.totalMinor)} over ${elapsed} ${elapsed === 1 ? 'day' : 'days'}`}</p>
+                <p className="text-[0.9375rem] text-ink-2">a day on average</p>
+                <p className="text-[0.9375rem] text-ink-2">
+                  <Figures text={`${money(view.totalMinor)} over ${elapsed} ${elapsed === 1 ? 'day' : 'days'}`} figures={[money(view.totalMinor), String(elapsed)]} />
+                </p>
               </>
             )}
           </div>
@@ -325,7 +328,9 @@ export function DayChart({ txs, categoryById, monthKey, lastDay, currency, budge
                   <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface" style={{ color: SIGN_COLOUR[s.key] ?? 'var(--ink-2)' }}>
                     <Icon name={SIGN[s.key] ?? 'spark'} size={16} />
                   </span>
-                  <span className="min-w-0 flex-1 text-left text-[0.9375rem]">{s.text}</span>
+                  <span className="min-w-0 flex-1 text-left text-[0.9375rem]">
+                    <Figures text={s.text} figures={s.figures ?? []} />
+                  </span>
                 </>
               )
               return (

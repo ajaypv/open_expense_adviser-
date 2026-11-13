@@ -88,14 +88,26 @@ export function PlanAhead({ ledger, today, onOpen, onSetUp }: Props) {
         <p className="mt-0.5 px-1 text-[0.9375rem] text-ink-2">{`Nothing due in the next ${HORIZON_DAYS} days.`}</p>
       ) : (
         <>
-          <p className="mt-0.5 px-1 text-base text-ink-2 text-pretty">
-            {`In the next ${HORIZON_DAYS} days, `}
-            <b className="font-semibold text-ink">{money(totals.outMinor)}</b>
+          <p className="mt-1 px-1 text-[1.0625rem] leading-[1.6] text-ink-2 text-pretty">
+            {'In the next '}
+            <b className="font-bold text-ink">{HORIZON_DAYS}</b>
+            {' days, '}
+            <b className="mark-out text-ink">
+              <span aria-hidden="true" className="mr-0.5 inline-block align-[-0.12em]">
+                <Icon name="arrowUp" size={14} weight={2.25} />
+              </span>
+              {money(totals.outMinor)}
+            </b>
             {' goes out'}
             {totals.inMinor > 0 && (
               <>
                 {' and '}
-                <b className="font-semibold text-good">{money(totals.inMinor)}</b>
+                <b className="mark-in text-good">
+                  <span aria-hidden="true" className="mr-0.5 inline-block align-[-0.12em]">
+                    <Icon name="arrowDown" size={14} weight={2.25} />
+                  </span>
+                  {money(totals.inMinor)}
+                </b>
                 {' comes in'}
               </>
             )}

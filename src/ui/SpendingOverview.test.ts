@@ -122,8 +122,9 @@ describe('SpendingOverview: today, yesterday and the week, kept small', () => {
     const html = render({ budgetMinor: 3_000_000 })
     // The amount, then the bar and the words, then the line, then the days.
     expect(html.indexOf('₹680')).toBeLessThan(html.indexOf('role="meter"'))
-    expect(html.indexOf('role="meter"')).toBeLessThan(html.indexOf('Budget ₹30,000'))
-    expect(html.indexOf('Budget ₹30,000')).toBeLessThan(html.indexOf('aria-label="Recent spending"'))
+    expect(html.indexOf('role="meter"')).toBeLessThan(html.indexOf('>₹30,000</b>'))
+    expect(html.indexOf('>₹30,000</b>')).toBeLessThan(html.indexOf('aria-label="Recent spending"'))
+    expect(text(html)).toContain('Budget ₹30,000 ·')
     expect(text(html)).toContain('₹29,320 left')
     expect(html).not.toContain('<svg viewBox')
     expect(html).not.toContain('<line ')
@@ -162,10 +163,25 @@ describe('SpendingOverview: today, yesterday and the week, kept small', () => {
     expect(html.indexOf('about ₹24 a day')).toBeLessThan(html.indexOf('12% more'))
   })
 
-  it('shows Today, Yesterday and Last 7 days as one quiet row, divided by thin lines, not as boxes', () => {
+  it('shows Today, Yesterday and Last 7 days as three even tiles, each its own soft card, not a row split by lines', () => {
     const html = render()
-    expect(html).toMatch(/aria-label="Recent spending" class="[^"]*divide-x/)
-    expect(html).not.toMatch(/aria-label="Today: [^"]*" class="[^"]*bg-surface-2/)
+    expect(html).toMatch(/aria-label="Recent spending" class="[^"]*grid-cols-3 gap-2/)
+    expect(html).not.toMatch(/aria-label="Recent spending" class="[^"]*divide-x/)
+    expect(html).toMatch(/aria-label="Today: [^"]*" class="[^"]*rounded-2xl bg-surface-2/)
+    expect(html).toMatch(/aria-label="Yesterday: ₹0" class="[^"]*rounded-2xl bg-surface-2/)
+  })
+
+  it('leads with a small round arrow for money going out, beside what was spent', () => {
+    const html = render()
+    expect(html).toMatch(/data-icon="arrowUp"[^>]*class="[^"]*rounded-full[^"]*"/)
+    expect(html.indexOf('data-icon="arrowUp"')).toBeLessThan(html.indexOf('Spent so far in'))
+  })
+
+  it('sets the figures in the detail line in bold, and the words around them as they were', () => {
+    const html = render()
+    expect(html).toMatch(/<b class="num text-ink">\d+<\/b> (expense|expenses)/)
+    expect(text(html)).toContain('expenses · about')
+    expect(html).toMatch(/about <b class="num text-ink">₹[\d,]+<\/b> a day/)
   })
 
   it('has no day tiles for a month that is over', () => {

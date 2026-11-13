@@ -2310,6 +2310,33 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   --font-voice: 'Figtree Variable', 'Manrope Variable', system-ui, sans-serif;
 }
 @layer components {
+  /* A figure in a sentence, picked out as with a highlighter: a soft stroke along the lower part of the line, in the colour of what it
+     means (out is the accent, in is green). It follows the text across lines and keeps its own contrast, the figure staying in full ink. */
+  /* A figure in a sentence is in the theme's bold sans, level, as every other amount is; the words around it are in the page's own face. */
+  .num,
+  .mark-out,
+  .mark-in {
+    font-family: var(--font-ui, var(--font-sans));
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+  .mark-out,
+  .mark-in {
+    padding: 0 0.15em;
+    margin: 0 -0.05em;
+    border-radius: 0.2em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    background-image: linear-gradient(to top, var(--mark) 0, var(--mark) 0.42em, transparent 0.42em);
+  }
+  .mark-out {
+    --mark: color-mix(in oklab, var(--accent) 34%, transparent);
+  }
+  .mark-in {
+    --mark: color-mix(in oklab, var(--good-text) 36%, transparent);
+  }
   /* The words of a screen: set on its root, so what is not a figure takes Figtree. */
   .font-text {
     font-family: var(--font-voice);

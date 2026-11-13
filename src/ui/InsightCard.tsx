@@ -1,4 +1,6 @@
 import type { Category } from '../db/schema'
+import { categoryIcon } from './categoryIcon'
+import { Figures } from './Figures'
 import { Icon } from './Icon'
 
 interface Props {
@@ -28,9 +30,13 @@ export function InsightCard({ totals, totalMinor, categoryById, monthName, onOpe
         <h2 id="insight-h" className="type-title">
           Understand your spending
         </h2>
-        <p className="mt-2 flex items-start gap-2.5 text-ink-2">
-          <span aria-hidden="true" className="mt-2 size-2 shrink-0 rounded-full" style={{ background: 'var(--accent)' }} />
-          {`${name} is ${percent}% of what you have spent in ${monthName}.`}
+        <p className="mt-3 flex items-start gap-3 text-[1.0625rem] leading-[1.6] text-ink-2">
+          <span aria-hidden="true" data-icon={categoryIcon(categoryById.get(top.categoryId)?.name)} className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-surface" style={{ color: 'var(--accent)' }}>
+            <Icon name={categoryIcon(categoryById.get(top.categoryId)?.name)} size={17} />
+          </span>
+          <span className="min-w-0">
+            <Figures text={`${name} is ${percent}% of what you have spent in ${monthName}.`} figures={[`${percent}%`]} />
+          </span>
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <button type="button" onClick={onOpen} className="min-h-11 rounded-full bg-btn px-5 font-semibold text-btn-ink">
