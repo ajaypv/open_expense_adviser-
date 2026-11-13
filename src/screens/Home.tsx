@@ -16,7 +16,6 @@ import {
   type MonthKey,
 } from '../insights/aggregates'
 import { isCard } from '../insights/cards'
-import { safeToSpend } from '../insights/safeToSpend'
 import { ScreenSkeleton } from '../ui/ScreenSkeleton'
 import type { Suggestion } from '../insights/suggestions'
 import { BackupNudge, DueCard, LogNudge } from '../ui/HomeCards'
@@ -206,7 +205,6 @@ export const Home = memo(function Home({
               expenseCount={expenseCount}
               budgetMinor={budgetMinor}
               currency={currency}
-              safe={isCurrent && budgetMinor !== null ? safeToSpend({ budgetMinor, spentMinor: total, todayMinor: recentlySpent.todayMinor, today }) : null}
               periods={
                 isCurrent
                   ? [

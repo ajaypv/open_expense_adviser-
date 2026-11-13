@@ -602,7 +602,7 @@ Home answers four questions in order: where do I stand, am I doing okay, where d
 |---|---|---|---|---|
 | HR-1 | The order | Open Home with a budget, a goal and a regular payment | Greeting, month, then one spending overview, then cash flow, what is coming up, suggestions, the day-by-day chart, recent transactions, where it went, one insight, and goals | Auto: `Home` |
 | HR-2 | Greeting | Open Home in the morning, afternoon and evening | "Good morning" until noon, "Good afternoon" until five, "Good evening" after, with the full date beneath; a screen reader hears "Home" first | Auto: `HomeHeader`, `app.flow` |
-| HR-3 | One headline number | Look at the overview | With no budget (or a past month, or a budget already used up): "Spent so far in October" and one number, 36 to 40 px, not larger; the comparison with last month in words and an arrow; the daily average and expenses logged. With a budget still to spend in the month in progress, see HOM-D1 | Auto: `SpendingOverview` |
+| HR-3 | One headline number | Look at the overview | With no budget (or a past month, or a budget already used up): "Spent so far in October" and one number, 36 to 40 px, not larger; the comparison with last month in words and an arrow; the daily average and expenses logged. | Auto: `SpendingOverview` |
 | HR-4 | The budget | With and without a budget | Without: "Your budget. Set a monthly budget to see how much you have left." and a Set budget button, as its own block lower down, after the cash flow and the payments coming up, not inside the spending card. With: the progress and how much is left, kept right under the daily average | Auto: `SpendingOverview` |
 | HR-5 | Compact days | Look under the budget | Today, Yesterday and Last 7 days as one quiet row, divided by thin lines, that does not compete with the headline; each with something behind it opens those transactions; a day with nothing is plain text | Auto: `SpendingOverview`, `app.flow` |
 | HR-5a | The summary card, plain | Open Home with a budget set, then with none | The card is the amount in big type; with a budget, one plain bar of how much is used (green, amber near the limit, red once over it) and where that leaves you in words (₹29,320 left, Close to the limit, Over budget by ₹400); one line under it, Budget ₹30,000 · 2 expenses · about ₹24 a day (without the Budget part when there is none); the comparison with last month; then the quiet row of recent days. No half circle, and no boxes. Plan ahead is a card of its own below | Auto: `SpendingOverview.test`, `Meter.flow` |
@@ -688,15 +688,12 @@ What regular payments cost and when they fall due, on the Insights screen (curre
 | REG-7 | Looks ahead only | Look at an earlier month | The section is not there; it also shows before anything has been spent this month | Auto: `Insights.regular.flow` |
 | REG-8 | Other currencies | Set up a payment in a currency with no exchange rate | It is counted at face value, and the section says which currency | Auto: `regular`, `Insights.regular.flow` |
 
-## Home: can I spend today?
+## Home: Add again
 
-The summary at the top of Home leads with the question people have, and "Add again" makes the usual spending one tap.
+"Add again" makes the usual spending one tap.
 
 | ID | Case | Do | Expect | Covered by |
 |---|---|---|---|---|
-| HOM-D1 | You can spend today | Set a monthly budget, then open Home in that month | The summary card leads with "You can spend today" and a big figure: what was left of the budget when the day began, spread over the days from today to the end of the month (today included), less what today has already taken, to a whole currency unit; under it one line: "Spend up to this each day and you finish November on budget." (or, with something spent today, "About ₹3,672 a day keeps November on budget. You have already spent ₹1,100 today."; when the day's share is used, "Today's ₹3,611 is used. Spending more takes from the days ahead.") | Auto: `safeToSpend`, `SpendingOverview`, `Home`, `budgetPrompt.flow`; look by eye |
-| HOM-D2 | The month against an even pace | Look under the figure | One bar of how much of the budget is spent, with a blue mark where an even month would be by the end of today; under it "₹55,000 spent" and "of ₹1,20,000"; and a line: "The blue mark is where an even month would be by now. You have spent ₹3,000 more than that." (less than that, or "You are right on it." within 2% of the budget) | Auto: `SpendingOverview`, `safeToSpend` |
-| HOM-D3 | When it does not apply | Look at a past month, a month with no budget, and a month with the budget used up | The old summary: "Spent so far" (or "Spent in") with the figure, the budget bar and the comparison; Today, Yesterday and Last 7 days are under the figure in every case | Auto: `SpendingOverview` |
 | HOM-D4 | Add again, one tap | Look under the balance, and tap a pill | See SUG-1, SUG-3 and SUG-6 | Auto: `SuggestionList.flow`, `app.suggestions.flow` |
 
 ## Add expense (quick)
