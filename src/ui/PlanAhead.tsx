@@ -4,8 +4,8 @@ import { formatMoney, localDateString } from '../db/money'
 import { planAhead } from '../insights/ahead'
 import { forecast, totalsOf, upcomingPayments } from '../insights/upcoming'
 import { Icon } from './Icon'
-import { useSeen } from './motion'
 import { HORIZON_DAYS, PaymentCard, SetAsideCard } from './planAheadCards'
+import { ScrollStrip } from './ScrollStrip'
 import { shortfallPhrase } from './upcomingText'
 
 type Ledger = ReturnType<typeof useLedger>
@@ -35,7 +35,6 @@ export function PlanAhead({ ledger, today, onOpen, onSetUp }: Props) {
   const { recurring, currency, rates, balanceSet, estimatedBalanceMinor, categoryById } = ledger
   const items = useMemo(() => upcomingPayments(recurring, todayKey, HORIZON_DAYS, { currency, rates }), [recurring, todayKey, currency, rates])
   const plan = useMemo(() => planAhead(items, { set: balanceSet, minor: estimatedBalanceMinor }, todayKey, HORIZON_DAYS), [items, balanceSet, estimatedBalanceMinor, todayKey])
-  const [watch, seen] = useSeen()
 
   if (!recurring.some((r) => r.active)) {
     return onSetUp ? (
@@ -119,7 +118,7 @@ export function PlanAhead({ ledger, today, onOpen, onSetUp }: Props) {
               'Set your balance to check these are covered.'
             )}
           </p>
-          <ul ref={watch} data-seen={seen} className="when-seen -mx-5 flex snap-x snap-proximity gap-3 overflow-x-auto scroll-px-5 px-5 py-0.5 pb-1">
+          <ScrollStrip label="Payments coming up, scroll sideways">
             {first && aside}
             {shown.map((p, i) => (
               <PaymentCard key={p.key} payment={p} highlight={highlights.get(p.key)} today={today} currency={currency} categoryName={categoryById.get(p.rule.categoryId)?.name} categoryColour={categoryById.get(p.rule.categoryId)?.color} index={i + (first ? 1 : 0)} />
@@ -131,10 +130,10 @@ export function PlanAhead({ ledger, today, onOpen, onSetUp }: Props) {
                   type="button"
                   onClick={onOpen}
                   aria-label={`See all ${items.length} payments`}
-                  className="flex h-full min-h-32 w-[9.5rem] flex-col items-start justify-between rounded-3xl bg-surface-2 p-3.5 text-left transition-transform active:scale-[0.97] motion-reduce:transition-none"
+                  className="flex h-full min-h-[7.5rem] w-[7.5rem] flex-col items-start justify-between rounded-[1.375rem] bg-surface-2 p-3 text-left transition-transform active:scale-[0.97] motion-reduce:transition-none"
                 >
-                  <span aria-hidden="true" className="flex size-10 items-center justify-center rounded-full bg-surface">
-                    <Icon name="chevRight" size={20} />
+                  <span aria-hidden="true" className="flex size-9 items-center justify-center rounded-full bg-surface">
+                    <Icon name="chevRight" size={18} />
                   </span>
                   <span>
                     <span className="type-figure block text-2xl">{`+${more}`}</span>
@@ -143,7 +142,7 @@ export function PlanAhead({ ledger, today, onOpen, onSetUp }: Props) {
                 </button>
               </li>
             )}
-          </ul>
+          </ScrollStrip>
         </>
       )}
     </section>

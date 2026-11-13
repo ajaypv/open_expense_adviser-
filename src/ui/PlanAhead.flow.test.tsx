@@ -231,3 +231,103 @@ describe('PlanAhead: colours', () => {
     expect(colours.slice(0, 2)).toEqual(['var(--critical)', 'var(--s4)'])
   })
 })
+
+describe('PlanAhead: compact cards and a better scroll', () => {
+  const strip = () => section().querySelector('ul')!
+  const outer = () => strip().parentElement as HTMLElement
+
+  it('has compact cards, narrower than before, each with its date as a leaf and a small badge of what it is', () => {
+    mount([emi, rent, salary])
+    const cards = Array.from(strip().querySelectorAll<HTMLElement>(':scope > li[data-kind]'))
+    expect(cards.length).toBeGreaterThanOrEqual(3)
+    for (const c of cards) {
+      expect(c.className).toContain('w-[12.5rem]')
+      expect(c.className).not.toContain('w-[16rem]')
+    }
+    const leaf = strip().querySelector<HTMLElement>('[data-leaf]')!.parentElement!
+    expect(leaf.style.width).toBe('44px')
+    expect(strip().querySelectorAll('[data-leaf] ~ [data-icon]')).toHaveLength(cards.length)
+  })
+
+  it('washes each card in the colour of its category, so they do not all look alike', () => {
+    mount([emi, rent])
+    const card = strip().querySelector<HTMLElement>('li[data-kind] > div')!
+    expect(card.style.background).toContain('var(--s1)')
+    expect(card.style.boxShadow).toContain('var(--s1)')
+  })
+
+  it('is a row that settles on a card, lets the next one show, and does not pass the swipe on', () => {
+    mount([emi, rent, salary])
+    expect(strip()).toHaveAttribute('aria-label', 'Payments coming up, scroll sideways')
+    expect(strip().className).toContain('snap-x')
+    expect(strip().className).toContain('snap-mandatory')
+    expect(strip().className).toContain('overscroll-x-contain')
+    expect(strip().className).toContain('scroll-px-5')
+    // A tab stop, so the arrow keys move it.
+    expect(strip()).toHaveAttribute('tabindex', '0')
+    // Every card starts on the left edge when it settles.
+    for (const li of Array.from(strip().querySelectorAll(':scope > li'))) expect(li.className).toContain('snap-start')
+  })
+
+  it('shows no edge fades or progress bar when everything fits', () => {
+    mount([emi])
+    expect(outer().dataset.scrollable).toBe('false')
+    expect(outer().dataset.start).toBe('false')
+    expect(outer().dataset.end).toBe('false')
+  })
+
+  describe('with more cards than fit', () => {
+    const real = { sw: Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollWidth'), cw: Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth') }
+    const withLayout = () => {
+      Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, get: () => 1000 })
+      Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 400 })
+      vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => (cb(0), 1))
+    }
+    const restore = () => {
+      if (real.sw) Object.defineProperty(HTMLElement.prototype, 'scrollWidth', real.sw)
+      else delete (HTMLElement.prototype as unknown as Record<string, unknown>).scrollWidth
+      if (real.cw) Object.defineProperty(HTMLElement.prototype, 'clientWidth', real.cw)
+      else delete (HTMLElement.prototype as unknown as Record<string, unknown>).clientWidth
+      vi.unstubAllGlobals()
+    }
+    const scrollTo = (x: number) => {
+      Object.defineProperty(strip(), 'scrollLeft', { configurable: true, writable: true, value: x })
+      strip().dispatchEvent(new Event('scroll'))
+    }
+
+    it('fades the right edge only, and shows how long the row is, at the start', () => {
+      withLayout()
+      try {
+        mount([emi, rent, salary])
+        expect(outer().dataset.scrollable).toBe('true')
+        expect(outer().dataset.start).toBe('false')
+        expect(outer().dataset.end).toBe('true')
+        const thumb = outer().querySelector<HTMLElement>('[data-thumb]')!
+        expect(parseFloat(thumb.style.width)).toBeCloseTo(40, 0) // 400 of 1000
+      } finally {
+        restore()
+      }
+    })
+
+    it('fades the left edge too in the middle, moves the bar along, and drops the right edge at the end', () => {
+      withLayout()
+      try {
+        mount([emi, rent, salary])
+        scrollTo(300)
+        expect(outer().dataset.start).toBe('true')
+        expect(outer().dataset.end).toBe('true')
+        const thumb = outer().querySelector<HTMLElement>('[data-thumb]')!
+        expect(thumb.style.transform).toMatch(/translateX\(\s*[\d.]+%\)/)
+        const middle = parseFloat(/translateX\(([\d.]+)%/.exec(thumb.style.transform)![1])
+        scrollTo(600)
+        expect(outer().dataset.end).toBe('false')
+        const end = parseFloat(/translateX\(([\d.]+)%/.exec(thumb.style.transform)![1])
+        expect(end).toBeGreaterThan(middle)
+        // At the very end the bar is at the end of its track: its own width (40%) and the rest (60%) of the track, as a share of itself.
+        expect(end).toBeCloseTo(150, 0)
+      } finally {
+        restore()
+      }
+    })
+  })
+})

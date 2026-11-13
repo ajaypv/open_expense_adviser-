@@ -83,10 +83,14 @@ describe('Home', () => {
     expect(render(false, 0, [regular], '2026-09')).not.toContain('Suggested for now') // a past month
   })
 
-  it('lists received money in Recent transactions with a plus sign, not just spending', () => {
+  it('does not list the transactions or draw the ribbon of where the money flows: each is a button to its own place', () => {
     const html = render(false)
-    expect(html).toContain('Employer')
-    expect(html).toContain('+₹80,000')
+    expect(html).not.toContain('Employer')
+    expect(html).not.toContain('+₹80,000')
+    expect(html).not.toContain('Share of spending by category')
+    expect(html).toContain('aria-label="More about this month"')
+    expect(html).toMatch(/<button[^>]*>.*Recent transactions<\/span><\/button>/)
+    expect(html).toContain('data-icon="list"') // the icon of Activity, which it leads to
   })
 })
 
@@ -283,6 +287,15 @@ describe('Home: what comes first', () => {
     expect(positions).toEqual([...positions].sort((a, b) => a - b))
   })
 
+  it('has a button, with the icon of its tab, to Recent transactions and to where the money flows, in that order, before where it went', () => {
+    const html = renderFull()
+    expect(html).toMatch(/<button[^>]*>(?:(?!<\/button>).)*data-icon="list"(?:(?!<\/button>).)*Recent transactions<\/span><\/button>/)
+    expect(html).toMatch(/<button[^>]*>(?:(?!<\/button>).)*data-icon="bars"(?:(?!<\/button>).)*Where the money flows<\/span><\/button>/)
+    const at = (s: string) => html.indexOf(s)
+    expect(at('Recent transactions')).toBeLessThan(at('Where the money flows'))
+    expect(at('Where the money flows')).toBeLessThan(at('Where it went'))
+  })
+
   it('has one calm headline number, then the tools around it, not a stack of equal cards', () => {
     const html = renderFull()
     expect((html.match(/type-display/g) ?? []).length).toBe(1)
@@ -295,9 +308,9 @@ describe('Home: what comes first', () => {
     it('sets the greeting in the serif, and every section title in the same one size', () => {
       const html = renderFull()
       expect(classes(html, 'type-greeting')).toBe(1)
-      // Plan ahead, Day by day, Where the money flows, Recent transactions, Where it went, Goals and the insights card.
-      expect(classes(html, 'type-title')).toBeGreaterThanOrEqual(6)
-      for (const title of ['Plan ahead', 'Day by day', 'Where the money flows', 'Recent transactions', 'Where it went']) {
+      // Plan ahead, Day by day, Where it went, Goals and the insights card.
+      expect(classes(html, 'type-title')).toBeGreaterThanOrEqual(4)
+      for (const title of ['Plan ahead', 'Day by day', 'Where it went']) {
         expect(html).toMatch(new RegExp(`<h2[^>]*class="[^"]*type-title[^"]*"[^>]*>${title}<`))
       }
     })

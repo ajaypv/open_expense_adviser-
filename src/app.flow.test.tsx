@@ -222,9 +222,11 @@ describe('Moving around', () => {
     expect(document.querySelector('main')).toHaveClass('overflow-y-auto', 'overflow-x-hidden')
   })
 
-  it('opens a transaction to edit from the list', async () => {
+  it('opens a transaction to edit from the list in Activity, which the Recent transactions button on Home leads to', async () => {
     await tx({ merchant: 'Cafe' })
     const user = await open()
+    await user.click(await screen.findByRole('button', { name: 'Recent transactions' }))
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Activity' })).toHaveAttribute('aria-current', 'page')
     await user.click(await screen.findByRole('button', { name: /Edit spent Cafe/ }))
     const sheet = await screen.findByRole('dialog', { name: 'Edit transaction' })
     expect(within(sheet).getByLabelText('Merchant')).toHaveValue('Cafe')
@@ -583,12 +585,26 @@ describe('The redesigned Home', () => {
     expect(goals).toHaveTextContent('₹20,000 to go')
   })
 
-  it('shows the recent transactions before where it went', async () => {
+  it('has buttons to Recent transactions and to where the money flows, not copies of them, before where it went', async () => {
     await tx({ merchant: 'Cafe' })
     await open()
-    const recent = await screen.findByRole('heading', { name: 'Recent transactions' })
+    const recent = await screen.findByRole('button', { name: 'Recent transactions' })
+    const flows = screen.getByRole('button', { name: 'Where the money flows' })
     const where = screen.getByRole('heading', { name: 'Where it went' })
-    expect(recent.compareDocumentPosition(where) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(recent.compareDocumentPosition(flows) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(flows.compareDocumentPosition(where) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // The list and the ribbon are not drawn on Home any more.
+    expect(screen.queryByRole('heading', { name: 'Recent transactions' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Where the money flows' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Edit spent Cafe/ })).toBeNull()
+  })
+
+  it('opens Insights from the Where the money flows button, which starts with the money flow', async () => {
+    await tx({ merchant: 'Cafe' })
+    const user = await open()
+    await user.click(await screen.findByRole('button', { name: 'Where the money flows' }))
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Insights' })).toHaveAttribute('aria-current', 'page')
+    expect(await screen.findByRole('region', { name: 'Money flow' })).toBeInTheDocument()
   })
 });
 

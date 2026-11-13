@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react'
 import type { useLedger } from '../data/useLedger'
 import { formatMoney, localDateString } from '../db/money'
 import type { Recurring } from '../db/schema'
+import { daysInMonth, monthLabel } from '../insights/aggregates'
 import { planAhead } from '../insights/ahead'
+import { monthPlan, type MonthPlan } from '../insights/monthPlan'
 import { describeWhen, forecast, TAG_LABELS, tagOf, totalsOf, upcomingPayments, type UpcomingPayment } from '../insights/upcoming'
 import { Dialog } from './Dialog'
 import { Icon } from './Icon'
@@ -29,6 +31,10 @@ const card = 'rounded-3xl bg-surface shadow-[0_0_0_1px_var(--ring)]'
 const chip =
   'flex min-h-11 shrink-0 items-center rounded-full bg-surface px-4 font-medium shadow-[0_0_0_1px_var(--ring)] aria-pressed:bg-btn aria-pressed:text-btn-ink aria-pressed:shadow-none'
 
+/** What has gone is solid and what is still to go is the same colour, pale: one colour, two states, so nothing needs a key to be read. */
+const PAID = 'var(--accent)'
+const LEFT = 'color-mix(in oklab, var(--accent) 26%, var(--surface-2))'
+
 /** The payments in the order of the days, in the bands a person thinks in. */
 const BANDS = [
   { id: 'late', label: 'Overdue', has: (p: UpcomingPayment) => p.daysLeft < 0 },
@@ -37,68 +43,178 @@ const BANDS = [
   { id: 'later', label: 'Later', has: (p: UpcomingPayment) => p.daysLeft >= 14 },
 ] as const
 
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
 /**
- * The balance walked forward through the payments, as a step line: where it starts, how it drops with each payment and rises with
- * each salary, and the zero line when it goes below. Words under it give the lowest point and the end, so the line is not the only way
- * to read it.
+ * The month in one picture: how much the regular payments come to in all, how much of it has already gone and how much is still to go,
+ * as one bar split in two (what has gone solid, what is left pale) with the two figures under it. What is late is said, and the last day
+ * something is still due. A salary is mentioned apart, since it is not part of what goes out.
  */
-function BalancePath({ start, items, todayKey, horizon, currency, today }: { start: number; items: UpcomingPayment[]; todayKey: string; horizon: number; currency: string; today: Date }) {
-  const f = forecast(start, items, todayKey)
-  const steps = useMemo(() => {
-    const events = items
-      .map((p) => ({ day: Math.max(0, p.daysLeft), delta: p.kind === 'income' ? p.amountMinor : -p.amountMinor }))
-      .sort((a, b) => a.day - b.day || a.delta - b.delta)
-    const out: { day: number; balance: number }[] = [{ day: 0, balance: start }]
-    let balance = start
-    for (const e of events) {
-      out.push({ day: e.day, balance })
-      balance += e.delta
-      out.push({ day: e.day, balance })
-    }
-    out.push({ day: horizon, balance })
-    return out
-  }, [items, start, horizon])
-
-  const W = 300
-  const H = 96
-  const lo = Math.min(0, ...steps.map((s) => s.balance))
-  const hi = Math.max(0, ...steps.map((s) => s.balance), 1)
-  const x = (day: number) => (day / horizon) * W
-  const y = (b: number) => 8 + (1 - (b - lo) / (hi - lo)) * (H - 16)
-  const line = steps.map((s, i) => `${i === 0 ? 'M' : 'L'}${x(s.day).toFixed(1)} ${y(s.balance).toFixed(1)}`).join(' ')
-  const short = f.shortfallMinor > 0
+function MonthCard({ plan, name, today, currency }: { plan: MonthPlan; name: string; today: Date; currency: string }) {
   const money = (m: number) => formatMoney(m, currency)
-
+  const nothing = plan.totalMinor === 0
   return (
-    <div>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        preserveAspectRatio="none"
-        role="img"
-        aria-label={`Your balance over the next ${horizon} days: starts at ${money(start)}, ends at ${money(f.endMinor)}${short ? ', and goes below zero' : ''}`}
-        className="h-24 w-full overflow-visible"
-      >
-        {lo < 0 && <line x1="0" x2={W} y1={y(0)} y2={y(0)} stroke="var(--critical)" strokeWidth="1" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" opacity="0.7" />}
-        <path d={`${line} L${W} ${H} L0 ${H} Z`} fill={short ? 'var(--critical)' : 'var(--accent)'} opacity="0.1" />
-        <path d={line} fill="none" stroke={short ? 'var(--critical)' : 'var(--accent)'} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-      </svg>
-      <p className="mt-2 flex items-baseline justify-between gap-3 text-sm text-ink-2 tabular-nums">
-        <span>{f.lowestDate ? `Lowest ${money(f.lowestMinor)} on ${shortDay(f.lowestDate, today)}` : `Stays at ${money(f.endMinor)} or more`}</span>
-        <span>{`Ends at ${money(f.endMinor)}`}</span>
+    <section aria-label={`${name} so far`} className={`${card} p-5`}>
+      <p className="text-[0.9375rem] font-medium text-ink-2">{`Regular payments in ${name}`}</p>
+      {nothing ? (
+        <p className="mt-1 text-lg font-medium">{`Nothing regular goes out in ${name}.`}</p>
+      ) : (
+        <>
+          <p data-testid="month-total" className="type-figure mt-0.5 text-[2rem]">
+            {money(plan.totalMinor)}
+          </p>
+          <p className="text-[0.9375rem] text-ink-2">{`in all this month, ${plural(plan.paidCount + plan.leftCount, 'payment', 'payments')}`}</p>
+
+          <div
+            role="img"
+            aria-label={`${money(plan.paidMinor)} has gone and ${money(plan.leftMinor)} is still to go, of ${money(plan.totalMinor)}`}
+            className="mt-4 flex h-3.5 overflow-hidden rounded-full bg-surface-2"
+          >
+            {plan.paidMinor > 0 && <span className="bar-grow block h-full" style={{ width: `${plan.paidShare * 100}%`, background: PAID }} />}
+            {plan.leftMinor > 0 && <span className="bar-grow block h-full flex-1" style={{ background: LEFT, '--d': '120ms' } as React.CSSProperties} />}
+          </div>
+
+          <dl className="mt-4 grid grid-cols-2 gap-4">
+            <div>
+              <dt className="flex items-center gap-2 text-[0.9375rem] font-medium text-ink-2">
+                <span aria-hidden="true" className="size-3 shrink-0 rounded-full" style={{ background: PAID }} />
+                Already paid
+              </dt>
+              <dd data-testid="month-paid" className="type-figure mt-0.5 text-[1.5rem]">
+                {money(plan.paidMinor)}
+              </dd>
+              <dd className="text-sm text-ink-2">{plan.paidCount > 0 ? plural(plan.paidCount, 'payment', 'payments') : 'None yet'}</dd>
+            </div>
+            <div>
+              <dt className="flex items-center gap-2 text-[0.9375rem] font-medium text-ink-2">
+                <span aria-hidden="true" className="size-3 shrink-0 rounded-full" style={{ background: LEFT, boxShadow: 'inset 0 0 0 1.5px var(--accent)' }} />
+                Still to pay
+              </dt>
+              <dd data-testid="month-left" className="type-figure mt-0.5 text-[1.5rem]">
+                {money(plan.leftMinor)}
+              </dd>
+              <dd className="text-sm text-ink-2">
+                {plan.leftCount > 0 ? `${plural(plan.leftCount, 'payment', 'payments')}${plan.lastDate ? `, the last on ${shortDay(plan.lastDate, today)}` : ''}` : 'All paid'}
+              </dd>
+            </div>
+          </dl>
+
+          {plan.lateMinor > 0 && (
+            <p className="mt-3 flex items-center gap-2 text-[0.9375rem] font-semibold text-critical">
+              <Icon name="warn" size={16} />
+              {`${money(plan.lateMinor)} of what is left is already late.`}
+            </p>
+          )}
+        </>
+      )}
+
+      {(plan.receivedMinor > 0 || plan.comingMinor > 0) && (
+        <p className={`${nothing ? 'mt-2' : 'mt-3 border-t border-line pt-3'} text-[0.9375rem] text-ink-2`}>
+          {'Money in this month: '}
+          <b className="font-semibold text-good">{money(plan.receivedMinor)}</b>
+          {' received'}
+          {plan.comingMinor > 0 && (
+            <>
+              {', '}
+              <b className="font-semibold text-good">{money(plan.comingMinor)}</b>
+              {' still to come'}
+            </>
+          )}
+          .
+        </p>
+      )}
+    </section>
+  )
+}
+
+/**
+ * What the payments do to the balance, in two numbers and one bar: what you have now, what is left once they are paid (and what comes
+ * in is added), and how much of the balance they use. It says in words what to feel about it: it covers it, it is tight, or it is not enough.
+ */
+function BalanceMeter({ now, after, outMinor, currency }: { now: number; after: number; outMinor: number; currency: string }) {
+  const money = (m: number) => formatMoney(m, currency)
+  const short = after < 0
+  const used = now > 0 ? Math.min(1, outMinor / now) : 1
+  const pct = Math.round(used * 100)
+  const tone = short ? 'critical' : used > 0.8 ? 'warn' : 'good'
+  const colour = tone === 'critical' ? 'var(--critical)' : tone === 'warn' ? 'var(--warn-ui)' : 'var(--good-text)'
+  const words = short
+    ? 'These payments are more than your balance.'
+    : used > 0.8
+      ? `Tight: these payments use ${pct}% of your balance.`
+      : used > 0.5
+        ? `These payments use ${pct}% of your balance.`
+        : `Comfortable: these payments use only ${pct}% of your balance.`
+  return (
+    <div data-feel={tone} aria-label="What this does to your balance" role="group" className="mt-4 border-t border-line pt-4">
+      <dl className="grid grid-cols-2 gap-3">
+        <div>
+          <dt className="text-[0.9375rem] font-medium text-ink-2">Balance now</dt>
+          <dd className="type-figure text-[1.375rem]">{money(now)}</dd>
+        </div>
+        <div>
+          <dt className="text-[0.9375rem] font-medium text-ink-2">After these</dt>
+          <dd data-testid="balance-after" className={`type-figure text-[1.375rem] ${short ? 'text-critical' : ''}`}>
+            {money(after)}
+          </dd>
+        </div>
+      </dl>
+      <div role="img" aria-label={short ? 'The payments use more than the whole balance' : `The payments use ${pct}% of the balance`} className="mt-3 h-3 overflow-hidden rounded-full bg-surface-2">
+        <span className="bar-grow block h-full rounded-full" style={{ width: `${Math.max(used, 0.03) * 100}%`, background: colour }} />
+      </div>
+      <p className={`mt-2 flex items-center gap-2 text-[0.9375rem] font-semibold ${short ? 'text-critical' : ''}`}>
+        <span aria-hidden="true" style={{ color: colour }}>
+          <Icon name={short ? 'warn' : 'check'} size={16} />
+        </span>
+        {words}
       </p>
     </div>
   )
 }
 
 /**
- * The whole plan for the weeks ahead on a page of its own: what goes out and what comes in over 30, 60 or 90 days, whether the
- * balance is enough and how it moves, what to put aside, and every payment in the order of the days, in bands from overdue to later,
- * each one opening to change it. The summary on Home is the way in.
+ * When the money leaves, in the same bands as the list below it: a bar for each of overdue, this week, next week and later, as long as
+ * what goes out in it, with the amount, so it is plain where the weight is. Money coming in is not here, only what goes out.
+ */
+function WhenItGoes({ items, currency }: { items: UpcomingPayment[]; currency: string }) {
+  const money = (m: number) => formatMoney(m, currency)
+  const rows = BANDS.map((b) => {
+    const list = items.filter((p) => p.kind === 'expense' && b.has(p))
+    return { ...b, count: list.length, minor: list.reduce((s, p) => s + p.amountMinor, 0) }
+  }).filter((r) => r.count > 0)
+  if (rows.length === 0) return null
+  const biggest = Math.max(...rows.map((r) => r.minor))
+  return (
+    <div className="mt-4 border-t border-line pt-4">
+      <p className="text-[0.9375rem] font-medium text-ink-2">When it goes out</p>
+      <ul aria-label="When it goes out" className="mt-2 space-y-3">
+        {rows.map((r) => (
+          <li key={r.id} data-band={r.id}>
+            <div className="flex items-baseline justify-between gap-3">
+              <span className={`text-base font-semibold ${r.id === 'late' ? 'text-critical' : ''}`}>{r.label}</span>
+              <span className="type-figure text-lg">{money(r.minor)}</span>
+            </div>
+            <div aria-hidden="true" className="mt-1 h-2.5 overflow-hidden rounded-full bg-surface-2">
+              <span className="bar-grow block h-full rounded-full" style={{ width: `${Math.max(0.05, r.minor / biggest) * 100}%`, background: r.id === 'late' ? 'var(--critical)' : PAID }} />
+            </div>
+            <p className="mt-0.5 text-sm text-ink-2">{plural(r.count, 'payment', 'payments')}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/**
+ * The whole plan for the weeks ahead on a page of its own. First the month: what the regular payments come to in all, what has already
+ * gone and what is still to go. Then, over 30, 60 or 90 days: what goes out and what comes in, whether the balance is enough (in two
+ * numbers and a bar), when the money leaves, what to put aside, and every payment in the order of the days, in bands from overdue to
+ * later, each one opening to change it. The summary on Home is the way in.
  */
 export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onManage }: Props) {
   const [horizon, setHorizon] = useState<(typeof HORIZONS)[number]>(30)
   const todayKey = localDateString(today)
-  const { recurring, currency, rates, categoryById, balanceSet, estimatedBalanceMinor } = ledger
+  const { recurring, currency, rates, categoryById, balanceSet, estimatedBalanceMinor, expenses, income } = ledger
 
   const items = useMemo(() => upcomingPayments(recurring, todayKey, horizon, { currency, rates }), [recurring, todayKey, horizon, currency, rates])
   const totals = totalsOf(items)
@@ -106,6 +222,14 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
   const overall = forecast(estimatedBalanceMinor, items, todayKey)
   const shortPhrase = balanceSet ? shortfallPhrase(overall, currency, today) : null
   const money = (m: number) => formatMoney(m, currency)
+
+  // The month, to its end: what has already been added from regular payments, and what is due in the days left.
+  const monthKey = todayKey.slice(0, 7)
+  const monthName = monthLabel(monthKey).split(' ')[0]
+  const thisMonth = useMemo(() => {
+    const left = daysInMonth(monthKey) - today.getDate()
+    return monthPlan([...expenses, ...income], upcomingPayments(recurring, todayKey, left, { currency, rates }), todayKey)
+  }, [expenses, income, recurring, todayKey, monthKey, today, currency, rates])
 
   return (
     <Dialog open={open} onClose={onClose} labelledBy="plan-title" variant="page">
@@ -115,7 +239,7 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
             <h2 id="plan-title" className="type-title">
               Plan ahead
             </h2>
-            <p className="truncate text-xs text-ink-2">{`The next ${horizon} days from ${shortDay(todayKey, today)}`}</p>
+            <p className="truncate text-xs text-ink-2">{`${monthName}, and the next ${horizon} days from ${shortDay(todayKey, today)}`}</p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <button type="button" onClick={onAdd} className="min-h-11 rounded-full bg-btn px-4 font-semibold text-btn-ink">
@@ -129,7 +253,11 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
 
         {open && (
           <>
-            <div role="group" aria-label="Look ahead" className="mt-2 flex gap-2">
+            <div className="mt-2">
+              <MonthCard plan={thisMonth} name={monthName} today={today} currency={currency} />
+            </div>
+
+            <div role="group" aria-label="Look ahead" className="mt-6 flex gap-2">
               {HORIZONS.map((h) => (
                 <button key={h} type="button" aria-pressed={horizon === h} onClick={() => setHorizon(h)} className={chip}>
                   {`${h} days`}
@@ -137,7 +265,7 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
               ))}
             </div>
 
-            <section aria-label={`Next ${horizon} days`} className={`${card} mt-4 p-5`}>
+            <section aria-label={`Next ${horizon} days`} className={`${card} mt-3 p-5`}>
               <dl className="grid grid-cols-2 gap-3">
                 <div>
                   <dt className="text-[0.9375rem] font-medium text-ink-2">Going out</dt>
@@ -173,11 +301,8 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
                 )}
               </p>
 
-              {balanceSet && items.length > 0 && (
-                <div className="mt-4">
-                  <BalancePath start={estimatedBalanceMinor} items={items} todayKey={todayKey} horizon={horizon} currency={currency} today={today} />
-                </div>
-              )}
+              {balanceSet && items.length > 0 && <BalanceMeter now={estimatedBalanceMinor} after={overall.endMinor} outMinor={totals.outMinor} currency={currency} />}
+              <WhenItGoes items={items} currency={currency} />
             </section>
 
             {plan?.setAside && (
@@ -196,7 +321,7 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
                   <section key={band.id} aria-labelledby={`plan-${band.id}`} className="mt-7">
                     <h3 id={`plan-${band.id}`} className="type-title mb-2 flex items-baseline justify-between px-1">
                       {band.label}
-                      <span className="text-[0.9375rem] font-medium text-ink-2">{`${list.length} ${list.length === 1 ? 'payment' : 'payments'}`}</span>
+                      <span className="text-[0.9375rem] font-medium text-ink-2">{plural(list.length, 'payment', 'payments')}</span>
                     </h3>
                     <ul className="space-y-2">
                       {list.map((p) => {

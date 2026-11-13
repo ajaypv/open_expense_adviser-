@@ -3,7 +3,6 @@ import type { LedgerTx } from '../data/buildLedger'
 import { setDisplay, useDisplay } from '../data/display'
 import { CategoryBars } from '../charts/CategoryBars'
 import { DayChart } from '../charts/DayChart'
-import { ShareRibbon } from '../charts/ShareRibbon'
 import type { useLedger } from '../data/useLedger'
 import { localDateString } from '../db/money'
 import {
@@ -18,7 +17,6 @@ import {
   type MonthKey,
 } from '../insights/aggregates'
 import { isCard } from '../insights/cards'
-import { newestFirst } from '../insights/order'
 import { ScreenSkeleton } from '../ui/ScreenSkeleton'
 import type { Suggestion } from '../insights/suggestions'
 import { BackupNudge, DueCard, LogNudge } from '../ui/HomeCards'
@@ -31,9 +29,9 @@ import { HomeHeader } from '../ui/HomeHeader'
 import { MonthSwitcher } from '../ui/MonthSwitcher'
 import { PlanAhead } from '../ui/PlanAhead'
 import { SuggestionList } from '../ui/SuggestionList'
-import { TxList } from '../ui/TxList'
 import { WalletPanel } from '../ui/WalletPanel'
 import { HomePager } from '../ui/HomePager'
+import { Icon, type IconName } from '../ui/Icon'
 import { Timeline } from '../ui/Timeline'
 
 type Ledger = ReturnType<typeof useLedger>
@@ -79,6 +77,23 @@ interface Props {
 const EXAMPLES = ['450 lunch at Cafe', 'Uber 230 yesterday', 'Salary 80,000']
 
 const card = 'rounded-3xl bg-surface shadow-[0_0_0_1px_var(--ring)]'
+
+/** A way to another part of the app, as an icon and its name: the list of transactions and the flow of money have their own places, not a copy on Home. */
+function GoTo({ icon, label, onClick }: { icon: IconName; label: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className={`${card} flex min-h-[5.75rem] flex-col justify-between gap-2.5 p-3 text-left active:bg-surface-2`}>
+      <span className="flex items-center justify-between">
+        <span aria-hidden="true" data-icon={icon} className="flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-2">
+          <Icon name={icon} size={22} />
+        </span>
+        <span aria-hidden="true" className="text-ink-2">
+          <Icon name="chevRight" size={18} />
+        </span>
+      </span>
+      <span className="text-[0.9375rem] font-semibold leading-snug">{label}</span>
+    </button>
+  )
+}
 
 export const Home = memo(function Home({
   ledger,
@@ -128,11 +143,10 @@ export const Home = memo(function Home({
       recentlySpent: recentSpending(expenses, today),
       monthTxs,
       categoryTotals: byCategory(monthTxs),
-      recent: inMonth(txs, month).sort(newestFirst).slice(0, 5),
       expenseCount: monthTxs.length,
     }
   }, [txs, expenses, income, month, today])
-  const { total, received, comparison, monthTxs, categoryTotals, recent, recentlySpent, expenseCount } = view
+  const { total, received, comparison, monthTxs, categoryTotals, recentlySpent, expenseCount } = view
   // Months with something in them get a dot in the month picker.
   const activeMonths = useMemo(() => new Set(txs.map((t) => t.date.slice(0, 7))), [txs])
 
@@ -267,26 +281,11 @@ export const Home = memo(function Home({
                   </div>
                 </section>
 
-                <section aria-labelledby="share-h" className="mt-8">
-                  <h2 id="share-h" className="type-title mb-3 px-1">
-                    Where the money flows
-                  </h2>
-                  <div className={`${card} p-4`}>
-                    <ShareRibbon key={month} totals={categoryTotals} categoryById={categoryById} onPick={onPickCategory} />
-                  </div>
-                </section>
-
-                <section aria-labelledby="recent-h" className="mt-8">
-                  <div className="mb-1 flex items-center justify-between px-1">
-                    <h2 id="recent-h" className="type-title">
-                      Recent transactions
-                    </h2>
-                    <button type="button" onClick={onSeeAll} className="min-h-11 px-2 font-medium underline underline-offset-2">
-                      See all
-                    </button>
-                  </div>
-                  <TxList rows={recent} categoryById={categoryById} accountById={ledger.accountById} currency={currency} showDate onEdit={onEdit} />
-                </section>
+                {/* The list of what was spent is Activity, and where the money flows is in Insights: one tap to each, not a copy here. */}
+                <nav aria-label="More about this month" className="mt-8 grid grid-cols-2 gap-3">
+                  <GoTo icon="list" label="Recent transactions" onClick={onSeeAll} />
+                  {onOpenInsights && <GoTo icon="bars" label="Where the money flows" onClick={onOpenInsights} />}
+                </nav>
 
                 <section aria-labelledby="cats-h" className="mt-8">
                   <h2 id="cats-h" className="type-title mb-1 px-1">

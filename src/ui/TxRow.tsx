@@ -62,7 +62,7 @@ export const TxRow = memo(function TxRow({ tx, category, currency, accountById, 
   const foreign = tx.originalCurrency !== undefined && tx.originalCurrency !== currency
   const converted = foreign && !tx.unconverted ? `≈ ${formatMoney(tx.amountMinor, currency)}` : null
 
-  const spoken = `${selecting ? (selected ? 'Selected' : 'Select') : 'Edit'} ${transfer ? 'transfer' : received ? 'received' : 'spent'} ${title}, ${paid}${showCategory ? `, ${categoryName}` : ''}${delivery ? `, ${delivery.toLowerCase()}` : ''}${showDate ? `, ${shortDate(tx.date)}` : ''}${tx.note ? `, note: ${tx.note}` : ''}${tx.source === 'recurring' ? ', added from a regular payment' : tx.source === 'import' ? ', imported from a file' : ''}${tx.location ? ', added with location' : ''}`
+  const spoken = `${selecting ? (selected ? 'Selected' : 'Select') : 'Edit'} ${transfer ? 'transfer' : received ? 'received' : 'spent'} ${title}, ${paid}${showCategory ? `, ${categoryName}` : ''}${delivery ? `, ${delivery.toLowerCase()}` : ''}${showDate ? `, ${shortDate(tx.date)}` : ''}${tx.note ? `, note: ${tx.note}` : ''}${tx.source === 'recurring' ? ', added from a regular payment' : ''}`
 
   return (
     <button
@@ -111,17 +111,8 @@ export const TxRow = memo(function TxRow({ tx, category, currency, accountById, 
             </span>
           )}
           {tx.paymentMethod && <span className="shrink-0 rounded-full bg-surface-2 px-2 py-px text-sm">{tx.paymentMethod}</span>}
-          {/* Entries you did not type yourself say so, so a change you did not make is easy to spot. */}
+          {/* An entry added by a regular payment says so, so a change you did not make is easy to spot. Imported ones and the place an entry was made are not shown on the row. */}
           {tx.source === 'recurring' && <span className="shrink-0 rounded-full bg-surface-2 px-2 py-px text-sm">Recurring</span>}
-          {tx.source === 'import' && <span className="shrink-0 rounded-full bg-surface-2 px-2 py-px text-sm">Imported</span>}
-          {tx.location && (
-            <>
-              <span aria-hidden="true" className="shrink-0">
-                <Icon name="pin" size={14} />
-              </span>
-              <span className="sr-only">Added with location</span>
-            </>
-          )}
         </span>
         {tx.note && <span className="mt-0.5 block truncate text-sm text-muted">{tx.note}</span>}
         {foreign && tx.unconverted && <span className="mt-0.5 block text-sm text-critical">No {tx.originalCurrency} rate set</span>}
