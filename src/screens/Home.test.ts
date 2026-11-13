@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
@@ -301,10 +302,15 @@ describe('Home: what comes first', () => {
       }
     })
 
-    it('sets the money that matters in the serif, with figures that stand level', () => {
+    it('sets the numbers in the theme’s sans, bold and level, and only the words in the serif', () => {
       const html = renderFull()
       expect(classes(html, 'type-display')).toBe(1)
       expect(classes(html, 'type-figure')).toBeGreaterThanOrEqual(2)
+      // No figure is set in the serif.
+      expect(html).not.toMatch(/class="[^"]*type-(headline|title|greeting)[^"]*"[^>]*>[^<]*₹/)
+      const css = readFileSync('src/index.css', 'utf8')
+      expect(css).toMatch(/\.type-display,\s*\.type-figure \{\s*font-family: var\(--font-ui, var\(--font-sans\)\);\s*font-variant-numeric: tabular-nums/)
+      expect(css).toMatch(/\.type-greeting,\s*\.type-headline,\s*\.type-title \{\s*font-family: var\(--font-voice\)/)
     })
 
     it('does not give any section a sans of its own: Plan ahead is in the theme font like the rest', () => {

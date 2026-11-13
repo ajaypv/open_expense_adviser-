@@ -276,7 +276,7 @@ export function Intro({ open, onDone, theme, onTheme }: { open: boolean; onDone:
             <AppMark size={40} />
             <span className="text-lg font-semibold tracking-tight text-ink-2">Expense Tracker</span>
           </span>
-          <h2 id={titleId} className="type-display intro-rise mt-5 text-[clamp(2.5rem,2rem+3vw,3.25rem)] text-balance" style={{ lineHeight: 1.04 }}>
+          <h2 id={titleId} className="type-headline intro-rise mt-5 text-balance" style={{ lineHeight: 1.04 }}>
             Know where{' '}
             <br />
             <span style={{ background: ACCENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>your money goes.</span>

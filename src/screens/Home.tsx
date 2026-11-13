@@ -143,7 +143,7 @@ export const Home = memo(function Home({
       <div>
         <HomeHeader today={today} goals={ledger.goals} onOpenGoals={onOpenGoals} />
         <div className="pt-10">
-        <h2 className="type-display text-balance">Let’s add your first one.</h2>
+        <h2 className="type-headline text-balance">Let’s add your first one.</h2>
         <p className="mt-3 max-w-sm text-lg text-ink-2">
           Type what you spent or received in the bar below, as you would say it. Tap an example, then press send. Or use + for the full form.
         </p>
