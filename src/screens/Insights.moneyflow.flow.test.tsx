@@ -60,9 +60,9 @@ describe('Insights: Money flow, a section of its own right at the top', () => {
 
   it('is no longer one of the ways to look at Where it went', () => {
     mount(txs())
-    const choice = within(screen.getByRole('region', { name: 'Where it went' })).getByRole('group', { name: 'How to show the categories' })
-    expect(within(choice).queryByRole('button', { name: 'Flow' })).toBeNull()
-    expect(within(choice).getByRole('button', { name: 'Bubbles' })).toHaveAttribute('aria-pressed', 'true')
+    const choice = within(screen.getByRole('region', { name: 'Where it went' })).getByRole('radiogroup', { name: 'How to show the categories' })
+    expect(within(choice).queryByRole('radio', { name: 'Flow' })).toBeNull()
+    expect(within(choice).getByRole('radio', { name: 'Bubbles' })).toHaveAttribute('aria-checked', 'true')
   })
 
   it('has nothing to draw in a month with no spending', () => {

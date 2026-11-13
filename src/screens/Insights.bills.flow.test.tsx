@@ -91,7 +91,7 @@ describe('Insights: bills divided inside the category charts', () => {
 
   it('divides the donut the same way, and its legend with it', () => {
     mount(txs())
-    fireEvent.click(screen.getByRole('button', { name: 'Donut' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Donut' }))
     const legend = within(screen.getByRole('list', { name: 'Spending by category' })).getAllByRole('listitem')
     expect(legend.map((l) => l.textContent)).toEqual([
       expect.stringContaining('EMIs'),
@@ -105,7 +105,7 @@ describe('Insights: bills divided inside the category charts', () => {
 
   it('divides the list view the same way', () => {
     mount(txs())
-    fireEvent.click(screen.getByRole('button', { name: 'List' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'List' }))
     const section = screen.getByRole('region', { name: 'Where it went' })
     for (const name of ['EMIs', 'Recharges', 'Utilities', 'Food & Dining']) expect(section).toHaveTextContent(name)
     expect(section).not.toHaveTextContent('Bills & Utilities')

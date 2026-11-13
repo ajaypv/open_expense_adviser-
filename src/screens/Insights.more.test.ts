@@ -203,3 +203,42 @@ describe('the pattern of the other pages', () => {
     expect(page).toMatch(/<h2 id="pace-h" class="type-title mb-3">Spending pace<\/h2>/)
   })
 })
+
+describe('HeroUI on this page', () => {
+  const rows = [...october, tx('2026-10-12', 4000, 1, { merchant: 'Big Bazaar' }), salary('2026-10-01', 5000)]
+
+  it('sets the cards in HeroUI Cards', () => {
+    const page = render(rows, '2026-10', { budgetMinor: 3_000_000, categoryBudgets: new Map([[1, 150_000]]) })
+    expect(page).toMatch(/class="card card--default mt-3 gap-0 p-3"[^>]*><dl class="grid grid-cols-2 gap-2">/)
+    expect(page).toMatch(/<section aria-labelledby="pace-h" class="mt-8"><div class="card card--default"/)
+    expect((page.match(/class="card card--default/g) ?? []).length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('shows the note about exchange rates as a HeroUI Alert, with a HeroUI Button that goes to Settings', () => {
+    const html = render(october, '2026-10', { missingRates: ['USD'] })
+    expect(html).toMatch(/<div class="alert alert--warning mt-4"[^>]*role="note"/)
+    expect(html).toContain('class="alert__description"')
+    expect(html).toMatch(/class="button button--sm button--secondary[^"]*"[^>]*>Set exchange rates<\/button>/)
+  })
+
+  it('chooses how to show the categories with a HeroUI toggle group, one of three, the first chosen', () => {
+    const page = render(rows, '2026-10')
+    expect(page).toMatch(/class="toggle-button-group[^"]*"[^>]*aria-label="How to show the categories"[^>]*role="radiogroup"/)
+    expect((page.match(/class="toggle-button /g) ?? []).length).toBe(3)
+    expect(page).toMatch(/aria-checked="true"[^>]*data-selected="true"[^>]*>Bubbles/)
+  })
+
+  it('shows when a regular payment is due as a HeroUI Chip, coloured by how soon', () => {
+    const recurring = [{ id: 90, kind: 'expense' as const, amountMinor: 100_000, currency: 'INR', categoryId: 1, merchant: 'Rent', note: '', paymentMethod: '', frequency: 'monthly' as const, nextDue: '2026-10-29', active: true }]
+    const html = render(rows, '2026-10', { recurring } as never)
+    expect(html).toMatch(/class="chip chip--[a-z]+ chip--sm chip--soft"/)
+    expect(html).toMatch(/data-status="(soon|later|late)"/)
+  })
+
+  it('goes on saying the same things in the same words', () => {
+    const t = text(render(rows, '2026-10', { missingRates: ['USD'] }))
+    expect(t).toContain('Some USD amounts are counted at face value, so the totals here are off.')
+    expect(t).toContain('Set exchange rates')
+    expect(t).toContain('BubblesDonutList')
+  })
+})

@@ -1,3 +1,9 @@
+import { Alert } from '@heroui/react/alert'
+import { Button } from '@heroui/react/button'
+import { Card } from '@heroui/react/card'
+import { Chip } from '@heroui/react/chip'
+import { ToggleButton } from '@heroui/react/toggle-button'
+import { ToggleButtonGroup } from '@heroui/react/toggle-button-group'
 import { memo, useMemo, useState } from 'react'
 import { BarList } from '../charts/BarList'
 import { BillSplit } from '../charts/BillSplit'
@@ -73,14 +79,16 @@ const weekdayName = (i: number) =>
 const statusOf = (p: UpcomingPayment) => (p.overdue ? 'late' : p.kind === 'income' ? 'arriving' : p.daysLeft <= 3 ? 'soon' : 'later')
 const DOT = { late: 'var(--critical)', soon: 'var(--warn-ui)', arriving: 'var(--good-text)', later: 'var(--ink-2)' } as const
 
+const CHIP_COLOR = { late: 'danger', soon: 'warning', arriving: 'success', later: 'default' } as const
+
 /** A small pill with a coloured dot and when the payment is due. The words carry the meaning; the dot only backs them up. */
 function StatusPill({ payment }: { payment: UpcomingPayment }) {
   const status = statusOf(payment)
   return (
-    <span data-status={status} className={`inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-0.5 text-sm ${status === 'late' ? 'font-medium text-critical' : 'text-ink-2'}`}>
+    <Chip data-status={status} size="sm" variant="soft" color={CHIP_COLOR[status]}>
       <span data-dot aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: DOT[status] }} />
-      {describeWhen(payment.daysLeft)}
-    </span>
+      <Chip.Label>{describeWhen(payment.daysLeft)}</Chip.Label>
+    </Chip>
   )
 }
 
@@ -241,26 +249,28 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
   const moneyInOut =
     savings.receivedMinor > 0 ? (
       <Section id="savings-h" title="Money in and out">
-        <dl className="mt-3 grid grid-cols-2 gap-2 rounded-3xl bg-surface p-3 shadow-[0_0_0_1px_var(--ring)]">
-          <div className="min-w-0 rounded-2xl bg-surface-2 p-3">
-            <dt className="flex items-center gap-2 text-sm font-medium text-ink-2">
-              <span aria-hidden="true" data-icon="arrowDown" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-good">
-                <Icon name="arrowDown" size={15} weight={2.25} />
-              </span>
-              Received
-            </dt>
-            <dd className="num mt-2 truncate text-xl text-good">{money(savings.receivedMinor)}</dd>
-          </div>
-          <div className="min-w-0 rounded-2xl bg-surface-2 p-3">
-            <dt className="flex items-center gap-2 text-sm font-medium text-ink-2">
-              <span aria-hidden="true" data-icon="arrowUp" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-ink">
-                <Icon name="arrowUp" size={15} weight={2.25} />
-              </span>
-              Spent
-            </dt>
-            <dd className="num mt-2 truncate text-xl">{money(savings.sentMinor)}</dd>
-          </div>
-        </dl>
+        <Card className="mt-3 gap-0 p-3">
+          <dl className="grid grid-cols-2 gap-2">
+            <div className="min-w-0 rounded-2xl bg-surface-2 p-3">
+              <dt className="flex items-center gap-2 text-sm font-medium text-ink-2">
+                <span aria-hidden="true" data-icon="arrowDown" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-good">
+                  <Icon name="arrowDown" size={15} weight={2.25} />
+                </span>
+                Received
+              </dt>
+              <dd className="num mt-2 truncate text-xl text-good">{money(savings.receivedMinor)}</dd>
+            </div>
+            <div className="min-w-0 rounded-2xl bg-surface-2 p-3">
+              <dt className="flex items-center gap-2 text-sm font-medium text-ink-2">
+                <span aria-hidden="true" data-icon="arrowUp" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-ink">
+                  <Icon name="arrowUp" size={15} weight={2.25} />
+                </span>
+                Spent
+              </dt>
+              <dd className="num mt-2 truncate text-xl">{money(savings.sentMinor)}</dd>
+            </div>
+          </dl>
+        </Card>
         <p className="mt-2 text-lg">
           {savings.savedMinor >= 0 ? (
             isCurrent ? (
@@ -294,19 +304,21 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
     >
       {regular && (
         <>
-          <dl className="mt-3 grid grid-cols-2 gap-2 rounded-3xl bg-surface p-3 shadow-[0_0_0_1px_var(--ring)]">
-            {[
-              { label: 'Every month', value: regular.monthlyMinor },
-              { label: 'A year', value: regular.yearlyMinor },
-              { label: `Still to pay in ${name}`, value: regular.leftThisMonth.outMinor },
-              { label: 'Next 30 days', value: regular.next30.outMinor },
-            ].map((s) => (
-              <div key={s.label} className="flex min-w-0 flex-col-reverse justify-end rounded-2xl bg-surface-2 p-3">
-                <dt className="text-sm text-ink-2">{s.label}</dt>
-                <dd className="num truncate text-xl">{money(s.value)}</dd>
-              </div>
-            ))}
-          </dl>
+          <Card className="mt-3 gap-0 p-3">
+            <dl className="grid grid-cols-2 gap-2">
+              {[
+                { label: 'Every month', value: regular.monthlyMinor },
+                { label: 'A year', value: regular.yearlyMinor },
+                { label: `Still to pay in ${name}`, value: regular.leftThisMonth.outMinor },
+                { label: 'Next 30 days', value: regular.next30.outMinor },
+              ].map((s) => (
+                <div key={s.label} className="flex min-w-0 flex-col-reverse justify-end rounded-2xl bg-surface-2 p-3">
+                  <dt className="text-sm text-ink-2">{s.label}</dt>
+                  <dd className="num truncate text-xl">{money(s.value)}</dd>
+                </div>
+              ))}
+            </dl>
+          </Card>
 
           {regular.next && (
             <p className="mt-3 text-lg">
@@ -367,38 +379,42 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
           )}
 
           <p className="mt-5 font-medium">Due next</p>
-          <ul aria-label="Due next" className="mt-1 divide-y divide-line rounded-3xl bg-surface px-4 shadow-[0_0_0_1px_var(--ring)]">
-            {regular.upcoming.map((p) => (
-              <li key={p.key} className="flex items-center gap-3 py-3">
-                <PaymentBadge tag={tagOf(p.rule)} name={lookNames(p)} categoryName={categoryById.get(p.rule.categoryId)?.name} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{lookNames(p)}</span>
-                  <span className="block text-sm text-ink-2">{`${TAG_LABELS[tagOf(p.rule)]}, ${shortDay(p.date, today)}`}</span>
-                </span>
-                <span className="shrink-0 text-right">
-                  <span className={`num block ${p.kind === 'income' ? 'text-good' : ''}`}>{signedAmount(p, currency)}</span>
-                  <StatusPill payment={p} />
-                </span>
-              </li>
-            ))}
-          </ul>
+          <Card className="mt-1 gap-0 px-4 py-0">
+            <ul aria-label="Due next" className="divide-y divide-line">
+              {regular.upcoming.map((p) => (
+                <li key={p.key} className="flex items-center gap-3 py-3">
+                  <PaymentBadge tag={tagOf(p.rule)} name={lookNames(p)} categoryName={categoryById.get(p.rule.categoryId)?.name} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{lookNames(p)}</span>
+                    <span className="block text-sm text-ink-2">{`${TAG_LABELS[tagOf(p.rule)]}, ${shortDay(p.date, today)}`}</span>
+                  </span>
+                  <span className="shrink-0 text-right">
+                    <span className={`num block ${p.kind === 'income' ? 'text-good' : ''}`}>{signedAmount(p, currency)}</span>
+                    <StatusPill payment={p} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
         </>
       )}
 
       {looksRegular.length > 0 && (
         <>
           <p className="mt-5 font-medium">Looks regular, not set up yet</p>
-          <ul className="mt-1 divide-y divide-line rounded-3xl bg-surface px-4 shadow-[0_0_0_1px_var(--ring)]">
-            {looksRegular.slice(0, 3).map((d) => (
-              <li key={d.key} className="flex items-center justify-between gap-3 py-3">
-                <span className="min-w-0">
-                  <span className="block truncate font-medium">{d.merchant}</span>
-                  <span className="block text-sm text-ink-2">{`Every month for ${d.count} months, next about ${shortDay(d.nextDue, today)}`}</span>
-                </span>
-                <span className="num shrink-0">{money(d.amountMinor)}</span>
-              </li>
-            ))}
-          </ul>
+          <Card className="mt-1 gap-0 px-4 py-0">
+            <ul className="divide-y divide-line">
+              {looksRegular.slice(0, 3).map((d) => (
+                <li key={d.key} className="flex items-center justify-between gap-3 py-3">
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{d.merchant}</span>
+                    <span className="block text-sm text-ink-2">{`Every month for ${d.count} months, next about ${shortDay(d.nextDue, today)}`}</span>
+                  </span>
+                  <span className="num shrink-0">{money(d.amountMinor)}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
           <p className="mt-2 text-ink-2">
             <Figures
               text={`If these carry on, that is about ${money(looksRegular.reduce((s, d) => s + d.amountMinor, 0))} more a month. Set them up to see when each falls due.`}
@@ -409,22 +425,20 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
       )}
 
       {!regular && looksRegular.length === 0 && (
-        <div className="mt-3 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]">
-          <p>
-            Add the payments that repeat, such as rent, loan EMIs, UPI AutoPay and subscriptions, and this shows what they cost a month and what is due
-            next.
-          </p>
-        </div>
+        <Card className="mt-3">
+          <div>
+            <p>
+              Add the payments that repeat, such as rent, loan EMIs, UPI AutoPay and subscriptions, and this shows what they cost a month and what is due
+              next.
+            </p>
+          </div>
+        </Card>
       )}
 
       {onOpenUpcoming && (
-        <button
-          type="button"
-          onClick={onOpenUpcoming}
-          className={`mt-4 min-h-12 w-full rounded-full px-5 font-semibold ${regular ? 'bg-surface-2' : 'bg-btn text-btn-ink'}`}
-        >
+        <Button fullWidth size="lg" variant={regular ? 'secondary' : 'primary'} onPress={onOpenUpcoming} className="mt-4 rounded-full">
           {regular ? 'See all regular payments' : 'Add regular payments'}
-        </button>
+        </Button>
       )}
     </Section>
   ) : null
@@ -437,17 +451,15 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
       <MonthSwitcher month={month} currentMonth={currentMonth} onChange={onMonth} activeMonths={activeMonths} />
 
       {ledger.missingRates.length > 0 && (
-        <div role="note" className="mt-4 flex items-start gap-3 rounded-2xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]">
-          <span aria-hidden="true" className="mt-0.5 shrink-0" style={{ color: 'var(--warn-ui)' }}>
-            <Icon name="warn" size={20} />
-          </span>
-          <div className="min-w-0">
-            <p>{`Some ${ledger.missingRates.join(', ')} amounts are counted at face value, so the totals here are off.`}</p>
-            <button type="button" onClick={onOpenSettings} className="mt-1 min-h-11 font-medium underline underline-offset-2">
+        <Alert status="warning" role="note" className="mt-4">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Description>{`Some ${ledger.missingRates.join(', ')} amounts are counted at face value, so the totals here are off.`}</Alert.Description>
+            <Button size="sm" variant="secondary" onPress={onOpenSettings} className="mt-2 self-start">
               Set exchange rates
-            </button>
-          </div>
-        </div>
+            </Button>
+          </Alert.Content>
+        </Alert>
       )}
 
       {total === 0 ? (
@@ -462,9 +474,9 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
           ) : (
             <div className="mt-8">
               <p className="text-3xl font-semibold leading-tight tracking-tight">{`No expenses logged in ${name}.`}</p>
-              <button type="button" onClick={() => onMonth(latestMonth)} className="mt-4 min-h-12 rounded-full bg-btn px-5 font-semibold text-btn-ink">
+              <Button size="lg" onPress={() => onMonth(latestMonth)} className="mt-4 rounded-full">
                 {`Go to ${firstWord(latestMonth)}`}
-              </button>
+              </Button>
             </div>
           )}
           {regularSection}
@@ -504,10 +516,8 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
             )}
           </section>
 
-          <section
-            aria-labelledby="pace-h"
-            className="mt-8 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]"
-          >
+          <section aria-labelledby="pace-h" className="mt-8">
+          <Card>
             <h2 id="pace-h" className="type-title mb-3">
               Spending pace
             </h2>
@@ -525,6 +535,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
               lastDay={elapsed}
               currency={currency}
             />
+          </Card>
           </section>
 
           <dl className="mt-8 grid grid-cols-3 gap-2">
@@ -541,25 +552,30 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
             title="Where it went"
             intro={`Where your ${name} spending went, biggest first.${catParts.some((t) => t.key) ? ' Bills are divided into what they were for.' : ''}${onPickCategory ? ' Tap one to see those expenses.' : ''}`}
           >
-            <div role="group" aria-label="How to show the categories" className="mt-3 flex gap-1 rounded-full bg-surface-2 p-1">
+            <ToggleButtonGroup
+              aria-label="How to show the categories"
+              selectionMode="single"
+              disallowEmptySelection
+              selectedKeys={new Set([categoryView])}
+              onSelectionChange={(keys) => {
+                const next = [...keys][0]
+                if (next === 'bubbles' || next === 'donut' || next === 'list') setCategoryView(next)
+              }}
+              className="mt-3 w-full"
+            >
               {(
                 [
                   ['bubbles', 'Bubbles'],
                   ['donut', 'Donut'],
                   ['list', 'List'],
                 ] as const
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  aria-pressed={categoryView === id}
-                  onClick={() => setCategoryView(id)}
-                  className={`min-h-11 flex-1 rounded-full px-3 text-sm font-medium transition-colors motion-reduce:transition-none ${categoryView === id ? 'bg-btn text-btn-ink' : 'text-ink-2'}`}
-                >
+              ).map(([id, label], i) => (
+                <ToggleButton key={id} id={id} className="min-h-11 flex-1">
+                  {i > 0 && <ToggleButtonGroup.Separator />}
                   {label}
-                </button>
+                </ToggleButton>
               ))}
-            </div>
+            </ToggleButtonGroup>
             <div className="mt-3">
               {categoryView === 'bubbles' ? (
                 <CategoryBubbles totals={catParts} categoryById={categoryById} currency={currency} onPick={onPickCategory} />
@@ -589,27 +605,29 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
 
           {budgetRows.length > 0 && (
             <Section id="budgets-h" title="Budgets by category">
-              <ul className="mt-3 space-y-5 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]">
-                {budgetRows.map((b) => {
-                  const cat = categoryById.get(b.categoryId)
-                  return (
-                    <li key={b.categoryId}>
-                      <p className="mb-1.5 flex items-center gap-2.5 font-medium">
-                        <span
-                          aria-hidden="true"
-                          data-icon={categoryIcon(cat?.name)}
-                          className="flex size-8 shrink-0 items-center justify-center rounded-full text-ink"
-                          style={{ background: `color-mix(in oklab, ${cat?.color ?? 'var(--other)'} 20%, var(--surface))` }}
-                        >
-                          <Icon name={categoryIcon(cat?.name)} size={16} />
-                        </span>
-                        {cat?.name ?? 'Other'}
-                      </p>
-                      <Meter spentMinor={b.spentMinor} limitMinor={b.limitMinor} currency={currency} />
-                    </li>
-                  )
-                })}
-              </ul>
+              <Card className="mt-3">
+                <ul className="space-y-5">
+                  {budgetRows.map((b) => {
+                    const cat = categoryById.get(b.categoryId)
+                    return (
+                      <li key={b.categoryId}>
+                        <p className="mb-1.5 flex items-center gap-2.5 font-medium">
+                          <span
+                            aria-hidden="true"
+                            data-icon={categoryIcon(cat?.name)}
+                            className="flex size-8 shrink-0 items-center justify-center rounded-full text-ink"
+                            style={{ background: `color-mix(in oklab, ${cat?.color ?? 'var(--other)'} 20%, var(--surface))` }}
+                          >
+                            <Icon name={categoryIcon(cat?.name)} size={16} />
+                          </span>
+                          {cat?.name ?? 'Other'}
+                        </p>
+                        <Meter spentMinor={b.spentMinor} limitMinor={b.limitMinor} currency={currency} />
+                      </li>
+                    )
+                  })}
+                </ul>
+              </Card>
             </Section>
           )}
 
@@ -635,20 +653,22 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
 
           {repeats.length > 0 && (
             <Section id="repeats-h" title="Keeps coming back" intro={`What you paid for again and again in ${name}.`}>
-              <ul className="mt-3 divide-y divide-line rounded-3xl bg-surface px-4 shadow-[0_0_0_1px_var(--ring)]">
-                {repeats.map((r) => (
-                  <li key={r.name.toLowerCase()} className="flex items-center gap-3 py-3">
-                    <span aria-hidden="true" className="flex h-9 min-w-11 shrink-0 items-center justify-center rounded-full bg-surface-2 px-2 text-sm font-semibold tabular-nums">
-                      {`${r.count}×`}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{r.name}</p>
-                      <p className="text-sm text-ink-2">{repeatDetail(r, money)}</p>
-                    </div>
-                    <span className="num shrink-0">{money(r.totalMinor)}</span>
-                  </li>
-                ))}
-              </ul>
+              <Card className="mt-3 gap-0 px-4 py-0">
+                <ul className="divide-y divide-line">
+                  {repeats.map((r) => (
+                    <li key={r.name.toLowerCase()} className="flex items-center gap-3 py-3">
+                      <span aria-hidden="true" className="flex h-9 min-w-11 shrink-0 items-center justify-center rounded-full bg-surface-2 px-2 text-sm font-semibold tabular-nums">
+                        {`${r.count}×`}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{r.name}</p>
+                        <p className="text-sm text-ink-2">{repeatDetail(r, money)}</p>
+                      </div>
+                      <span className="num shrink-0">{money(r.totalMinor)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
               <p className="mt-2 text-ink-2">
                 {`Together ${money(repeatTotal)}, ${Math.round((repeatTotal / total) * 100)}% of what you spent in ${name}.`}
               </p>
@@ -657,30 +677,32 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
 
           {unusual.length > 0 && (
             <Section id="unusual-h" title="Bigger than usual" intro="Purchases far above what that category normally costs.">
-              <ul className="mt-3 divide-y divide-line rounded-3xl bg-surface px-4 shadow-[0_0_0_1px_var(--ring)]">
-                {unusual.map((u) => (
-                  <li key={u.tx.id} className="flex items-start gap-3 py-3">
-                    <span
-                      aria-hidden="true"
-                      data-icon="warn"
-                      className="flex size-9 shrink-0 items-center justify-center rounded-full"
-                      style={{ color: 'var(--warn-ui)', background: 'color-mix(in oklab, var(--warn-ui) 16%, var(--surface))' }}
-                    >
-                      <Icon name="warn" size={18} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">
-                        {u.tx.merchant || categoryById.get(u.tx.categoryId)?.name || 'Expense'}
-                      </p>
-                      <p className="text-sm text-ink-2">
-                        {Math.round(u.times * 10) / 10} times the usual {categoryById.get(u.tx.categoryId)?.name ?? 'category'}{' '}
-                        spend of {money(u.typicalMinor)}.
-                      </p>
-                    </div>
-                    <span className="num shrink-0">{money(u.tx.amountMinor)}</span>
-                  </li>
-                ))}
-              </ul>
+              <Card className="mt-3 gap-0 px-4 py-0">
+                <ul className="divide-y divide-line">
+                  {unusual.map((u) => (
+                    <li key={u.tx.id} className="flex items-start gap-3 py-3">
+                      <span
+                        aria-hidden="true"
+                        data-icon="warn"
+                        className="flex size-9 shrink-0 items-center justify-center rounded-full"
+                        style={{ color: 'var(--warn-ui)', background: 'color-mix(in oklab, var(--warn-ui) 16%, var(--surface))' }}
+                      >
+                        <Icon name="warn" size={18} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">
+                          {u.tx.merchant || categoryById.get(u.tx.categoryId)?.name || 'Expense'}
+                        </p>
+                        <p className="text-sm text-ink-2">
+                          {Math.round(u.times * 10) / 10} times the usual {categoryById.get(u.tx.categoryId)?.name ?? 'category'}{' '}
+                          spend of {money(u.typicalMinor)}.
+                        </p>
+                      </div>
+                      <span className="num shrink-0">{money(u.tx.amountMinor)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
             </Section>
           )}
 
@@ -696,17 +718,21 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
 
           {trends.length > 0 && monthsWithData >= 2 && (
             <Section id="trends-h" title="Trends by category" intro="How your biggest categories have moved. Each is measured against its usual month.">
-              <div className="mt-3 rounded-3xl bg-surface px-4 shadow-[0_0_0_1px_var(--ring)]">
-                <TrendBars trends={trends} categoryById={categoryById} currency={currency} monthName={name} inProgress={isCurrent} />
-              </div>
+              <Card className="mt-3 gap-0 px-4 py-0">
+                <div>
+                  <TrendBars trends={trends} categoryById={categoryById} currency={currency} monthName={name} inProgress={isCurrent} />
+                </div>
+              </Card>
             </Section>
           )}
 
           {monthsWithData >= 2 && (
             <Section id="year-h" title="The last 12 months" intro="What you spent each month. The latest bar may be a month that is still going.">
-              <div className="mt-3 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]">
-                <MonthColumns totals={yearTotals} currency={currency} />
-              </div>
+              <Card className="mt-3">
+                <div>
+                  <MonthColumns totals={yearTotals} currency={currency} />
+                </div>
+              </Card>
             </Section>
           )}
 
@@ -720,15 +746,17 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
             ) : hasAnyPlace ? (
               <p className="mt-3 text-ink-2">{`No places were recorded in ${name}.`}</p>
             ) : (
-              <div className="mt-3 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]">
-                <p>
-                  See where you spend. Turn on &ldquo;Save where I add transactions&rdquo; in Settings, and each new transaction adds a spot to a map
-                  here.
-                </p>
-                <button type="button" onClick={onOpenSettings} className="mt-3 min-h-11 rounded-full bg-surface-2 px-4 font-medium">
-                  Open settings
-                </button>
-              </div>
+              <Card className="mt-3">
+                <div>
+                  <p>
+                    See where you spend. Turn on &ldquo;Save where I add transactions&rdquo; in Settings, and each new transaction adds a spot to a map
+                    here.
+                  </p>
+                  <Button variant="secondary" onPress={onOpenSettings} className="mt-3 rounded-full">
+                    Open settings
+                  </Button>
+                </div>
+              </Card>
             )}
           </Section>
         </>
