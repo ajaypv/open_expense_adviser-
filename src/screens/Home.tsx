@@ -1,5 +1,4 @@
 import { memo, useCallback, useMemo } from 'react'
-import type { LedgerTx } from '../data/buildLedger'
 import { setDisplay, useDisplay } from '../data/display'
 import { CategoryBars } from '../charts/CategoryBars'
 import { DayChart } from '../charts/DayChart'
@@ -43,7 +42,6 @@ interface Props {
   onMonth: (month: MonthKey) => void
   today: Date
   onPickCategory: (categoryId: number) => void
-  onEdit: (tx: LedgerTx) => void
   onExample: (text: string) => void
   onOpenSettings: () => void
   onSeeAll: () => void
@@ -102,7 +100,6 @@ export const Home = memo(function Home({
   onMonth,
   today,
   onPickCategory,
-  onEdit,
   onExample,
   onOpenSettings,
   onSeeAll,

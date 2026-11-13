@@ -510,7 +510,6 @@ function Shell() {
             onMonth={setMonth}
             today={today}
             onPickCategory={pickCategory}
-            onEdit={openEdit}
             onExample={fillChat}
             onOpenSettings={openSettings}
             onSeeAll={seeAll}
