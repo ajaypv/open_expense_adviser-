@@ -23,6 +23,11 @@ describe('Figures', () => {
     expect(html('₹5 and ₹5', ['₹5'])).toBe('<b class="num text-ink">₹5</b> and ₹5')
   })
 
+  it('bolds every place a figure stands when asked to', () => {
+    const every = renderToStaticMarkup(<Figures every text="₹5 and ₹5" figures={['₹5']} />)
+    expect(every).toBe('<b class="num text-ink">₹5</b> and <b class="num text-ink">₹5</b>')
+  })
+
   it('finds a percentage or a multiple as written', () => {
     expect(html('about 164% more than weekdays', ['164%'])).toBe('about <b class="num text-ink">164%</b> more than weekdays')
     expect(html('about 2.5× what weekdays do', ['2.5×'])).toBe('about <b class="num text-ink">2.5×</b> what weekdays do')

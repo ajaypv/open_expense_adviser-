@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Category, Recurring, Transaction } from '../db/schema'
 import { makeLedger } from '../test/ledger'
+import { MonthBar, whole } from './AiCharts'
 import { AiSheet } from './AiSheet'
 
 const categories: Category[] = [
@@ -537,5 +538,78 @@ describe('AiSheet: its typography', () => {
   it('is set in a larger size than the type around it, since a serif reads smaller than a sans at the same size', () => {
     mount()
     expect(within(lead()).getByRole('heading', { level: 3 }).className).toMatch(/text-\[clamp\(2\.125rem,9vw,2\.875rem\)\]/)
+  })
+})
+
+describe('AiSheet: the pattern of the other pages', () => {
+  it('leads the header with a round icon, and closes from a soft round button', () => {
+    mount()
+    expect(dialog().querySelector('header [data-icon="spark"]')).toHaveClass('rounded-full')
+    expect(within(dialog()).getByRole('button', { name: 'Close' })).toHaveClass('rounded-full', 'bg-surface-2')
+  })
+
+  it('puts what needs attention in soft tiles, each with a round amber warning', () => {
+    mount({ budgetMinor: 800_000 })
+    const alert = dialog().querySelector('[data-alert="over"]')!
+    expect(alert).toHaveClass('rounded-2xl', 'bg-surface-2')
+    expect(alert.querySelector('[data-icon="warn"]')).toHaveClass('rounded-full')
+  })
+
+  it('sets each part of the month bar in a soft tile, and shows its amount in whole rupees', () => {
+    expect(whole(2_192_094)).toBe(2_192_100)
+    const bar = { everydayMinor: 1_245_000, autoDoneMinor: 0, autoDueMinor: 0, expectedEverydayMinor: 2_192_094, scaleMinor: 3_437_094, totalMinor: 3_437_094, budgetMinor: null }
+    render(<MonthBar bar={bar as never} currency="INR" />)
+    const row = screen.getByText('Likely to spend').closest('li')!
+    expect(row).toHaveClass('rounded-2xl', 'bg-surface-2')
+    expect(row).toHaveTextContent('₹21,921')
+    expect(row.textContent).not.toContain('.94')
+  })
+
+  it('gives each leak a tile and the round icon of what it is about, with its switch and amounts on the right', () => {
+    mount()
+    const food = dialog().querySelector('[data-leak="usual-1"]')!
+    expect(food).toHaveClass('rounded-2xl', 'bg-surface-2')
+    expect(food.querySelector('[data-icon="utensils"]')).toHaveClass('rounded-full')
+    expect(dialog().querySelector('[data-leak="repeat-swiggy"] [data-icon="repeat"]')).toBeInTheDocument()
+    expect(food.querySelector('.num')).toHaveTextContent('₹1,750')
+    expect(screen.getByTestId('leak-total')).toHaveClass('rounded-2xl', 'bg-surface-2')
+  })
+
+  it('gives each category the round icon of its kind, in its colour, not a dot', () => {
+    mount()
+    const food = dialog().querySelector('[data-category="1"]')!
+    expect(food.querySelector('[data-icon="utensils"]')).toHaveClass('rounded-full')
+    expect(food.querySelector('.size-2\\.5')).toBeNull()
+    expect(food.querySelector('.num')).toHaveTextContent('₹5,000')
+  })
+
+  it('does not tag every category "New" when last month had nothing to compare with', () => {
+    mount({ txs: expenses.filter((t) => t.date >= '2026-10') })
+    expect(section('ai-where')).not.toHaveTextContent('New')
+    expect(section('ai-where')).not.toHaveTextContent('Against the same days')
+    expect(dialog().querySelector('[data-category="1"]')).toHaveTextContent('Food')
+  })
+
+  it('shows what is next month in two soft tiles, not two halves split by a line', () => {
+    mount({ recurring: [emiLater] })
+    const fixed = screen.getByTestId('outlook').querySelector('[data-part="fixed"]')!.parentElement!
+    expect(fixed).toHaveClass('rounded-2xl', 'bg-surface-2')
+    expect(screen.getByTestId('outlook').innerHTML).not.toContain('divide-x')
+  })
+
+  it('sets the figures in the sentences in bold', () => {
+    mount({ recurring: [emiNow] })
+    const bold = (el: Element | null) => Array.from(el!.querySelectorAll('b.num')).map((b) => b.textContent)
+    expect(bold(lead())).toEqual(expect.arrayContaining(['₹12,500']))
+    expect(bold(section('ai-auto').querySelector('[data-line="monthly"]'))).toEqual(expect.arrayContaining(['₹12,500', '63%', '₹7,500']))
+    // Both places where the same amount stands are bold, in a sentence that says it twice.
+    expect(bold(section('ai-auto').querySelectorAll('p')[0])).toEqual(['₹12,500', '₹0', '₹12,500'])
+    expect(bold(screen.getByTestId('outlook').querySelector('[data-line="year"]'))).toHaveLength(1)
+  })
+
+  it('sets the sentences in the one size of the other pages', () => {
+    mount({ recurring: [emiNow] })
+    expect(dialog().innerHTML).not.toContain('text-[0.9375rem]')
+    expect(section('ai-auto').querySelector('[data-line="monthly"]')).toHaveClass('text-[1.0625rem]', 'leading-[1.6]')
   })
 })
