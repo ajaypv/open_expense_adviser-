@@ -5,7 +5,7 @@ import { greetingFor, HomeHeader } from './HomeHeader'
 
 const at = (hour: number) => new Date(2026, 9, 28, hour, 30)
 const longDate = (d: Date) => new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(d)
-const render = (today = at(14)) => renderToStaticMarkup(createElement(HomeHeader, { today, goals: [], onOpenGoals: () => {} }))
+const render = (today = at(14)) => renderToStaticMarkup(createElement(HomeHeader, { today, onOpenSettings: () => {} }))
 
 describe('greetingFor', () => {
   it.each([
@@ -39,12 +39,13 @@ describe('HomeHeader', () => {
     expect(render(d)).toContain(longDate(d))
   })
 
-  it('has the goals button at the right, after the greeting and the date', () => {
+  it('has the round Settings button at the right, after the greeting and the date, and no goals button', () => {
     const d = at(14)
     const html = render(d)
     expect(html).toMatch(/^<header/)
     expect(html.indexOf('Good afternoon')).toBeLessThan(html.indexOf(longDate(d)))
-    expect(html.indexOf(longDate(d))).toBeLessThan(html.indexOf('aria-label="Goals. None yet"'))
+    expect(html.indexOf(longDate(d))).toBeLessThan(html.indexOf('aria-label="Settings"'))
+    expect(html).not.toContain('Goals')
   })
 
   it('lets a long date shorten instead of pushing the button off the screen', () => {

@@ -38,7 +38,7 @@ import { AddSheet } from './ui/AddSheet'
 import { QuickAdd, type QuickEntry } from './ui/QuickAdd'
 import { useBackClose } from './ui/backStack'
 import { spendIcon } from './ui/categoryIcon'
-import { BottomNav, TABS, type Tab } from './ui/BottomNav'
+import { BottomNav, TAB_LABELS, TAB_ORDER, type Tab } from './ui/BottomNav'
 import { openHomeOn, showHomeView } from './ui/homeView'
 import { ChatBar } from './ui/ChatBar'
 import { GoalMoneySheet, GoalSheet } from './ui/GoalSheets'
@@ -154,8 +154,7 @@ function Shell() {
 
   // The browser tab, history and screen readers all announce the title, so it names the screen that is open.
   useEffect(() => {
-    const label = TABS.find((t) => t.id === tab)?.label
-    document.title = tab === 'home' || !label ? 'Expense Tracker' : `${label} - Expense Tracker`
+    document.title = tab === 'home' ? 'Expense Tracker' : `${TAB_LABELS[tab]} - Expense Tracker`
   }, [tab])
 
   // Fetch the other screens in the idle moment after the first one is up, so opening a tab is instant.
@@ -235,7 +234,7 @@ function Shell() {
       setCategoryFilter(null)
       setActivityRange(null)
     }
-    const direction = TABS.findIndex((t) => t.id === next) > TABS.findIndex((t) => t.id === current) ? 'forward' : 'backward'
+    const direction = TAB_ORDER.indexOf(next) > TAB_ORDER.indexOf(current) ? 'forward' : 'backward'
     const update = () => {
       tabRef.current = next
       flushSync(() => setTab(next))
@@ -439,6 +438,11 @@ function Shell() {
   const newGoal = useCallback(() => setGoalSheet((s) => ({ open: true, goal: null, n: s.n + 1 })), [])
   const editGoal = useCallback((goal: Goal) => setGoalSheet((s) => ({ open: true, goal, n: s.n + 1 })), [])
   const openGoals = useCallback(() => setGoalsOpen(true), [])
+  // The round button at the top of a screen: Settings as it is, on its list of pages, not on a page of it.
+  const openSettingsList = useCallback(() => {
+    setSettingsPage(null)
+    go('settings')
+  }, [go])
   const closeGoals = useCallback(() => setGoalsOpen(false), [])
   const openCards = useCallback(() => setCardsOpen(true), [])
   const closeCards = useCallback(() => setCardsOpen(false), [])
@@ -512,6 +516,7 @@ function Shell() {
             onPickCategory={pickCategory}
             onExample={fillChat}
             onOpenSettings={openSettings}
+            onOpenAppSettings={openSettingsList}
             onSeeAll={seeAll}
             balanceShown={balanceShown}
             onToggleBalance={toggleBalance}
@@ -530,11 +535,11 @@ function Shell() {
           />
         )}
         {tab === 'activity' && (
-          <Activity ledger={ledger} today={today} categoryFilter={categoryFilter} onCategoryFilter={setCategoryFilter} initialRange={activityRange} onEdit={openEdit} />
+          <Activity ledger={ledger} today={today} categoryFilter={categoryFilter} onCategoryFilter={setCategoryFilter} initialRange={activityRange} onEdit={openEdit} onOpenSettings={openSettingsList} />
         )}
         {tab === 'insights' && (
           <Suspense fallback={<ScreenSkeleton label="Insights" />}>
-            <Insights ledger={ledger} month={month} onMonth={setMonth} today={today} onOpenSettings={openSettings} onPickCategory={pickCategory} onOpenUpcoming={openUpcoming} onOpenAi={openAi} />
+            <Insights ledger={ledger} month={month} onMonth={setMonth} today={today} onOpenSettings={openSettings} onOpenAppSettings={openSettingsList} onPickCategory={pickCategory} onOpenUpcoming={openUpcoming} onOpenAi={openAi} />
           </Suspense>
         )}
         {tab === 'settings' && (
@@ -575,7 +580,7 @@ function Shell() {
           )}
           <ChatBar key={draft.n} initialText={draft.text} onSubmit={logFromChat} onOpenForm={openAddDefault} people={ledger.people} />
         </div>
-        <BottomNav current={tab} onSelect={go} onSwipe={swipeBar} />
+        <BottomNav current={tab} onSelect={go} goals={ledger.goals} onOpenGoals={openGoals} onSwipe={swipeBar} />
       </div>
 
       <AddSheet

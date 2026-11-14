@@ -13,7 +13,7 @@ interface Props {
 /**
  * On Home, below everything that matters more: the goal that is nearest, with what is saved, what it costs, what is
  * left and how long there is, so a percentage is never left without its meaning. Amber is the colour of goals.
- * Nothing at all when there are none: the Goals button at the top is the way in.
+ * Nothing at all when there are none: Goals in the bottom bar is the way in.
  */
 export function GoalsSummary({ goals, currency, today, onOpen }: Props) {
   if (goals.length === 0) return null

@@ -45,7 +45,7 @@ const pressBack = () =>
   })
 
 async function toSettings(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(mainNav().getByRole('button', { name: 'Settings' }))
+  await user.click(await screen.findByRole('button', { name: 'Settings' }))
   await screen.findByRole('navigation', { name: 'Settings pages' })
 }
 
@@ -110,7 +110,7 @@ describe('Settings: going to a page and back', () => {
     await user.click(pages().getByRole('button', { name: /^Appearance/ }))
     await screen.findByRole('heading', { name: 'Appearance' })
     await user.click(mainNav().getByRole('button', { name: 'Home' }))
-    await user.click(mainNav().getByRole('button', { name: 'Settings' }))
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
     expect(await screen.findByRole('navigation', { name: 'Settings pages' })).toBeInTheDocument()
   })
 })
@@ -124,7 +124,7 @@ describe('Settings: the phone back button', () => {
 
     await pressBack()
     expect(await screen.findByRole('navigation', { name: 'Settings pages' })).toBeInTheDocument()
-    expect(mainNav().getByRole('button', { current: 'page' })).toHaveAccessibleName('Settings')
+    expect(screen.getByRole('heading', { name: 'Settings', level: 1 })).toBeInTheDocument()
 
     await pressBack()
     await waitFor(() => expect(mainNav().getByRole('button', { current: 'page' })).toHaveAccessibleName('Home'))
@@ -156,7 +156,7 @@ describe('Settings: opened from a button elsewhere', () => {
     await user.click(await screen.findByRole('button', { name: 'Set budget' }))
     await screen.findByRole('heading', { name: 'Money' })
     await user.click(mainNav().getByRole('button', { name: 'Home' }))
-    await user.click(mainNav().getByRole('button', { name: 'Settings' }))
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
     expect(await screen.findByRole('navigation', { name: 'Settings pages' })).toBeInTheDocument()
   })
 })
@@ -197,7 +197,7 @@ describe('Settings: the colour theme', () => {
     const group = await toAppearance(user)
     await user.click(within(group).getByRole('radio', { name: /^Forest/ }))
     await user.click(mainNav().getByRole('button', { name: 'Home' }))
-    await user.click(mainNav().getByRole('button', { name: 'Settings' }))
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
     await user.click(pages().getByRole('button', { name: /^Appearance/ }))
     expect(await screen.findByRole('radio', { name: /^Forest/ })).toBeChecked()
     expect(root.dataset.palette).toBe('forest')
@@ -256,7 +256,7 @@ describe('Settings: the glass themes', () => {
     await user.click(within(group).getByRole('radio', { name: /^Aurora/ }))
     await user.click(mainNav().getByRole('button', { name: 'Home' }))
     expect(root.dataset.palette).toBe('aurora')
-    await user.click(mainNav().getByRole('button', { name: 'Settings' }))
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
     await user.click(pages().getByRole('button', { name: /^Appearance/ }))
     await user.click(await screen.findByRole('radio', { name: /^Classic/ }))
     expect(root.dataset.palette).toBeUndefined()

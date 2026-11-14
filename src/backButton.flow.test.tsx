@@ -53,8 +53,14 @@ describe('The back button moves back through the app instead of leaving it', () 
     await tx()
     const user = await open()
     await screen.findByText('Recent transactions')
-    await user.click(mainNav().getByRole('button', { name: tab }))
-    await waitFor(() => expect(current()).toHaveAccessibleName(tab))
+    // Settings is the round button at the top, not a tab of the bar.
+    if (tab === 'Settings') {
+      await user.click(await screen.findByRole('button', { name: 'Settings' }))
+      await screen.findByRole('heading', { name: 'Settings', level: 1 })
+    } else {
+      await user.click(mainNav().getByRole('button', { name: tab }))
+      await waitFor(() => expect(current()).toHaveAccessibleName(tab))
+    }
     await pressBack()
     await waitFor(() => expect(current()).toHaveAccessibleName('Home'))
     expect(backDepth()).toBe(0) // nothing left to go back through: the next back press is the phone's own
@@ -75,7 +81,7 @@ describe('The back button moves back through the app instead of leaving it', () 
     await tx()
     const user = await open()
     await screen.findByText('Recent transactions')
-    await user.click(mainNav().getByRole('button', { name: 'Settings' }))
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
     await user.click(mainNav().getByRole('button', { name: 'Home' }))
     await new Promise((r) => setTimeout(r, 40))
     expect(backDepth()).toBe(0)

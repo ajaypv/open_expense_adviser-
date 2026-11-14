@@ -13,11 +13,13 @@ const overview = (goals: Goal[]) =>
   renderToStaticMarkup(createElement(GoalsOverview, { open: true, onClose: noop, goals, currency: 'INR', today, onNew: noop, onEdit: noop, onAddMoney: noop }))
 
 describe('GoalsOverview', () => {
-  it('is a sheet titled Goals, with a way to close it', () => {
+  it('is a page titled Goals, with a way to close it, in the same layout as the other pages', () => {
     const html = overview([])
     expect(html).toMatch(/<h2[^>]*id="goals-title"[^>]*>Goals<\/h2>/)
     expect(html).toContain('aria-labelledby="goals-title"')
     expect(html).toContain('aria-label="Close"')
+    expect(html).toContain('sticky top-0')
+    expect(html).toContain('class="type-title"')
   })
 
   it('invites a first goal when there are none, with no totals to show', () => {
@@ -31,7 +33,7 @@ describe('GoalsOverview', () => {
   it('shows everything saved against everything it will cost', () => {
     const html = overview([goal({ targetMinor: 2_500_000, savedMinor: 500_000 }), goal({ name: 'Phone', targetMinor: 6_000_000, savedMinor: 1_500_000 })])
     expect(html).toContain('₹20,000')
-    expect(html).toContain('saved of ₹85,000')
+    expect(html).toContain('saved of <b class="num text-ink">₹85,000</b>')
     expect(html).toContain('2 goals')
     expect(html).toContain('aria-label="All goals saved"')
     expect(html).toContain('aria-valuenow="24"') // 20,000 of 85,000
@@ -86,27 +88,29 @@ describe('GoalsOverview', () => {
 
   it('shows what is still to save and the share saved, in the total', () => {
     const html = overview([goal({ targetMinor: 2_500_000, savedMinor: 500_000 }), goal({ name: 'Phone', targetMinor: 6_000_000, savedMinor: 1_500_000 })])
-    expect(html).toContain('₹65,000 to go')
-    expect(html).toContain('24% saved')
+    expect(html).toContain('Still to go</span><span class="block text-[1.0625rem] leading-tight"><b class="num">₹65,000</b>')
+    expect(html).toContain('>24%<') // in the ring
+    expect(html).toContain('Saved so far')
+    expect(html).toContain('<b class="num">0 of 2</b>')
   })
 
   it('says everything is saved, not "₹0 to go", once every goal is reached', () => {
     const html = overview([goal({ savedMinor: 2_500_000 })])
     expect(html).toContain('All saved')
-    expect(html).not.toContain('to go')
+    expect(html).not.toContain('₹0')
   })
 
   it('gives each goal its percentage, what is left, its date and what to set aside', () => {
     const html = overview([goal({ targetMinor: 2_500_000, savedMinor: 500_000, dueDate: '2026-11-08' })])
-    expect(html).toContain('20%')
-    expect(html).toContain('₹20,000 to go')
+    expect(html).toContain('>20%<')
+    expect(html).toContain('<b class="num">₹20,000</b> to go')
     expect(html).toContain('9 days left')
-    expect(html).toContain('Save ₹10,000 a week to get there on time')
+    expect(html).toContain('Save <b class="num text-ink">₹10,000</b> a week to get there on time')
   })
 
   it('still says what is left for a goal with no date, and suggests no pace', () => {
     const html = overview([goal({ targetMinor: 2_500_000, savedMinor: 500_000 })])
-    expect(html).toContain('₹20,000 to go')
+    expect(html).toContain('<b class="num">₹20,000</b> to go')
     expect(html).not.toContain('Due ')
     expect(html).not.toContain('to get there on time')
   })
@@ -128,5 +132,38 @@ describe('GoalsOverview', () => {
     const html = overview([goal({ name: 'Goa trip' })])
     expect(html).toContain('aria-label="Edit goal Goa trip"')
     expect(html).toContain('aria-label="Add money to Goa trip"')
+  })
+
+  it('sets the total as a ring with the percentage in it, the amount large beside it, and two soft tiles under it', () => {
+    const html = overview([goal({ targetMinor: 2_500_000, savedMinor: 500_000 })])
+    expect(html).toContain('data-ring')
+    expect(html).toMatch(/<svg[^>]*width="96"/)
+    expect(html).toContain('Still to go')
+    expect(html).toContain('rounded-2xl bg-surface-2')
+    expect(html).toContain('Saved so far')
+  })
+
+  it('gives each goal its own small ring, with a flag in it, or a tick once it is reached', () => {
+    const open = overview([goal({ name: 'Open' })])
+    expect(open).toMatch(/<svg[^>]*width="48"/)
+    expect(open).toContain('data-icon="flag"')
+    const done = overview([goal({ name: 'Done', savedMinor: 2_500_000 })])
+    const row = done.slice(done.indexOf('Edit goal Done'))
+    expect(row).toContain('data-icon="check"')
+    expect(row).toContain('var(--good-text)')
+  })
+
+  it('shows its figures in the bold number face, as every page does, and its sentences at the body size', () => {
+    const html = overview([goal({ dueDate: '2026-11-08' })])
+    expect(html).toContain('<b class="num text-ink">₹5,000</b>')
+    expect(html).toContain('text-[1.0625rem] leading-[1.5]')
+  })
+
+  it('puts a plus on the Add money button, and a numbered round circle on each step of the empty page', () => {
+    expect(overview([goal()])).toMatch(/Add money to Goa trip[^]*data-icon="plus"/)
+    const empty = overview([])
+    expect(empty).toContain('>1<')
+    expect(empty).toContain('>3<')
+    expect(empty).toContain('data-icon="flag"')
   })
 })

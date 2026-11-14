@@ -43,6 +43,8 @@ interface Props {
   onPickCategory: (categoryId: number) => void
   onExample: (text: string) => void
   onOpenSettings: () => void
+  /** The round button at the top: Settings itself, not a page of it. */
+  onOpenAppSettings: () => void
   onSeeAll: () => void
   /** The estimated balance stays hidden until this is true; the app owns it so it survives tab changes. */
   balanceShown: boolean
@@ -101,6 +103,7 @@ export const Home = memo(function Home({
   onPickCategory,
   onExample,
   onOpenSettings,
+  onOpenAppSettings,
   onSeeAll,
   balanceShown,
   onToggleBalance,
@@ -152,7 +155,7 @@ export const Home = memo(function Home({
   if (txs.length === 0) {
     return (
       <div>
-        <HomeHeader today={today} goals={ledger.goals} onOpenGoals={onOpenGoals} />
+        <HomeHeader today={today} onOpenSettings={onOpenAppSettings} />
         <div className="pt-10">
         <h2 className="type-headline text-balance">Let’s add your first one.</h2>
         <p className="mt-3 max-w-sm text-lg text-ink-2">
@@ -184,7 +187,7 @@ export const Home = memo(function Home({
 
   return (
     <div className="font-text pb-4">
-      <HomeHeader today={today} goals={ledger.goals} onOpenGoals={onOpenGoals} />
+      <HomeHeader today={today} onOpenSettings={onOpenAppSettings} />
       <HomePager
         overview={
           <>

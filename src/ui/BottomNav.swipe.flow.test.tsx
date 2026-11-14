@@ -20,7 +20,7 @@ function swipe(target: Element, dx: number, dy = 0, pointerType = 'touch') {
 function setup(withSwipe = true) {
   const onSelect = vi.fn()
   const onSwipe = vi.fn()
-  render(<BottomNav current="home" onSelect={onSelect} onSwipe={withSwipe ? onSwipe : undefined} />)
+  render(<BottomNav current="home" onSelect={onSelect} goals={[]} onOpenGoals={() => {}} onSwipe={withSwipe ? onSwipe : undefined} />)
   return { onSelect, onSwipe, home: screen.getByRole('button', { name: 'Home' }), insights: screen.getByRole('button', { name: 'Insights' }) }
 }
 

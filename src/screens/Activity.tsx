@@ -30,6 +30,7 @@ import { useBackClose } from '../ui/backStack'
 import { categoryIcon } from '../ui/categoryIcon'
 import { Icon } from '../ui/Icon'
 import { PickerField } from '../ui/PickerField'
+import { ScreenBar } from '../ui/ScreenBar'
 import { ScreenSkeleton } from '../ui/ScreenSkeleton'
 import { TxList } from '../ui/TxList'
 import { useToast } from '../ui/toast'
@@ -44,6 +45,8 @@ interface Props {
   /** What to start on, such as the month a category was opened from on Home, or just the spending behind a figure there. */
   initialRange?: { from: string; to: string; kind?: KindFilter } | null
   onEdit: (tx: LedgerTx) => void
+  /** The round Settings button at the top. */
+  onOpenSettings?: () => void
 }
 
 const PAGE = 80
@@ -100,7 +103,7 @@ const parseAmount = (text: string): number | null => {
   return text.trim() !== '' && Number.isFinite(n) && n >= 0 ? toMinor(n) : null
 }
 
-export const Activity = memo(function Activity({ ledger, today, categoryFilter, onCategoryFilter, initialRange = null, onEdit }: Props) {
+export const Activity = memo(function Activity({ ledger, today, categoryFilter, onCategoryFilter, initialRange = null, onEdit, onOpenSettings }: Props) {
   const { txs, categories, categoryById, accountById, expenseCategories, currency } = ledger
   useDisplay() // amounts are masked or regrouped by display settings, so redraw when they change
   const toast = useToast()
@@ -298,7 +301,7 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
 
   return (
     <div className="pb-6">
-      <h1 className="sr-only">Activity</h1>
+      <ScreenBar title="Activity" onOpenSettings={onOpenSettings} />
 
       {/* Search and filters scroll with the list so they never cover it. */}
       <div className="relative mt-5">

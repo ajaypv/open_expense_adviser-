@@ -51,6 +51,7 @@ import { paymentName, shortDay, shortfallPhrase, signedAmount } from '../ui/upco
 import { MonthStrip } from '../ui/MonthStrip'
 import { PlacesMap } from '../ui/PlacesMap'
 import { MonthSwitcher } from '../ui/MonthSwitcher'
+import { ScreenBar } from '../ui/ScreenBar'
 import { ScreenSkeleton } from '../ui/ScreenSkeleton'
 
 type Ledger = ReturnType<typeof useLedger>
@@ -61,6 +62,8 @@ interface Props {
   onMonth: (month: MonthKey) => void
   today: Date
   onOpenSettings: () => void
+  /** The round Settings button at the top. */
+  onOpenAppSettings?: () => void
   /** Opens Activity on one category for this month. */
   onPickCategory?: (categoryId: number) => void
   /** Opens the list of regular payments, to see them all or add one. */
@@ -115,7 +118,7 @@ function Section({ id, title, intro, className = 'mt-10', children }: { id: stri
 }
 
 /** What the logged expenses say, computed on the device. Each block answers one question. */
-export const Insights = memo(function Insights({ ledger, month, onMonth, today, onOpenSettings, onPickCategory, onOpenUpcoming, onOpenAi }: Props) {
+export const Insights = memo(function Insights({ ledger, month, onMonth, today, onOpenSettings, onOpenAppSettings, onPickCategory, onOpenUpcoming, onOpenAi }: Props) {
   useDisplay() // amounts are masked or regrouped by display settings, so redraw when they change
   const [categoryView, setCategoryView] = useState<'bubbles' | 'donut' | 'list'>('bubbles')
   // Insights describe spending, so they use money sent only; received money feeds the balance.
@@ -447,7 +450,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
 
   return (
     <div className="pb-8">
-      <h1 className="sr-only">Insights</h1>
+      <ScreenBar title="Insights" onOpenSettings={onOpenAppSettings} />
       <MonthSwitcher month={month} currentMonth={currentMonth} onChange={onMonth} activeMonths={activeMonths} />
 
       {ledger.missingRates.length > 0 && (

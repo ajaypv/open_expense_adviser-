@@ -1,14 +1,22 @@
 import { useRef } from 'react'
+import type { Goal } from '../db/schema'
+import { GoalsButton } from './GoalsButton'
 import { Icon, type IconName } from './Icon'
 
 export type Tab = 'home' | 'activity' | 'insights' | 'settings'
 
-export const TABS: { id: Tab; label: string; icon: IconName }[] = [
+/** The tabs of the bottom bar. Goals is the fourth place on it but opens a page over the screen, and Settings is reached from the round button at the top of a screen. */
+export const TABS: { id: Exclude<Tab, 'settings'>; label: string; icon: IconName }[] = [
   { id: 'home', label: 'Home', icon: 'home' },
   { id: 'activity', label: 'Activity', icon: 'list' },
   { id: 'insights', label: 'Insights', icon: 'bars' },
-  { id: 'settings', label: 'Settings', icon: 'sliders' },
 ]
+
+/** Every screen, in the order a switch between them slides: Settings is past Insights, to the right. */
+export const TAB_ORDER: Tab[] = ['home', 'activity', 'insights', 'settings']
+
+/** What the bar says of a screen, for the title of the page. */
+export const TAB_LABELS: Record<Tab, string> = { home: 'Home', activity: 'Activity', insights: 'Insights', settings: 'Settings' }
 
 /** How far a finger must travel along the bar, and how much more sideways than up or down, for it to count as a swipe. */
 const SWIPE_MIN = 40
@@ -17,11 +25,14 @@ const SWIPE_SLOPE = 1.5
 interface Props {
   current: Tab
   onSelect: (tab: Tab) => void
+  /** What is saved towards each goal, for the ring round the flag. */
+  goals: Goal[]
+  onOpenGoals: () => void
   /** A swipe along the bar: `left` is the finger going left. The bar does not decide what it means. */
   onSwipe?: (direction: 'left' | 'right') => void
 }
 
-export function BottomNav({ current, onSelect, onSwipe }: Props) {
+export function BottomNav({ current, onSelect, goals, onOpenGoals, onSwipe }: Props) {
   const from = useRef<{ x: number; y: number } | null>(null)
   const swallow = useRef(false)
 
@@ -77,6 +88,9 @@ export function BottomNav({ current, onSelect, onSwipe }: Props) {
             </li>
           )
         })}
+        <li>
+          <GoalsButton goals={goals} onClick={onOpenGoals} />
+        </li>
       </ul>
     </nav>
   )

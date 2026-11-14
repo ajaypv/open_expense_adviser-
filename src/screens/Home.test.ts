@@ -94,7 +94,7 @@ describe('Home', () => {
   })
 })
 
-describe('Home goals button', () => {
+describe('Home goals and the Settings button', () => {
   const renderWith = (goals: Goal[], list = txs) =>
     renderToStaticMarkup(
       createElement(Home, {
@@ -103,21 +103,18 @@ describe('Home goals button', () => {
           expenseCategories: categories.slice(0, 1), categoryById: new Map(categories.map((c) => [c.id, c])), goals,
         }),
         month: '2026-10', onMonth: () => {}, today, onPickCategory: () => {}, onEdit: () => {}, onExample: () => {},
-        onOpenSettings: () => {}, onSeeAll: () => {}, balanceShown: false, onToggleBalance: () => {}, suggestions: [],
+        onOpenSettings: () => {}, onOpenAppSettings: () => {}, onSeeAll: () => {}, balanceShown: false, onToggleBalance: () => {}, suggestions: [],
         onSuggestion: () => {}, logNudge: false, onAdd: () => {}, onOpenGoals: () => {},
       }),
     )
 
-  it('puts the goals button in a header, at the right of the greeting and date and above the month switcher', () => {
+  it('puts the Settings button in a header, at the right of the greeting and date and above the month switcher, and the goals button is in the bottom bar instead', () => {
     const dateTitle = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(today)
     const html = renderWith([])
     expect(html).toContain('<header')
-    expect(html.indexOf(dateTitle)).toBeLessThan(html.indexOf('aria-label="Goals. None yet"'))
-    expect(html.indexOf('aria-label="Goals. None yet"')).toBeLessThan(html.indexOf('aria-label="Previous month"'))
-  })
-
-  it('says on the button how much is saved overall', () => {
-    expect(renderWith([{ id: 1, name: 'Goa trip', targetMinor: 2_500_000, savedMinor: 500_000, createdAt: 1 }])).toContain('aria-label="Goals. 1 goal, 20% saved"')
+    expect(html.indexOf(dateTitle)).toBeLessThan(html.indexOf('aria-label="Settings"'))
+    expect(html.indexOf('aria-label="Settings"')).toBeLessThan(html.indexOf('aria-label="Previous month"'))
+    expect(html).not.toContain('aria-label="Goals.')
   })
 
   it('shows the goal that matters most on Home, with what it means, near the bottom', () => {
@@ -132,10 +129,10 @@ describe('Home goals button', () => {
     expect(renderWith([])).not.toContain('See goals')
   })
 
-  it('is there on a first launch too, so a goal can be set before anything is logged', () => {
+  it('has Settings at the top on a first launch too', () => {
     const html = renderWith([], [])
     expect(html).toContain('Let’s add your first one.')
-    expect(html).toContain('aria-label="Goals. None yet"')
+    expect(html).toContain('aria-label="Settings"')
   })
 })
 

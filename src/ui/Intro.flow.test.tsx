@@ -58,13 +58,25 @@ describe('Intro: the cards', () => {
     expect(screen.getByText(/stays private on your phone/)).toBeInTheDocument()
   })
 
-  it('has three lanes of cards all flowing from the right to the left, at three paces, each a sequence drawn several times so it can drift without a gap', () => {
+  it('sets its words as every page does: the headline in the page’s own face, the sentence at the body size in the quiet ink with its figure bold in the number face', () => {
+    mount()
+    const heading = screen.getByRole('heading', { name: /Know where your money goes/ })
+    expect(heading.className).toContain('type-headline')
+    const sentence = screen.getByText(/Type it the way you would say it/)
+    expect(sentence.className).toContain('text-[1.0625rem]')
+    expect(sentence.className).toContain('leading-[1.6]')
+    expect(sentence.className).toContain('text-ink-2')
+    expect(sentence.querySelector('b.num')!.textContent).toBe('450')
+    expect(sentence.textContent).toBe('Type it the way you would say it, like “450 lunch at Cafe”. It all stays private on your phone.')
+  })
+
+  it('has four lanes of cards all flowing from the right to the left, at four paces, each a sequence drawn several times so it can drift without a gap', () => {
     mount()
     const lanes = [...document.querySelectorAll<HTMLElement>('.intro-lane')]
-    expect(lanes).toHaveLength(3)
-    expect(lanes.map((l) => l.dataset.flow)).toEqual(['left', 'left', 'left'])
+    expect(lanes).toHaveLength(4)
+    expect(lanes.map((l) => l.dataset.flow)).toEqual(['left', 'left', 'left', 'left'])
     const speeds = lanes.map((l) => l.style.getPropertyValue('--t'))
-    expect(new Set(speeds).size).toBe(3)
+    expect(new Set(speeds).size).toBe(4)
     expect(lanes[0].querySelectorAll('.intro-card').length % 4).toBe(0)
     expect(lanes[0].querySelectorAll('.intro-card').length).toBeGreaterThanOrEqual(16)
   })
@@ -76,16 +88,54 @@ describe('Intro: the cards', () => {
     const seconds = lanes.map((l) => parseFloat(l.style.getPropertyValue('--t')))
     const scales = wrappers.map((w) => parseFloat(w.style.scale))
     const depths = wrappers.map((w) => parseFloat(w.style.getPropertyValue('--k')))
-    expect(seconds[0]).toBeGreaterThan(seconds[1])
-    expect(seconds[1]).toBeGreaterThan(seconds[2])
-    expect(scales[0]).toBeLessThan(scales[1])
-    expect(scales[1]).toBeLessThan(scales[2])
-    expect(depths[0]).toBeLessThan(depths[1])
-    expect(depths[1]).toBeLessThan(depths[2])
+    for (let i = 1; i < 4; i++) {
+      expect(seconds[i - 1]).toBeGreaterThan(seconds[i])
+      expect(scales[i - 1]).toBeLessThan(scales[i])
+      expect(depths[i - 1]).toBeLessThan(depths[i])
+    }
+  })
+
+  it('lays the lanes over one another, a lane lower than the last but not by a whole card, so a big card slides over a small one', () => {
+    mount()
+    const tops = [...document.querySelectorAll<HTMLElement>('.intro-enter')].map((w) => parseFloat(w.style.top))
+    expect(tops[0]).toBe(0)
+    for (let i = 1; i < 4; i++) expect(tops[i]).toBeGreaterThan(tops[i - 1])
+    // The step between lanes is well under the height of a card, a fifth of the field at most.
+    for (let i = 1; i < 4; i++) expect(tops[i] - tops[i - 1]).toBeLessThanOrEqual(22)
+    // Later lanes are later in the page, so they are in front.
+    const wrappers = [...document.querySelectorAll('.intro-enter')]
+    expect(wrappers.every((w, i) => i === 0 || (wrappers[i - 1].compareDocumentPosition(w) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0)).toBe(true)
+  })
+
+  it('does not set the cards in a row: they sit at different heights and a different distance apart', () => {
+    mount()
+    const lane = document.querySelector<HTMLElement>('.intro-lane')!
+    const slots = [...lane.children].slice(0, 4) as HTMLElement[]
+    expect(new Set(slots.map((s) => s.style.paddingTop)).size).toBeGreaterThanOrEqual(3)
+    expect(new Set(slots.map((s) => s.style.paddingRight)).size).toBeGreaterThanOrEqual(3)
+  })
+
+  it('makes each card a small poster in a pane of glass: what it is, a big figure, and a line under it', () => {
+    mount()
+    const cards = [...document.querySelectorAll<HTMLElement>('.intro-card')]
+    expect(cards.length).toBe(64)
+    const first = cards[0]
+    expect(first.style.boxShadow).toContain('inset')
+    expect(first.querySelector('.num')).not.toBeNull()
+    expect(first.querySelector('svg')).not.toBeNull() // the round icon
+    for (const text of ['₹250', 'Money flow', 'Budget', '+₹85,000', 'Quiet days']) expect(document.body.textContent).toContain(text)
+  })
+
+  it('has the duck of an empty day on one of the cards, and the ribbons of the money flow on another', () => {
+    mount()
+    expect(document.body.textContent).toContain('Nothing spent yet')
+    expect(document.querySelector('.intro-card ellipse[fill="#FFD23F"]')).not.toBeNull()
+    expect(document.querySelector('.intro-card path[stroke="#34d399"]')).not.toBeNull()
   })
 
   it('drifts by a quarter of a lane, always to the left, which is where a sequence begins again, and stands still when motion is reduced', () => {
     expect(css).toMatch(/@keyframes intro-drift \{\s*to \{\s*transform: translateX\(-25%\)/)
+    expect(css).toMatch(/@keyframes intro-enter \{\s*from \{\s*opacity: 0;\s*transform: translateX\(70%\)/)
     expect(css).not.toMatch(/intro-lane\[data-reverse/)
     expect(css).toMatch(/prefers-reduced-motion: reduce\) \{\s*\.intro-lane,\s*\.intro-card,\s*\.intro-field,\s*\.intro-enter,\s*\.intro-rise,\s*\.intro-mark,\s*\.intro-go::after,\s*\.intro-go > svg \{\s*animation: none/)
   })

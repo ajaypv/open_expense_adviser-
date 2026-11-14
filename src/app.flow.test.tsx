@@ -229,11 +229,17 @@ describe('Moving around', () => {
     await tx()
     const user = await open()
     await screen.findByText('Recent transactions')
-    for (const [name, heading] of [['Activity', /Filters/], ['Insights', /./], ['Settings', 'Settings']] as const) {
+    for (const [name, heading] of [['Activity', /Filters/], ['Insights', /./]] as const) {
       await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name }))
       expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name })).toHaveAttribute('aria-current', 'page')
-      if (typeof heading === 'string') expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name, level: 1 })).toBeInTheDocument()
+      expect(heading).toBeDefined()
     }
+    // Settings is not in the bar: it is the round button at the top of a screen, and while it is open no tab of the bar is marked.
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
+    expect(await screen.findByRole('heading', { name: 'Settings', level: 1 })).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).queryByRole('button', { current: 'page' })).toBeNull()
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).queryByRole('button', { name: 'Settings' })).toBeNull()
     await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Home' }))
     expect(await screen.findByText('Recent transactions')).toBeInTheDocument()
   })
@@ -273,7 +279,7 @@ describe('Hide amounts', () => {
     await tx({ merchant: 'Cafe', amountMinor: 45_000 })
     const user = await open()
     await screen.findByText('Recent transactions')
-    await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Settings' }))
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
     // Hide amounts is on the Settings page itself, with the rest of Mode, text and numbers.
     const page = await screen.findByRole('heading', { name: 'Settings', level: 1 })
 
@@ -281,7 +287,7 @@ describe('Hide amounts', () => {
     const main = document.querySelector('main')!
     main.scrollTop = 420
 
-    await user.click(screen.getByRole('switch', { name: /Hide amounts/ }))
+    await user.click(await screen.findByRole('switch', { name: /Hide amounts/ }))
 
     expect(document.querySelector('main')).toBe(main) // the same element: not remounted
     expect(main.isConnected).toBe(true)
@@ -330,7 +336,7 @@ describe('App lock', () => {
 describe('Goals from Home', () => {
   const goalsButton = () => screen.findByRole('button', { name: /^Goals\./ })
 
-  it('opens from the button at the top right of Home, and is not a tab', async () => {
+  it('opens from Goals in the bottom bar, as a page over the screen, and is not a tab', async () => {
     await tx()
     await db.goals.add({ name: 'Phone', targetMinor: 6_000_000, savedMinor: 0, createdAt: 1 } as never)
     const user = await open()
@@ -338,20 +344,21 @@ describe('Goals from Home', () => {
     // The goals sit in a sheet that is closed, so nothing about them can be reached on the page itself.
     expect(screen.queryByRole('button', { name: 'Edit goal Phone' })).toBeNull()
     expect(screen.queryByRole('dialog', { name: 'Goals' })).toBeNull()
-    expect(within(screen.getByRole('navigation', { name: 'Main' })).queryByRole('button', { name: 'Goals' })).toBeNull()
+    expect(await goalsButton()).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: /^Goals./ })).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).queryByRole('button', { current: 'page' })).toHaveAccessibleName('Home')
     await user.click(await goalsButton())
     const sheet = await screen.findByRole('dialog', { name: 'Goals' })
     expect(within(sheet).getByText('Phone')).toBeInTheDocument()
   })
 
-  it('glows once when the app opens, and not again when coming back to Home', async () => {
+  it('glows once when the app opens, and the button stays in the bar on every screen', async () => {
     await tx()
     const user = await open()
     expect(await goalsButton()).toHaveClass('goal-glow')
-    await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Settings' }))
-    await screen.findByRole('heading', { name: 'Settings' })
-    await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Home' }))
-    expect(await goalsButton()).not.toHaveClass('goal-glow')
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
+    await screen.findByRole('heading', { name: 'Settings', level: 1 })
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: /^Goals./ })).toBeInTheDocument()
   })
 
   it('makes a goal and sets money aside for it, and the button keeps count', async () => {
@@ -365,8 +372,8 @@ describe('Goals from Home', () => {
     await user.type(within(sheet).getByLabelText('How much does it cost?'), '25,000')
     await user.click(within(sheet).getByRole('button', { name: 'Save goal' }))
     expect(await within(overview).findByText('Goa trip')).toBeInTheDocument()
-    expect(within(overview).getAllByText('saved of ₹25,000')).toHaveLength(2) // in the total and on the goal: the overview stayed open behind the form
-    expect(within(overview).getAllByText('₹25,000 to go').length).toBeGreaterThan(0) // the new goal, with nothing saved yet
+    expect(within(overview).getAllByText(/saved of/)).toHaveLength(2) // in the total and on the goal: the overview stayed open behind the form
+    expect(within(overview).getAllByText('₹25,000').length).toBeGreaterThan(0) // the new goal, with nothing saved yet: what it costs and what is to go
 
     await user.click(within(overview).getByRole('button', { name: 'Add money to Goa trip' }))
     const money = await screen.findByRole('dialog', { name: 'Add money to Goa trip' })
@@ -374,7 +381,7 @@ describe('Goals from Home', () => {
     await user.click(within(money).getByRole('button', { name: 'Add to goal' }))
     await waitFor(async () => expect((await db.goals.toArray())[0].savedMinor).toBe(500_000))
     expect(await within(overview).findByRole('progressbar', { name: 'Goa trip saved' })).toHaveAttribute('aria-valuenow', '20')
-    expect((await within(overview).findAllByText('₹20,000 to go')).length).toBeGreaterThan(0) // updated in place, on the goal and in the total
+    expect((await within(overview).findAllByText('₹20,000')).length).toBeGreaterThan(0) // updated in place, on the goal and in the total
     expect(await screen.findByRole('button', { name: 'Goals. 1 goal, 20% saved' })).toBeInTheDocument()
   })
 
@@ -430,7 +437,7 @@ describe('The page title', () => {
     expect(document.title).toBe('Expense Tracker')
     await user.click(mainNav().getByRole('button', { name: 'Activity' }))
     await waitFor(() => expect(document.title).toBe('Activity - Expense Tracker'))
-    await user.click(mainNav().getByRole('button', { name: 'Settings' }))
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
     await waitFor(() => expect(document.title).toBe('Settings - Expense Tracker'))
     await user.click(mainNav().getByRole('button', { name: 'Home' }))
     await waitFor(() => expect(document.title).toBe('Expense Tracker'))

@@ -1241,7 +1241,7 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 
 /* ---------- The first screen a new person sees ---------- */
 
-/* Little cards flow from the right to the left in three lanes, each at its own pace (--t), the one behind slower and smaller; a lane's content
+/* Little cards flow from the right to the left in four lanes, each at its own pace (--t), the one behind slower and smaller; a lane's content
    is the same sequence drawn four times, so moving a quarter of it along lands exactly where it began, and each lane starts part of the way
    round (--o, a share of the cycle) so the cards are not in step. Each card also bobs a little on its own. When the screen opens each lane
    slides in from the right, one after another (--e), and the mark pops. The arrow button leans into its arrow now and then, and a ring

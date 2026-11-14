@@ -11,6 +11,23 @@ const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n
 /** The water level at rest, measured down from the top of the picture. */
 const REST = H - DEPTH
 
+/** The duck itself, a yellow one looking right, drawn about its waterline: the middle of its belly is at 0,0 and its head is about 34 above. */
+export function DuckShape() {
+  return (
+    <>
+      {/* Tail, body, wing, head, beak and eye: a yellow duck looking right. */}
+      <path d="M-17 -9 L-27 -20 Q-21 -21 -13 -17 Z" fill="#F2B705" />
+      <ellipse cx="0" cy="-8" rx="20" ry="12.5" fill="#FFD23F" />
+      <path d="M-12 -9 Q-3 -19 9 -9 Q1 -2 -12 -9 Z" fill="#F2B705" />
+      <circle cx="13" cy="-24" r="10" fill="#FFD23F" />
+      <path d="M21 -26 Q31 -26 31 -22.5 Q31 -19.5 21 -20 Z" fill="#FF8A1F" />
+      <circle cx="16.5" cy="-27" r="2" fill="#1c1c1e" />
+      <circle cx="17.2" cy="-27.8" r="0.7" fill="#fff" />
+      <ellipse cx="11" cy="-21" rx="2.6" ry="1.6" fill="#FF8A1F" opacity="0.28" />
+    </>
+  )
+}
+
 /**
  * A duck floating in a little pond, for a day with nothing spent yet. The water is today's bar's water: its surface stays level against
  * the world as the phone is tilted and runs to the low end, swings when the phone is pushed, and is shaken into bigger waves. The duck
@@ -121,15 +138,7 @@ export function DuckPond() {
         {/* The duck, then the front of the water over its belly. */}
         <polygon ref={back} fill={`url(#${id}-deep)`} points={`0,${REST} ${W},${REST} ${W},${H} 0,${H}`} />
         <g ref={duckEl} data-duck transform={`translate(${W / 2} ${REST}) rotate(0) scale(1 1)`}>
-          {/* Tail, body, wing, head, beak and eye: a yellow duck looking right. */}
-          <path d="M-17 -9 L-27 -20 Q-21 -21 -13 -17 Z" fill="#F2B705" />
-          <ellipse cx="0" cy="-8" rx="20" ry="12.5" fill="#FFD23F" />
-          <path d="M-12 -9 Q-3 -19 9 -9 Q1 -2 -12 -9 Z" fill="#F2B705" />
-          <circle cx="13" cy="-24" r="10" fill="#FFD23F" />
-          <path d="M21 -26 Q31 -26 31 -22.5 Q31 -19.5 21 -20 Z" fill="#FF8A1F" />
-          <circle cx="16.5" cy="-27" r="2" fill="#1c1c1e" />
-          <circle cx="17.2" cy="-27.8" r="0.7" fill="#fff" />
-          <ellipse cx="11" cy="-21" rx="2.6" ry="1.6" fill="#FF8A1F" opacity="0.28" />
+          <DuckShape />
         </g>
         <polygon ref={front} fill={`url(#${id}-deep)`} opacity="0.6" points={`0,${REST + 2.5} ${W},${REST + 2.5} ${W},${H} 0,${H}`} />
         {/* A thin light line along the surface, and a fainter one under it, so it reads as water and not as a cut edge. */}
