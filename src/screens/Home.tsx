@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { setDisplay, useDisplay } from '../data/display'
 import { CategoryBars } from '../charts/CategoryBars'
 import { DayChart } from '../charts/DayChart'
@@ -23,6 +23,7 @@ import { BudgetPrompt } from '../ui/BudgetPrompt'
 import { CardsCard } from '../ui/CardsCard'
 import { GoalsSummary } from '../ui/GoalsSummary'
 import { InsightCard } from '../ui/InsightCard'
+import { SpendingGraphSheet } from '../ui/SpendingGraphSheet'
 import { SpendingOverview } from '../ui/SpendingOverview'
 import { HomeHeader } from '../ui/HomeHeader'
 import { MonthSwitcher } from '../ui/MonthSwitcher'
@@ -128,6 +129,8 @@ export const Home = memo(function Home({
   const currentMonth = todayKey.slice(0, 7)
   const isCurrent = month === currentMonth
   const display = useDisplay()
+  // The graph of the spending, opened from the headline of the card.
+  const [graphOpen, setGraphOpen] = useState(false)
   // The timeline is not redrawn for a handler that is new at every render of Home, so this one keeps its identity.
   const pickDay = useCallback((date: string) => onPickPeriod({ from: date, to: date }), [onPickPeriod])
 
@@ -221,6 +224,21 @@ export const Home = memo(function Home({
               onTogglePrivacy={() => setDisplay({ privacy: !display.privacy })}
               onPickPeriod={onPickPeriod}
               monthKey={month}
+              onOpenGraph={() => setGraphOpen(true)}
+            />
+            {/* Keyed by the month, so a week gone back to in one month does not carry into the next. */}
+            <SpendingGraphSheet
+              key={month}
+              open={graphOpen}
+              onClose={() => setGraphOpen(false)}
+              expenses={expenses}
+              monthTxs={monthTxs}
+              categoryById={categoryById}
+              month={month}
+              today={today}
+              currency={currency}
+              budgetMinor={budgetMinor}
+              onPickDay={pickDay}
             />
 
             {isCurrent && <PlanAhead ledger={ledger} today={today} onOpen={onOpenPlan} onSetUp={onOpenUpcoming} />}

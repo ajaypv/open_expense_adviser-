@@ -32,6 +32,28 @@ interface Props {
   onPickPeriod: (range: { from: string; to: string }) => void
   /** The month in view (YYYY-MM): when it changes, the figures slide in from the side it came from. */
   monthKey?: string
+  /** Opens the graph of the spending, a week at first, from the headline. Without it the headline is only words. */
+  onOpenGraph?: () => void
+}
+
+/**
+ * The headline of the card: what was spent and for which month. With a way to open the graph it is one wide button (named in words, with
+ * the amount, and what it does), so the whole of it can be pressed; without, it is only text.
+ */
+function Headline({ onOpen, name, amount, children }: { onOpen?: () => void; name: string; amount: string; children: React.ReactNode }) {
+  if (!onOpen) return <div data-headline>{children}</div>
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      data-headline
+      aria-haspopup="dialog"
+      aria-label={`${name}: ${amount}. See the graph`}
+      className="-m-2 block w-[calc(100%+1rem)] rounded-2xl p-2 text-left active:bg-surface-2 [@media(hover:hover)]:hover:bg-surface-2/60"
+    >
+      {children}
+    </button>
+  )
 }
 
 /**
@@ -55,6 +77,7 @@ export function SpendingOverview({
   onTogglePrivacy,
   onPickPeriod,
   monthKey,
+  onOpenGraph,
 }: Props) {
   const against = `${partial ? 'the same days in ' : ''}${prevName}`
 
@@ -84,17 +107,23 @@ export function SpendingOverview({
       {totalMinor === 0 ? (
         <p className="type-title pr-10">{`Nothing spent in ${monthName} yet.`}</p>
       ) : (
-        <>
-          <p className="flex items-center gap-2 pr-10 font-medium text-ink-2">
+        <Headline onOpen={onOpenGraph} name={`${isCurrent ? 'Spent so far in' : 'Spent in'} ${monthName}`} amount={formatMoney(totalMinor, currency)}>
+          <span className="flex items-center gap-2 pr-10 font-medium text-ink-2">
             <span aria-hidden="true" data-icon="arrowUp" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink">
               <Icon name="arrowUp" size={15} weight={2.25} />
             </span>
             {isCurrent ? `Spent so far in ${monthName}` : `Spent in ${monthName}`}
-          </p>
-          <p className="type-display mt-1 whitespace-nowrap">
+          </span>
+          <span className="type-display mt-1 flex items-end justify-between gap-3 whitespace-nowrap">
             <AnimatedMoney minor={totalMinor} currency={currency} id="hero" />
-          </p>
-        </>
+            {onOpenGraph && (
+              <span aria-hidden="true" data-graph-hint className="mb-1 flex shrink-0 items-center gap-1.5 rounded-full bg-surface-2 py-1.5 pl-2.5 pr-3 text-sm font-medium text-ink">
+                <Icon name="bars" size={16} />
+                Graph
+              </span>
+            )}
+          </span>
+        </Headline>
       )}
 
       {/* With a budget: one plain bar of how much of it is used, and in words where that leaves you. */}
