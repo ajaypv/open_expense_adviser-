@@ -8,7 +8,10 @@ import { SpendingGraphSheet } from './SpendingGraphSheet'
 import { SpendingOverview } from './SpendingOverview'
 
 const today = new Date(2026, 10, 14) // Sat 14 Nov 2026
-const categories: Category[] = [{ id: 1, name: 'Food & Dining', color: 'var(--s1)' }]
+const categories: Category[] = [
+  { id: 1, name: 'Food & Dining', color: 'var(--s1)' },
+  { id: 2, name: 'Transport', color: 'var(--s2)' },
+]
 const categoryById = new Map(categories.map((c) => [c.id, c]))
 
 let id = 0
@@ -20,7 +23,10 @@ const expenses = [tx('2026-11-14', 120), tx('2026-11-14', 30), tx('2026-11-12', 
 const inNovember = expenses.filter((t) => t.date.startsWith('2026-11'))
 
 function mount(over: Partial<Parameters<typeof SpendingGraphSheet>[0]> = {}) {
-  const props = { open: true, onClose: vi.fn(), expenses, monthTxs: inNovember, categoryById, month: '2026-11', today, currency: 'INR', budgetMinor: null, onPickDay: vi.fn(), ...over }
+  const props = {
+    open: true, onClose: vi.fn(), expenses, monthTxs: inNovember, categoryById, month: '2026-11', today, currency: 'INR', budgetMinor: null,
+    categoryTotals: [{ categoryId: 1, totalMinor: 62_000 }, { categoryId: 2, totalMinor: 18_000 }], onPickDay: vi.fn(), onPickCategory: vi.fn(), ...over,
+  }
   render(<SpendingGraphSheet {...props} />)
   return { ...props, user: userEvent.setup() }
 }
@@ -123,6 +129,50 @@ describe('SpendingGraphSheet: the month', () => {
   })
 })
 
+describe('SpendingGraphSheet: the categories', () => {
+  it('has three graphs to choose from: Week first, then Month and Category', () => {
+    mount()
+    const group = screen.getByRole('radiogroup', { name: 'Graph' })
+    expect(within(group).getAllByRole('radio').map((r) => (r as HTMLInputElement).labels![0].textContent)).toEqual(['Week', 'Month', 'Category'])
+    expect(screen.getByRole('radio', { name: 'Week' })).toBeChecked()
+  })
+
+  it('shows the month cut into what it went on when Category is chosen, with each category and its share', async () => {
+    const { user } = mount()
+    await user.click(screen.getByRole('radio', { name: 'Category' }))
+    expect(screen.getByRole('radio', { name: 'Category' })).toBeChecked()
+    const section = screen.getByRole('region', { name: 'Category' })
+    expect(within(section).getByText('Where November went')).toBeInTheDocument()
+    const list = within(section).getByRole('list', { name: 'Spending by category' })
+    expect(within(list).getByText('Food & Dining')).toBeInTheDocument()
+    expect(within(list).getByText('Transport')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Week' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Month' })).toBeNull()
+  })
+
+  it('opens that category’s expenses, and closes the sheet, when a category is pressed', async () => {
+    const { user, onClose, onPickCategory } = mount()
+    await user.click(screen.getByRole('radio', { name: 'Category' }))
+    await user.click(screen.getByRole('button', { name: /^Transport.*Show these expenses/ }))
+    expect(onClose).toHaveBeenCalled()
+    expect(onPickCategory).toHaveBeenCalledWith(2)
+  })
+
+  it('says so, and draws nothing, when nothing was spent in the month', async () => {
+    const { user } = mount({ categoryTotals: [] })
+    await user.click(screen.getByRole('radio', { name: 'Category' }))
+    expect(screen.getByText('Nothing spent in November yet.')).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Spending by category' })).toBeNull()
+  })
+
+  it('goes back to the week from Category', async () => {
+    const { user } = mount()
+    await user.click(screen.getByRole('radio', { name: 'Category' }))
+    await user.click(screen.getByRole('radio', { name: 'Week' }))
+    expect(screen.getByRole('region', { name: 'Week' })).toBeInTheDocument()
+  })
+})
+
 describe('SpendingOverview: the headline opens the graph', () => {
   const overview = (onOpenGraph?: () => void) =>
     render(
@@ -138,7 +188,9 @@ describe('SpendingOverview: the headline opens the graph', () => {
     const button = screen.getByRole('button', { name: 'Spent so far in November: ₹230. See the graph' })
     expect(button).toHaveAttribute('aria-haspopup', 'dialog')
     expect(within(button).getByText('Spent so far in November')).toBeInTheDocument()
-    expect(button.querySelector('[data-graph-hint]')).not.toBeNull()
+    // No word or tag on the card says it: the card is the same as it was, and the name of the button says what it opens.
+    expect(button.querySelector('[data-graph-hint]')).toBeNull()
+    expect(button.textContent).not.toContain('Graph')
     await userEvent.setup().click(button)
     expect(open).toHaveBeenCalledTimes(1)
   })

@@ -114,14 +114,8 @@ export function SpendingOverview({
             </span>
             {isCurrent ? `Spent so far in ${monthName}` : `Spent in ${monthName}`}
           </span>
-          <span className="type-display mt-1 flex items-end justify-between gap-3 whitespace-nowrap">
+          <span className="type-display mt-1 block whitespace-nowrap">
             <AnimatedMoney minor={totalMinor} currency={currency} id="hero" />
-            {onOpenGraph && (
-              <span aria-hidden="true" data-graph-hint className="mb-1 flex shrink-0 items-center gap-1.5 rounded-full bg-surface-2 py-1.5 pl-2.5 pr-3 text-sm font-medium text-ink">
-                <Icon name="bars" size={16} />
-                Graph
-              </span>
-            )}
           </span>
         </Headline>
       )}

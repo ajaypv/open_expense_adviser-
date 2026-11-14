@@ -207,12 +207,12 @@ describe('Home: the budget invitation', () => {
       }),
     )
 
-  it('sits below the suggestions, and above the day-by-day chart', () => {
+  it('sits below the suggestions, and above the recent transactions', () => {
     const html = renderBudget(null, '2026-10', true)
     const at = (s: string) => html.indexOf(s)
     expect(at('Add again, one tap')).toBeGreaterThan(-1)
     expect(at('Set a monthly budget')).toBeGreaterThan(at('Add again, one tap'))
-    expect(at('Set a monthly budget')).toBeLessThan(at('Day by day'))
+    expect(at('Set a monthly budget')).toBeLessThan(at('Recent transactions'))
   })
 
   it('shows the suggestions as round pills that add at once, with the reason for a screen reader', () => {
@@ -268,14 +268,13 @@ describe('Home: what comes first', () => {
     )
   }
 
-  it('answers "where do I stand" first, then cash, what is coming, the day-by-day chart, recent activity, where it went, advice and goals', () => {
+  it('answers "where do I stand" first, then cash, what is coming, recent activity, where it went, advice and goals; the days are in the graph the card opens', () => {
     const html = renderFull()
     const order = [
       'aria-label="Summary"',
       'aria-label="Plan ahead"',
       'aria-label="Money received and your balance"',
       'aria-label="Budget"',
-      'Day by day',
       'Recent transactions',
       'Where it went',
       'Understand your spending',
@@ -307,9 +306,9 @@ describe('Home: what comes first', () => {
     it('sets the greeting in the Home voice, and every section title in the same one size', () => {
       const html = renderFull()
       expect(classes(html, 'type-greeting')).toBe(1)
-      // Plan ahead, Day by day, Where it went, Goals and the insights card.
-      expect(classes(html, 'type-title')).toBeGreaterThanOrEqual(4)
-      for (const title of ['Plan ahead', 'Day by day', 'Where it went']) {
+      // Plan ahead, Where it went, Goals and the insights card.
+      expect(classes(html, 'type-title')).toBeGreaterThanOrEqual(3)
+      for (const title of ['Plan ahead', 'Where it went']) {
         expect(html).toMatch(new RegExp(`<h2[^>]*class="[^"]*type-title[^"]*"[^>]*>${title}<`))
       }
     })

@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
+import { CategoryDonut } from '../charts/CategoryDonut'
 import { DayChart } from '../charts/DayChart'
 import { WeekChart } from '../charts/WeekChart'
 import { localDateString, parseLocalDate } from '../db/money'
 import type { Category, Transaction } from '../db/schema'
-import { monthLabel } from '../insights/aggregates'
+import { monthLabel, type CategoryTotal } from '../insights/aggregates'
 import { shiftWeek, weekEndFor, weekView } from '../insights/week'
 import { Dialog } from './Dialog'
 import { Icon } from './Icon'
@@ -21,22 +22,32 @@ interface Props {
   today: Date
   currency: string
   budgetMinor: number | null
+  /** What the month in view went on, biggest first, for the category graph. */
+  categoryTotals: CategoryTotal[]
   /** Opens the expenses of one day, which closes this first. */
   onPickDay: (date: string) => void
+  /** Opens the expenses of one category in the month, which closes this first. */
+  onPickCategory: (categoryId: number) => void
 }
 
-type Graph = 'week' | 'month'
+type Graph = 'week' | 'month' | 'category'
+
+const GRAPHS: { id: Graph; label: string }[] = [
+  { id: 'week', label: 'Week' },
+  { id: 'month', label: 'Month' },
+  { id: 'category', label: 'Category' },
+]
 
 let rangeFormat: Intl.DateTimeFormat | undefined
 const dayMonth = (date: string) => (rangeFormat ??= new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })).format(parseLocalDate(date))
 
 /**
- * What the spending card on Home opens: the same money as a graph, a week first and the month if asked. The week is seven columns, one a day,
- * for the last seven days (or the last seven of a month that is over), with arrows to go back a week at a time; the month is the same day by
- * day chart that Home shows, with its average, budget line and each day's categories. A switch at the top changes between them, and the one
- * chosen is the one it opens on next time while the app stays open.
+ * What the spending card on Home opens: the same money as a graph, a week first, then the month or the categories if asked. The week is seven
+ * columns, one a day, for the last seven days (or the last seven of a month that is over), with arrows to go back a week at a time; the month
+ * is the day by day chart, with its average, budget line and each day's categories; the category graph is the month cut into what it went on, a
+ * ring and the list beside it, each of which opens its expenses. A switch at the top changes between them.
  */
-export function SpendingGraphSheet({ open, onClose, expenses, monthTxs, categoryById, month, today, currency, budgetMinor, onPickDay }: Props) {
+export function SpendingGraphSheet({ open, onClose, expenses, monthTxs, categoryById, month, today, currency, budgetMinor, categoryTotals, onPickDay, onPickCategory }: Props) {
   const [graph, setGraph] = useState<Graph>('week')
   // How many weeks back from the end of the month in view.
   const [back, setBack] = useState(0)
@@ -53,6 +64,10 @@ export function SpendingGraphSheet({ open, onClose, expenses, monthTxs, category
     onClose()
     onPickDay(date)
   }
+  const pickCategory = (categoryId: number) => {
+    onClose()
+    onPickCategory(categoryId)
+  }
 
   return (
     <Dialog open={open} onClose={onClose} labelledBy="spend-graph-title">
@@ -65,14 +80,14 @@ export function SpendingGraphSheet({ open, onClose, expenses, monthTxs, category
         </button>
       </div>
 
-      <div role="radiogroup" aria-label="Graph" className="mt-3 grid grid-cols-2 gap-1 rounded-[1.75rem] bg-surface-2 p-1">
-        {(['week', 'month'] as const).map((g) => (
+      <div role="radiogroup" aria-label="Graph" className="mt-3 grid grid-cols-3 gap-1 rounded-[1.75rem] bg-surface-2 p-1">
+        {GRAPHS.map((g) => (
           <label
-            key={g}
+            key={g.id}
             className="flex min-h-11 cursor-pointer items-center justify-center rounded-full text-sm font-medium has-[:checked]:bg-btn has-[:checked]:text-btn-ink has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2"
           >
-            <input type="radio" name="spend-graph" className="sr-only" checked={graph === g} onChange={() => setGraph(g)} />
-            {g === 'week' ? 'Week' : 'Month'}
+            <input type="radio" name="spend-graph" className="sr-only" checked={graph === g.id} onChange={() => setGraph(g.id)} />
+            {g.label}
           </label>
         ))}
       </div>
@@ -104,6 +119,15 @@ export function SpendingGraphSheet({ open, onClose, expenses, monthTxs, category
           </div>
           {/* Keyed by the week, so each week's columns rise afresh and a day chosen in one does not carry to the next. */}
           <WeekChart key={view.to} view={view} currency={currency} onPickDay={pick} />
+        </section>
+      ) : graph === 'category' ? (
+        <section aria-label="Category" className="mt-5">
+          <p className="type-title mb-4 text-[1.25rem]">{`Where ${monthName.split(' ')[0]} went`}</p>
+          {categoryTotals.length === 0 ? (
+            <p className="text-[1.0625rem] leading-[1.6] text-ink-2">{`Nothing spent in ${monthName.split(' ')[0]} yet.`}</p>
+          ) : (
+            <CategoryDonut totals={categoryTotals} categoryById={categoryById} currency={currency} onPick={pickCategory} />
+          )}
         </section>
       ) : (
         <section aria-label="Month" className="mt-5">

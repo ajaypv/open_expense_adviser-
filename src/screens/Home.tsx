@@ -1,7 +1,6 @@
 import { memo, useCallback, useMemo, useState } from 'react'
 import { setDisplay, useDisplay } from '../data/display'
 import { CategoryBars } from '../charts/CategoryBars'
-import { DayChart } from '../charts/DayChart'
 import type { useLedger } from '../data/useLedger'
 import { localDateString } from '../db/money'
 import {
@@ -238,7 +237,9 @@ export const Home = memo(function Home({
               today={today}
               currency={currency}
               budgetMinor={budgetMinor}
+              categoryTotals={categoryTotals}
               onPickDay={pickDay}
+              onPickCategory={onPickCategory}
             />
 
             {isCurrent && <PlanAhead ledger={ledger} today={today} onOpen={onOpenPlan} onSetUp={onOpenUpcoming} />}
@@ -279,25 +280,6 @@ export const Home = memo(function Home({
 
             {total > 0 && (
               <>
-                <section aria-labelledby="daily-h" className="mt-8">
-                  <h2 id="daily-h" className="type-title mb-3 px-1">
-                    Day by day
-                  </h2>
-                  <div className={`${card} p-4`}>
-                    {/* Keyed by the month, so each month's columns rise afresh and a day chosen in one does not carry to the next. */}
-                    <DayChart
-                      key={month}
-                      txs={monthTxs}
-                      categoryById={categoryById}
-                      monthKey={month}
-                      lastDay={isCurrent ? today.getDate() : null}
-                      currency={currency}
-                      budgetMinor={budgetMinor}
-                      onPickDay={pickDay}
-                    />
-                  </div>
-                </section>
-
                 {/* The list of what was spent is Activity, and where the money flows is in Insights: one tap to each, not a copy here. */}
                 <nav aria-label="More about this month" className="mt-8 grid grid-cols-2 gap-3">
                   <GoTo icon="list" label="Recent transactions" onClick={onSeeAll} />
