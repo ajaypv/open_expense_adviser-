@@ -6,6 +6,7 @@ import type { Category, Transaction } from '../db/schema'
 import { monthLabel } from '../insights/aggregates'
 import { buildTimeline, timelineRows, type DayPart, type TimelineDay, type TimelineRow } from '../insights/timeline'
 import { categoryIcon, spendIcon } from './categoryIcon'
+import { DuckPond } from './DuckPond'
 import { Icon } from './Icon'
 import { useCountWhen, useSeen } from './motion'
 import { riverPath, widthFor } from './river'
@@ -233,6 +234,7 @@ function DayRowBase({ day, look, max, color, next, edge, wFrom, wTo, open, onTog
           <div className="rounded-3xl bg-surface px-4 py-3.5 shadow-[0_0_0_1px_var(--ring)]">
             <p className="font-semibold">{title}</p>
             <p className="text-sm text-ink-2">Nothing spent yet today.</p>
+            {day.daysAgo === 0 && <DuckPond />}
           </div>
         ) : onlyReceived ? (
           <div role="group" aria-label={`${title}, received ${money(day.receivedMinor)}`} className="flex items-center gap-3 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]">

@@ -150,6 +150,22 @@ describe('Timeline: the days', () => {
     expect(within(dayRow('2026-11-06')).getByText('Nothing spent yet today.')).toBeInTheDocument()
     expect(dayRow('2026-11-06').querySelector('[data-dot]')).toHaveTextContent('6')
   })
+
+  it('floats a duck in a pond under today when nothing is spent yet, as a picture beside the words', () => {
+    mount([tx('2026-11-04', 100, 1, 'Cafe')])
+    const row = dayRow('2026-11-06')
+    const pond = row.querySelector('[data-duck-pond]')!
+    expect(pond).not.toBeNull()
+    expect(pond).toHaveAttribute('aria-hidden', 'true')
+    expect(pond.querySelector('[data-duck]')).not.toBeNull()
+    expect(within(row).getByText('Today')).toBeInTheDocument()
+    expect(within(row).getByText('Nothing spent yet today.')).toBeInTheDocument()
+  })
+
+  it('has no pond once something is spent today, or on any other day', () => {
+    mount()
+    expect(document.querySelector('[data-duck-pond]')).toBeNull()
+  })
 })
 
 describe('Timeline: opening a day', () => {
