@@ -26,11 +26,12 @@ describe('BottomNav', () => {
     expect(render('home')).toContain('grid-cols-4')
   })
 
-  it('says in words how much is saved on the Goals button, with a ring round the flag once there is a goal', () => {
+  it('says in words how much is saved on the Goals button, and draws its icon like the others, with no ring', () => {
     expect(render('home')).toContain('aria-label="Goals. 1 goal, 25% saved"')
-    expect(render('home')).toContain('stroke-dashoffset')
     expect(render('home', [])).toContain('aria-label="Goals. None yet"')
-    expect(render('home', [])).not.toContain('stroke-dashoffset')
+    expect(render('home')).not.toContain('stroke-dashoffset')
+    // Four icons, all the same size.
+    expect((render('home').match(/<svg[^>]*width="21"/g) ?? []).length).toBe(4)
   })
 
   it('marks only the current tab, and no tab while Settings or Goals is what is open', () => {

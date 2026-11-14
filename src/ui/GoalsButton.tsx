@@ -3,9 +3,6 @@ import type { Goal } from '../db/schema'
 import { goalsTotals } from '../insights/goals'
 import { Icon } from './Icon'
 
-const RADIUS = 11.5
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS
-
 // The glow is there to say "goals live here". Once it has played it has done its job, so it plays once
 // each time the app is opened, not every time the person comes back to Home.
 let glowed = false
@@ -16,8 +13,9 @@ export function resetGoalGlow() {
 }
 
 /**
- * Goals in the bottom bar, beside Home, Activity and Insights: a flag, the word "Goals", and once there is a goal a ring round the flag
- * that fills as the money is saved. It opens the goals page. What it shows is also said in words.
+ * Goals in the bottom bar, beside Home, Activity and Insights, drawn as they are: an icon (a flag) in the same pill, the same size, and the word
+ * under it. It opens the goals page, and is never marked as the current place. How many goals there are and how much is saved is said in words
+ * for a screen reader, not drawn on the icon.
  */
 export function GoalsButton({ goals, onClick }: { goals: Goal[]; onClick: () => void }) {
   // Read before the first paint, and marked as played only after it, so a redraw can't restart it.
@@ -41,27 +39,8 @@ export function GoalsButton({ goals, onClick }: { goals: Goal[]; onClick: () => 
       aria-label={label}
       className={`${glow ? 'goal-glow ' : ''}flex min-h-14 w-full flex-col items-center justify-center gap-0.5 rounded-3xl text-xs font-medium text-muted short:min-h-11`}
     >
-      <span aria-hidden="true" className="relative flex h-7 w-12 items-center justify-center rounded-full">
-        <span className="relative flex size-7 items-center justify-center">
-          {totals.count > 0 && (
-            <svg width="28" height="28" viewBox="0 0 28 28" className="absolute inset-0 -rotate-90" focusable="false">
-              <circle cx="14" cy="14" r={RADIUS} fill="none" strokeWidth="2.25" stroke="color-mix(in oklab, var(--accent) 22%, transparent)" />
-              <circle
-                cx="14"
-                cy="14"
-                r={RADIUS}
-                fill="none"
-                strokeWidth="2.25"
-                strokeLinecap="round"
-                stroke={totals.reachedCount === totals.count ? 'var(--good-text)' : 'var(--accent)'}
-                strokeDasharray={CIRCUMFERENCE}
-                strokeDashoffset={CIRCUMFERENCE * (1 - Math.min(1, percent / 100))}
-                className="transition-[stroke-dashoffset] duration-500"
-              />
-            </svg>
-          )}
-          <Icon name="flag" size={totals.count > 0 ? 15 : 21} />
-        </span>
+      <span aria-hidden="true" className="flex h-7 w-12 items-center justify-center rounded-full">
+        <Icon name="flag" size={21} />
       </span>
       <span aria-hidden="true" className="short:sr-only">
         Goals

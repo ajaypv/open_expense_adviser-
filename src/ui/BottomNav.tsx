@@ -25,7 +25,7 @@ const SWIPE_SLOPE = 1.5
 interface Props {
   current: Tab
   onSelect: (tab: Tab) => void
-  /** What is saved towards each goal, for the ring round the flag. */
+  /** The goals, for what the Goals button says in words. */
   goals: Goal[]
   onOpenGoals: () => void
   /** A swipe along the bar: `left` is the finger going left. The bar does not decide what it means. */
