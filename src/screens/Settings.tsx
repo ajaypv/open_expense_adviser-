@@ -47,7 +47,7 @@ const PAGES: { id: SettingsPage; title: string; summary: string; icon: IconName 
   { id: 'money', title: 'Money', summary: 'Currency, accounts and balance, people, monthly budget', icon: 'bank' },
   { id: 'auto', title: 'Automatic', summary: 'Regular payments, reminders, widget', icon: 'autopay' },
   { id: 'suggestions', title: 'Suggestions', summary: 'Your regulars, on Home or above the input bar', icon: 'spark' },
-  { id: 'look', title: 'Appearance', summary: 'Colour theme, light or dark, text size, hide amounts', icon: 'palette' },
+  { id: 'look', title: 'Appearance', summary: 'Colour theme, in light or dark', icon: 'palette' },
   { id: 'privacy', title: 'Privacy and data', summary: 'App lock, location, export, recently deleted', icon: 'shield' },
 ]
 
@@ -110,7 +110,7 @@ export const Settings = memo(function Settings({ ledger, theme, onTheme, palette
           </>
         )}
         {open.id === 'suggestions' && <SuggestionsSection />}
-        {open.id === 'look' && <DisplaySection theme={theme} onTheme={onTheme} palette={palette} onPalette={onPalette} />}
+        {open.id === 'look' && <DisplaySection part="theme" theme={theme} onTheme={onTheme} palette={palette} onPalette={onPalette} />}
         {open.id === 'privacy' && (
           <>
             <DataSection ledger={ledger} />
@@ -130,6 +130,9 @@ export const Settings = memo(function Settings({ ledger, theme, onTheme, palette
         <BackupCard ledger={ledger} />
         <UpdateCard updateReady={updateReady} onApplyUpdate={onApplyUpdate} onCheckUpdate={onCheckUpdate} onShowWhatsNew={onShowWhatsNew} />
       </div>
+
+      {/* Light or dark, the size of the text, hiding amounts and the way numbers are written: the settings that are reached for most, on the page itself. */}
+      <DisplaySection part="basics" theme={theme} onTheme={onTheme} palette={palette} onPalette={onPalette} />
 
       <nav aria-label="Settings pages">
         {GROUPS.map((g) => (

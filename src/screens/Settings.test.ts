@@ -26,16 +26,25 @@ describe('Settings: the list', () => {
 
   it('says in a line what is on each page', () => {
     const html = render()
-    for (const line of ['Currency, accounts and balance, people, monthly budget', 'Regular payments, reminders, widget', 'Your regulars, on Home or above the input bar', 'Colour theme, light or dark, text size, hide amounts', 'App lock, location, export, recently deleted']) {
+    for (const line of ['Currency, accounts and balance, people, monthly budget', 'Regular payments, reminders, widget', 'Your regulars, on Home or above the input bar', 'Colour theme, in light or dark', 'App lock, location, export, recently deleted']) {
       expect(html).toContain(line)
     }
   })
 
   it('keeps the settings themselves off the list, so it stays short', () => {
     const html = render()
-    for (const text of ['Main currency', 'Monthly budget</h3>', 'Remind me at', 'Hide amounts', 'App lock</h3>', 'Recently deleted']) {
+    for (const text of ['Main currency', 'Monthly budget</h3>', 'Remind me at', 'App lock</h3>', 'Recently deleted']) {
       expect(html, text).not.toContain(text)
     }
+  })
+
+  it('has Mode, text and numbers on the page itself: light or dark, the text size, hiding amounts and the number format', () => {
+    const html = render()
+    expect(html).toMatch(/<h3[^>]*>Mode, text and numbers<\/h3>/)
+    for (const text of ['Mode', 'Text size', 'Hide amounts', 'Number format']) expect(html, text).toContain(text)
+    // After the backup and the update, before the pages.
+    expect(html.indexOf('aria-label="App update"')).toBeLessThan(html.indexOf('>Mode, text and numbers</h3>'))
+    expect(html.indexOf('>Mode, text and numbers</h3>')).toBeLessThan(html.indexOf('aria-label="Settings pages"'))
   })
 
   it('puts the backup first, then the update, then the pages', () => {
@@ -119,12 +128,11 @@ describe('Settings: a page', () => {
     expect(html).toContain('Loans, auto-payments, subscriptions, rent and salary')
   })
 
-  it('Appearance: the colour theme first, then light or dark, text size, hiding amounts and number format', () => {
+  it('Appearance: the colour theme alone, since the rest of how the app is read is on the Settings page', () => {
     const html = page('look')
     expect(html).toMatch(/<h3[^>]*>Colour theme<\/h3>/)
-    expect(html).toMatch(/<h3[^>]*>Mode, text and numbers<\/h3>/)
-    expect(html.indexOf('>Colour theme</h3>')).toBeLessThan(html.indexOf('>Mode, text and numbers</h3>'))
-    for (const text of ['Mode', 'Text size', 'Hide amounts', 'Number format']) expect(html, text).toContain(text)
+    expect(html).not.toContain('Mode, text and numbers')
+    for (const text of ['Text size', 'Hide amounts', 'Number format']) expect(html, text).not.toContain(text)
   })
 
   it('Appearance: offers every colour theme, each with a line about it, and shows the chosen one', () => {
@@ -200,8 +208,8 @@ describe('Settings: the list, set in the reference style', () => {
     expect(render({ initialPage: 'money' })).toMatch(/data-icon="bank" class="[^"]*rounded-full/)
   })
 
-  it('gives the Appearance settings a round icon each', () => {
-    const html = render({ initialPage: 'look' })
+  it('gives each of Mode, text and numbers a round icon', () => {
+    const html = render()
     for (const icon of ['sun', 'sliders', 'eyeOff', 'swap']) expect(html, icon).toMatch(new RegExp('data-icon="' + icon + '" class="[^"]*rounded-full'))
   })
 

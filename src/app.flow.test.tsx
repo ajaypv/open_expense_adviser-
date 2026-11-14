@@ -274,8 +274,8 @@ describe('Hide amounts', () => {
     const user = await open()
     await screen.findByText('Recent transactions')
     await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Settings' }))
-    await user.click(await screen.findByRole('button', { name: /^Appearance/ }))
-    const page = await screen.findByRole('heading', { name: 'Appearance' })
+    // Hide amounts is on the Settings page itself, with the rest of Mode, text and numbers.
+    const page = await screen.findByRole('heading', { name: 'Settings', level: 1 })
 
     // Something a rebuild would lose: the page itself and the scroll position.
     const main = document.querySelector('main')!

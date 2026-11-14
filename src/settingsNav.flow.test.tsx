@@ -83,12 +83,25 @@ describe('Settings: going to a page and back', () => {
     expect(screen.getByRole('button', { name: 'Back up now' })).toBeEnabled()
   })
 
-  it('changes a setting on its page', async () => {
+  it('changes light or dark, the text size, hiding amounts and the number format from the Settings page itself, without opening a page', async () => {
+    const user = await open()
+    await toSettings(user)
+    expect(screen.getByRole('heading', { name: 'Mode, text and numbers' })).toBeInTheDocument()
+    await user.click(screen.getByRole('switch', { name: /Hide amounts/ }))
+    expect(screen.getByRole('switch', { name: /Hide amounts/ })).toBeChecked()
+    expect(screen.getByRole('radiogroup', { name: 'Mode' })).toBeInTheDocument()
+    expect(screen.getByRole('radiogroup', { name: 'Text size' })).toBeInTheDocument()
+    expect(screen.getByRole('radiogroup', { name: 'Number format' })).toBeInTheDocument()
+  })
+
+  it('leaves only the colour theme on the Appearance page', async () => {
     const user = await open()
     await toSettings(user)
     await user.click(pages().getByRole('button', { name: /^Appearance/ }))
-    await user.click(await screen.findByRole('switch', { name: /Hide amounts/ }))
-    expect(screen.getByRole('switch', { name: /Hide amounts/ })).toBeChecked()
+    await screen.findByRole('radiogroup', { name: 'Colour theme' })
+    expect(screen.queryByRole('switch', { name: /Hide amounts/ })).toBeNull()
+    expect(screen.queryByRole('radiogroup', { name: 'Text size' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Mode, text and numbers' })).toBeNull()
   })
 
   it('starts on the list again after leaving Settings and coming back', async () => {
@@ -194,7 +207,8 @@ describe('Settings: the colour theme', () => {
     const user = await open()
     const group = await toAppearance(user)
     await user.click(within(group).getByRole('radio', { name: /^Lavender/ }))
-    await user.click(screen.getByRole('radio', { name: 'Dark' }))
+    await user.click(screen.getByRole('button', { name: 'Back to Settings' }))
+    await user.click(await screen.findByRole('radio', { name: 'Dark' }))
     expect(root.dataset.palette).toBe('lavender')
     expect(root.dataset.theme).toBe('dark')
   })
@@ -226,8 +240,13 @@ describe('Settings: the glass themes', () => {
     const user = await open()
     const group = await toPicker(user)
     await user.click(within(group).getByRole('radio', { name: /^Neon/ }))
+    // Mode is on the Settings page, so that is where the line is.
+    await user.click(screen.getByRole('button', { name: 'Back to Settings' }))
     expect(await screen.findByText(/Neon is always dark/)).toBeInTheDocument()
-    await user.click(within(group).getByRole('radio', { name: /^Liquid Glass/ }))
+    await user.click(pages().getByRole('button', { name: /^Appearance/ }))
+    await user.click(within(await screen.findByRole('radiogroup', { name: 'Colour theme' })).getByRole('radio', { name: /^Liquid Glass/ }))
+    await user.click(screen.getByRole('button', { name: 'Back to Settings' }))
+    await screen.findByRole('radiogroup', { name: 'Mode' })
     expect(screen.queryByText(/is always dark, so light and dark/)).toBeNull()
   })
 
