@@ -131,12 +131,68 @@ describe('Bills calendar', () => {
     expect(screen.getByRole('radio', { name: 'Upcoming' })).toBeChecked()
   })
 
-  it('opens a payment still to come, or late, to change it, but not one already paid', async () => {
-    const { onEdit } = mount([netflix, power], [paidTx()])
+  const details = () => screen.getByRole('dialog', { hidden: false })
+
+  it('opens the details of a payment when it is pressed, with what it is, how it stands and when it is due', async () => {
+    mount([netflix, power], [paidTx()])
     await userEvent.click(screen.getByRole('button', { name: /^Electricity, Bill, Overdue by 7 days/ }))
+    const d = within(details())
+    expect(d.getByRole('heading', { name: 'Electricity' })).toBeInTheDocument()
+    expect(d.getByTestId('bill-amount')).toHaveTextContent('₹900')
+    expect(d.getByTestId('bill-status')).toHaveTextContent('Overdue by 7 days')
+    expect(d.getByText('Due on')).toBeInTheDocument()
+    expect(d.getByText('Repeats')).toBeInTheDocument()
+    expect(d.getByText('Every month, on day 8')).toBeInTheDocument()
+    expect(d.getByText('Filed under')).toBeInTheDocument()
+  })
+
+  it('opens the payment to change it from the details, and shuts the details first', async () => {
+    const { onEdit } = mount([netflix, power])
+    await userEvent.click(screen.getByRole('button', { name: /^Electricity, Bill, Overdue by 7 days/ }))
+    expect(onEdit).not.toHaveBeenCalled()
+    await userEvent.click(within(details()).getByRole('button', { name: 'Edit' }))
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ merchant: 'Electricity' }))
+    expect(screen.queryByTestId('bill-amount')).toBeNull()
+  })
+
+  it('opens the details of one already paid, found again by its name, with when it was paid and Edit', async () => {
+    const { onEdit } = mount([rent], [paidTx({ merchant: 'Rent', date: '2026-11-03', amountMinor: 600_000 })])
     await userEvent.click(screen.getByRole('radio', { name: 'Paid' }))
-    expect(screen.queryByRole('button', { name: /^Insurance/ })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: /^Rent, Bill, Paid/ }))
+    const d = within(details())
+    expect(d.getByTestId('bill-status')).toHaveTextContent('Paid')
+    expect(d.getByText('Paid on')).toBeInTheDocument()
+    await userEvent.click(d.getByRole('button', { name: 'Edit' }))
+    expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ merchant: 'Rent' }))
+  })
+
+  it('can only read one paid from a payment that is gone: no Edit, and it says so', async () => {
+    mount([netflix], [paidTx()])
+    await userEvent.click(screen.getByRole('radio', { name: 'Paid' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Insurance/ }))
+    const d = within(details())
+    expect(d.queryByRole('button', { name: 'Edit' })).toBeNull()
+    expect(d.getByText(/since been changed or removed/)).toBeInTheDocument()
+    await userEvent.click(d.getByRole('button', { name: 'Done' }))
+    expect(screen.queryByTestId('bill-amount')).toBeNull()
+  })
+
+  it('says when it last went through, and a note and what it is paid with, when there are some', async () => {
+    const withNote = rule({ merchant: 'Gym', tag: 'bill', amountMinor: 200_000, nextDue: '2026-11-25', note: 'Annual plan, split monthly', paymentMethod: 'UPI' })
+    mount([withNote], [paidTx({ merchant: 'Gym', date: '2026-10-25', amountMinor: 200_000 })])
+    await userEvent.click(screen.getByRole('button', { name: /^Gym, Bill, In 10 days/ }))
+    const d = within(details())
+    expect(d.getByText('Last time')).toBeInTheDocument()
+    expect(d.getByText('Last time').closest('div')).toHaveTextContent(/Last time.*2026.*₹2,000/)
+    expect(d.getByText('Annual plan, split monthly')).toBeInTheDocument()
+    expect(d.getByText('UPI')).toBeInTheDocument()
+  })
+
+  it('opens from a day that was pressed too', async () => {
+    mount([netflix, rent, gym])
+    await userEvent.click(day('2026-11-30'))
+    await userEvent.click(screen.getByRole('button', { name: /^Rent, Bill/ }))
+    expect(within(details()).getByRole('heading', { name: 'Rent' })).toBeInTheDocument()
   })
 
   it('goes back and forward a month, and shows the paid ones of a month gone', async () => {

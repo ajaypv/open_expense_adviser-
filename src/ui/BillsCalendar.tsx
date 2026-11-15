@@ -5,6 +5,7 @@ import type { Recurring } from '../db/schema'
 import { monthLabel, shiftMonth } from '../insights/aggregates'
 import { billsFrom, byDay, countsOf, monthGrid, type Bill, type BillState } from '../insights/bills'
 import { describeWhen, TAG_LABELS, upcomingPayments } from '../insights/upcoming'
+import { BillDetails } from './BillDetails'
 import { BrandMark, brandOf } from './brands'
 import { Icon } from './Icon'
 import { PaymentBadge } from './PaymentBadge'
@@ -63,7 +64,7 @@ function statusOf(b: Bill): string {
 }
 
 /** One bill as a row: its icon, its name and kind, the amount, and how it stands. A bill that is still to come or late opens to be changed. */
-function BillRow({ bill: b, today, currency, onEdit }: { bill: Bill; today: Date; currency: string; onEdit: (rule: Recurring) => void }) {
+function BillRow({ bill: b, today, currency, onOpen }: { bill: Bill; today: Date; currency: string; onOpen: (bill: Bill) => void }) {
   const amount = `${b.kind === 'income' ? '+' : ''}${formatMoney(b.amountMinor, currency)}`
   const status = statusOf(b)
   const type = TAG_LABELS[b.tag]
@@ -85,21 +86,17 @@ function BillRow({ bill: b, today, currency, onEdit }: { bill: Bill; today: Date
     </>
   )
   const spoken = `${b.name}, ${type}, ${status}, ${amount} ${b.kind === 'income' ? 'coming in' : 'going out'}, ${shortDay(b.date, today)}`
-  const cls = `${card} flex min-h-[4.5rem] w-full items-center gap-3 p-3 text-left`
-  return b.rule ? (
+  return (
     <li data-bill={b.state}>
       <button
         type="button"
-        onClick={() => onEdit(b.rule!)}
+        onClick={() => onOpen(b)}
         aria-label={spoken}
-        className={`${cls} transition-transform active:scale-[0.985] motion-reduce:transition-none`}
+        aria-haspopup="dialog"
+        className={`${card} flex min-h-[4.5rem] w-full items-center gap-3 p-3 text-left transition-transform active:scale-[0.985] motion-reduce:transition-none`}
       >
         {body}
       </button>
-    </li>
-  ) : (
-    <li data-bill={b.state} className={cls}>
-      {body}
     </li>
   )
 }
@@ -111,11 +108,12 @@ function BillRow({ bill: b, today, currency, onEdit }: { bill: Bill; today: Date
  * (Overdue is every late payment, in whichever month, since each is waiting for you). The arrows go back and forward a month.
  */
 export function BillsCalendar({ ledger, today, onEdit }: Props) {
-  const { recurring, currency, rates, categoryById, expenses, income } = ledger
+  const { recurring, currency, rates, categoryById, expenses, income, accounts, accountById } = ledger
   const todayKey = localDateString(today)
   const thisMonth = todayKey.slice(0, 7)
   const [month, setMonth] = useState(thisMonth)
   const [day, setDay] = useState<string | null>(null)
+  const [openBill, setOpenBill] = useState<Bill | null>(null)
   const first = useMemo(weekStart, [])
 
   // Everything due up to the end of the month in view, with whatever is late (a month already gone has only the late ones).
@@ -144,6 +142,14 @@ export function BillsCalendar({ ledger, today, onEdit }: Props) {
   const monthName = monthLabel(month)
   const shown: Bill[] = day ? (days.get(day) ?? []) : tab === 'late' ? lateAll : inMonth.filter((b) => b.state === tab)
   const nothing = recurring.length === 0 && bills.length === 0
+
+  // For the bill that is open: the payment behind it, what it is paid from (said only when there is a choice of accounts), and the last time it went through.
+  const lastPaid = useMemo(() => {
+    if (!openBill) return undefined
+    const name = openBill.name.trim().toLowerCase()
+    return bills.filter((b) => b.state === 'paid' && b.date < openBill.date && b.name.trim().toLowerCase() === name).at(-1)
+  }, [bills, openBill])
+  const accountName = openBill?.rule?.accountId !== undefined && accounts.length > 1 ? accountById.get(openBill.rule.accountId)?.name : undefined
 
   const goTo = (m: string) => {
     setMonth(m)
@@ -296,11 +302,13 @@ export function BillsCalendar({ ledger, today, onEdit }: Props) {
         ) : (
           <ul aria-label={day ? `Payments on ${longDay(day)}` : `${plural(shown.length, 'payment')}, ${TABS.find((t) => t.id === tab)!.label.toLowerCase()}`} className="space-y-2">
             {shown.map((b) => (
-              <BillRow key={b.key} bill={b} today={today} currency={currency} onEdit={onEdit} />
+              <BillRow key={b.key} bill={b} today={today} currency={currency} onOpen={setOpenBill} />
             ))}
           </ul>
         )}
       </div>
+
+      <BillDetails bill={openBill} rule={openBill?.rule} currency={currency} accountName={accountName} lastPaid={lastPaid} onClose={() => setOpenBill(null)} onEdit={onEdit} />
     </section>
   )
 }

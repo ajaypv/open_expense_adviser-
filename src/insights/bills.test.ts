@@ -35,7 +35,7 @@ describe('billsFrom', () => {
     const items = upcomingPayments([rent], '2026-11-15', 20, money)
     const [done, coming] = billsFrom([paid({ merchant: ' rent ' })], items, [rent], nameOf)
     expect(done.tag).toBe('bill')
-    expect(done.rule).toBeUndefined()
+    expect(done.rule).toBe(rent) // found by its name
     expect(coming.rule).toBe(rent)
     expect(coming.daysLeft).toBe(15)
   })

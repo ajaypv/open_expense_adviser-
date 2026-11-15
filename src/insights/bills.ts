@@ -19,7 +19,7 @@ export interface Bill {
   state: BillState
   /** Days from today: zero today, negative once late. Not set for a paid one. */
   daysLeft?: number
-  /** The rule behind it, so it can be opened to change (not known for one that was paid). */
+  /** The regular payment behind it, so it can be opened to change (for one already paid, found by its name, and not there if it has been removed). */
   rule?: Recurring
 }
 
@@ -65,6 +65,7 @@ export function billsFrom(
       kind: t.kind,
       amountMinor: t.amountMinor,
       state: 'paid',
+      rule,
     })
   }
   for (const p of items) {
