@@ -6,6 +6,7 @@ import { daysInMonth, monthLabel } from '../insights/aggregates'
 import { planAhead } from '../insights/ahead'
 import { monthPlan, type MonthPlan } from '../insights/monthPlan'
 import { describeWhen, forecast, TAG_LABELS, tagOf, totalsOf, upcomingPayments, type UpcomingPayment } from '../insights/upcoming'
+import { BillsCalendar } from './BillsCalendar'
 import { Dialog } from './Dialog'
 import { Icon } from './Icon'
 import { DateLeaf, paymentColour, SetAsideCard, toneOf } from './planAheadCards'
@@ -254,6 +255,10 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
         {open && (
           <>
             <div className="mt-2">
+              <BillsCalendar ledger={ledger} today={today} onEdit={onEdit} />
+            </div>
+
+            <div className="mt-6">
               <MonthCard plan={thisMonth} name={monthName} today={today} currency={currency} />
             </div>
 
