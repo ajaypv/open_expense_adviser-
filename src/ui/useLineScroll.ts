@@ -9,8 +9,7 @@ const clamp01 = (n: number) => Math.min(Math.max(n, 0), 1)
 
 /**
  * Draws the timeline's line as the page scrolls. Each stretch of it (marked data-seg) is revealed from the top as far as the line has
- * got, and a bead of light rides its leading edge; a stretch that is on screen and drawn is marked data-flow, which sets the water
- * running down it; each date (marked data-dot) lights up as the line reaches it. The line trails
+ * got, and a bead of light rides its leading edge; each date (marked data-dot) lights up as the line reaches it. The line trails
  * the scroll a little, so it flows rather than jumping with every notch. It follows the scrolling parent (the main area), and
  * measures again whenever the list changes size, as when a day is opened. With reduced motion all of it is drawn at once.
  *
@@ -49,7 +48,6 @@ export function useLineScroll(list: RefObject<HTMLElement | null>, layoutKey: st
     /** Where the list starts, in the scrolling area's own coordinates (so it does not change as the area is scrolled). */
     let listTop = 0
     const lastP: number[] = []
-    const lastFlow: boolean[] = []
     const lastLit: boolean[] = []
     let visible = true
 
@@ -72,7 +70,6 @@ export function useLineScroll(list: RefObject<HTMLElement | null>, layoutKey: st
         return spine.getBoundingClientRect().top - rootBox.top + lift + d.offsetHeight / 2
       })
       lastP.length = 0
-      lastFlow.length = 0
       lastLit.length = 0
     }
 
@@ -81,17 +78,9 @@ export function useLineScroll(list: RefObject<HTMLElement | null>, layoutKey: st
 
     let reach = 0
     const paint = () => {
-      const seen0 = scrolled() - listTop
-      const seen1 = seen0 + viewHeight()
       segs.forEach((seg, i) => {
         const { top, height } = tops[i]
         const p = Math.round(clamp01(height > 0 ? (reach - top) / height : reach >= top ? 1 : 0) * 1000) / 1000
-        // Water runs only down a stretch that has been drawn and can be seen.
-        const flow = p > 0 && top + height > seen0 && top < seen1
-        if (flow !== lastFlow[i]) {
-          lastFlow[i] = flow
-          seg.dataset.flow = String(flow)
-        }
         if (p === lastP[i]) return
         lastP[i] = p
         draw(seg, p)

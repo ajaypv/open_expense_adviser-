@@ -294,17 +294,6 @@ describe('Timeline: the line', () => {
     expect(colour('2026-11-03')).not.toBe(colour('2026-11-05'))
   })
 
-  it('has light streaks sliding down it, at two paces, running only on a stretch that can be seen', () => {
-    mount()
-    const seg = dayRow('2026-11-05').querySelector('[data-seg]') as HTMLElement
-    expect(seg.querySelector('.tl-flow-a')).toBeInTheDocument()
-    expect(seg.querySelector('.tl-flow-b')).toBeInTheDocument()
-    expect(css).toMatch(/\.tl-flow-a \{[^}]*animation-name: tl-flow-a/)
-    expect(css).toMatch(/\.tl-flow-b \{[^}]*animation-name: tl-flow-b/)
-    expect(css).toMatch(/\.tl-river\[data-flow='true'\] :is\(\.tl-flow-a, \.tl-flow-b\) \{\s*animation-play-state: running/)
-    expect(css).toMatch(/prefers-reduced-motion: reduce\)[\s\S]*\.tl-flow-a,\s*\.tl-flow-b \{\s*animation: none/)
-  })
-
   it('runs straight down, with no sway, so it never crosses over itself or the dates', () => {
     mount()
     for (const seg of segs()) {

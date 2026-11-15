@@ -123,8 +123,7 @@ function RiverBase({ from, to, wFrom, wTo, edge, top = DOT_Y, left = '50%' }: { 
       <svg aria-hidden="true" viewBox="0 0 24 100" preserveAspectRatio="none" className="absolute inset-0 size-full">
         <path d={d} fill="var(--edge)" opacity="0.5" />
       </svg>
-      {/* The coloured river is shown from the top down as far as the page has been scrolled; a bead of light rides its edge, and
-          streaks of light slide down it, at two paces, while it is on screen, so it reads as water running. */}
+      {/* The coloured river is shown from the top down as far as the page has been scrolled; a bead of light rides its edge. */}
       <svg aria-hidden="true" viewBox="0 0 24 100" preserveAspectRatio="none" className="tl-fill absolute inset-0 size-full">
         <defs>
           <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
@@ -133,23 +132,6 @@ function RiverBase({ from, to, wFrom, wTo, edge, top = DOT_Y, left = '50%' }: { 
           </linearGradient>
         </defs>
         <path d={d} fill={`url(#${id})`} />
-        <clipPath id={`${id}c`}>
-          <path d={d} />
-        </clipPath>
-        <linearGradient id={`${id}a`} x1="0" y1="0" x2="0" y2="0.15" spreadMethod="repeat">
-          <stop offset="0" stopColor="#fff" stopOpacity="0" />
-          <stop offset="0.5" stopColor="#fff" stopOpacity="0.5" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0" />
-        </linearGradient>
-        <linearGradient id={`${id}b`} x1="0" y1="0" x2="0" y2="0.1" spreadMethod="repeat">
-          <stop offset="0" stopColor="#fff" stopOpacity="0" />
-          <stop offset="0.5" stopColor="#fff" stopOpacity="0.3" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0" />
-        </linearGradient>
-        <g clipPath={`url(#${id}c)`}>
-          <rect className="tl-flow-a" x="0" y="-30" width="24" height="200" fill={`url(#${id}a)`} />
-          <rect className="tl-flow-b" x="0" y="-20" width="24" height="200" fill={`url(#${id}b)`} />
-        </g>
       </svg>
       <span className="tl-head absolute size-3 rounded-full" />
     </span>
