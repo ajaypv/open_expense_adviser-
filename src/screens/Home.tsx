@@ -45,6 +45,8 @@ interface Props {
   onOpenSettings: () => void
   /** The round button at the top: Settings itself, not a page of it. */
   onOpenAppSettings: () => void
+  /** Opens your year as reels, from the round button beside Settings. */
+  onOpenReels?: () => void
   onSeeAll: () => void
   /** The estimated balance stays hidden until this is true; the app owns it so it survives tab changes. */
   balanceShown: boolean
@@ -104,6 +106,7 @@ export const Home = memo(function Home({
   onExample,
   onOpenSettings,
   onOpenAppSettings,
+  onOpenReels,
   onSeeAll,
   balanceShown,
   onToggleBalance,
@@ -157,7 +160,7 @@ export const Home = memo(function Home({
   if (txs.length === 0) {
     return (
       <div>
-        <HomeHeader today={today} onOpenSettings={onOpenAppSettings} />
+        <HomeHeader today={today} onOpenSettings={onOpenAppSettings} onOpenReels={onOpenReels} />
         <div className="pt-10">
         <h2 className="type-headline text-balance">Let’s add your first one.</h2>
         <p className="mt-3 max-w-sm text-lg text-ink-2">
@@ -189,7 +192,7 @@ export const Home = memo(function Home({
 
   return (
     <div className="font-text pb-4">
-      <HomeHeader today={today} onOpenSettings={onOpenAppSettings} />
+      <HomeHeader today={today} onOpenSettings={onOpenAppSettings} onOpenReels={onOpenReels} />
       <HomePager
         overview={
           <>

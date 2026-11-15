@@ -48,6 +48,14 @@ describe('HomeHeader', () => {
     expect(html).not.toContain('Goals')
   })
 
+  it('has the reels button beside Settings when there is a year to show, and not otherwise', () => {
+    const d = at(14)
+    const html = renderToStaticMarkup(createElement(HomeHeader, { today: d, onOpenSettings: () => {}, onOpenReels: () => {} }))
+    expect(html.indexOf('aria-label="Your year in reels"')).toBeLessThan(html.indexOf('aria-label="Settings"'))
+    expect(html.indexOf(longDate(d))).toBeLessThan(html.indexOf('aria-label="Your year in reels"'))
+    expect(render(d)).not.toContain('Your year in reels')
+  })
+
   it('lets a long date shorten instead of pushing the button off the screen', () => {
     expect(render()).toContain('truncate')
   })

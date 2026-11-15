@@ -6,7 +6,6 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Category, Transaction } from '../db/schema'
 import { makeLedger } from '../test/ledger'
-import { ReelsEntry } from './ReelsEntry'
 import { YearReels } from './YearReels'
 
 afterEach(cleanup)
@@ -153,23 +152,5 @@ describe('Year reels', () => {
     expect(css).toMatch(/\.reel\[data-active='true'\] \.reel-in \{[^}]*animation: reel-in/)
     expect(css).toMatch(/\.reel-in \{\s*opacity: 0;/)
     expect(css).toMatch(/prefers-reduced-motion: reduce\)[\s\S]*?\.reel-in \{\s*opacity: 1;/)
-  })
-})
-
-describe('The way into the reels', () => {
-  it('is a button on Insights that names the year and opens the page', async () => {
-    render(<ReelsEntry ledger={ledgerOf(full)} today={today} />)
-    await userEvent.click(screen.getByRole('button', { name: /Your 2026 in reels/ }))
-    expect(screen.getByRole('heading', { name: '2026, in spending' })).toBeInTheDocument()
-  })
-
-  it('is not there when nothing has been spent', () => {
-    render(<ReelsEntry ledger={ledgerOf([])} today={today} />)
-    expect(screen.queryByRole('button', { name: /in reels/ })).toBeNull()
-  })
-
-  it('names the latest year with spending when this year has none', () => {
-    render(<ReelsEntry ledger={ledgerOf([tx('2025-12-10', 2100)])} today={today} />)
-    expect(screen.getByRole('button', { name: /Your 2025 in reels/ })).toBeInTheDocument()
   })
 })

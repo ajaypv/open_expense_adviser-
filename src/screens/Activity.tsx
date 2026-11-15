@@ -47,6 +47,8 @@ interface Props {
   onEdit: (tx: LedgerTx) => void
   /** The round Settings button at the top. */
   onOpenSettings?: () => void
+  /** Opens your year as reels, from the round button beside Settings. */
+  onOpenReels?: () => void
 }
 
 const PAGE = 80
@@ -103,7 +105,7 @@ const parseAmount = (text: string): number | null => {
   return text.trim() !== '' && Number.isFinite(n) && n >= 0 ? toMinor(n) : null
 }
 
-export const Activity = memo(function Activity({ ledger, today, categoryFilter, onCategoryFilter, initialRange = null, onEdit, onOpenSettings }: Props) {
+export const Activity = memo(function Activity({ ledger, today, categoryFilter, onCategoryFilter, initialRange = null, onEdit, onOpenSettings, onOpenReels }: Props) {
   const { txs, categories, categoryById, accountById, expenseCategories, currency } = ledger
   useDisplay() // amounts are masked or regrouped by display settings, so redraw when they change
   const toast = useToast()
@@ -301,7 +303,7 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
 
   return (
     <div className="pb-6">
-      <ScreenBar title="Activity" onOpenSettings={onOpenSettings} />
+      <ScreenBar title="Activity" onOpenSettings={onOpenSettings} onOpenReels={onOpenReels} />
 
       {/* Search and filters scroll with the list so they never cover it. */}
       <div className="relative mt-5">

@@ -43,7 +43,6 @@ import { describeWhen, forecast, TAG_LABELS, tagOf, upcomingPayments, type Upcom
 import { repeatingSpend, type RepeatingSpend } from '../insights/repeats'
 import { categoryBudgetStatus, categoryTrends, monthlyTotals, savingsFor, unusualExpenses } from '../insights/trends'
 import { AiEntry } from '../ui/AiEntry'
-import { ReelsEntry } from '../ui/ReelsEntry'
 import { categoryIcon, spendIcon } from '../ui/categoryIcon'
 import { Figures } from '../ui/Figures'
 import { Icon } from '../ui/Icon'
@@ -65,6 +64,8 @@ interface Props {
   onOpenSettings: () => void
   /** The round Settings button at the top. */
   onOpenAppSettings?: () => void
+  /** Opens your year as reels, from the round button beside Settings. */
+  onOpenReels?: () => void
   /** Opens Activity on one category for this month. */
   onPickCategory?: (categoryId: number) => void
   /** Opens the list of regular payments, to see them all or add one. */
@@ -119,7 +120,7 @@ function Section({ id, title, intro, className = 'mt-10', children }: { id: stri
 }
 
 /** What the logged expenses say, computed on the device. Each block answers one question. */
-export const Insights = memo(function Insights({ ledger, month, onMonth, today, onOpenSettings, onOpenAppSettings, onPickCategory, onOpenUpcoming, onOpenAi }: Props) {
+export const Insights = memo(function Insights({ ledger, month, onMonth, today, onOpenSettings, onOpenAppSettings, onOpenReels, onPickCategory, onOpenUpcoming, onOpenAi }: Props) {
   useDisplay() // amounts are masked or regrouped by display settings, so redraw when they change
   const [categoryView, setCategoryView] = useState<'bubbles' | 'donut' | 'list'>('bubbles')
   // Insights describe spending, so they use money sent only; received money feeds the balance.
@@ -451,7 +452,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
 
   return (
     <div className="pb-8">
-      <ScreenBar title="Insights" onOpenSettings={onOpenAppSettings} />
+      <ScreenBar title="Insights" onOpenSettings={onOpenAppSettings} onOpenReels={onOpenReels} />
       <MonthSwitcher month={month} currentMonth={currentMonth} onChange={onMonth} activeMonths={activeMonths} />
 
       {ledger.missingRates.length > 0 && (
@@ -501,7 +502,6 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
           </Section>
 
           {onOpenAi && <AiEntry onOpen={onOpenAi} />}
-          <ReelsEntry ledger={ledger} today={today} />
 
           <section aria-label="Highlights" className="mt-5">
             <p className="text-[clamp(1.5rem,6.8vw,1.875rem)] font-semibold leading-tight tracking-tight [&_b]:font-extrabold">

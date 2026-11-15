@@ -1,4 +1,4 @@
-import { SettingsButton } from './ScreenBar'
+import { HeaderActions } from './ScreenBar'
 
 let dateFormat: Intl.DateTimeFormat | undefined
 
@@ -6,6 +6,8 @@ interface Props {
   today: Date
   /** Opens Settings, from the round button on the right. */
   onOpenSettings: () => void
+  /** Opens your year as reels, from the round button beside Settings; there is none when there is no spending to tell a story about. */
+  onOpenReels?: () => void
 }
 
 /** "Good morning" until noon, "Good afternoon" until five, then "Good evening" (and through the small hours). */
@@ -21,7 +23,7 @@ export function greetingFor(now: Date): string {
  * to the whole app (Settings) on the right, as on every screen. The month switcher sits below, since it changes what the page shows
  * rather than being part of the title.
  */
-export function HomeHeader({ today, onOpenSettings }: Props) {
+export function HomeHeader({ today, onOpenSettings, onOpenReels }: Props) {
   const date = (dateFormat ??= new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' })).format(today)
   return (
     <header className="flex items-center justify-between gap-3 pt-3">
@@ -32,7 +34,7 @@ export function HomeHeader({ today, onOpenSettings }: Props) {
         </h1>
         <p className="truncate text-sm text-ink-2">{date}</p>
       </div>
-      <SettingsButton onClick={onOpenSettings} />
+      <HeaderActions onOpenSettings={onOpenSettings} onOpenReels={onOpenReels} />
     </header>
   )
 }

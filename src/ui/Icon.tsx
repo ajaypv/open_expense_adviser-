@@ -32,6 +32,7 @@ const PATHS = {
   arrowDown: 'M12 5v13M6 12l6 6 6-6',
   flag: 'M5 21V3.5M5 4.5c3-1.8 5.5 1.8 9 0 2-1.2 3.7-1.2 5 0v9c-1.3-1.2-3-1.2-5 0-3.5 1.8-6-1.8-9 0',
   play: 'M8 5.5v13l11-6.5z',
+  reels: 'M7 3.5h10A1.5 1.5 0 0 1 18.5 5v14a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5zM10.5 9v6l4.5-3z',
   search:'M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4.2-4.2',
   // What a category looks like, shown in the pop-up when something is added to it.
   utensils: 'M6 3v6a3 3 0 0 0 6 0V3M9 12v9M17 21V3c-2.5 1-4 4-4 8h4',

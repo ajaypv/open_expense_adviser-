@@ -46,6 +46,8 @@ import { CardsSheet } from './ui/CardsSheet'
 import { GoalsOverview } from './ui/GoalsOverview'
 import { RuleSheet } from './ui/RuleSheet'
 import { AiSheet } from './ui/AiSheet'
+import { YearReels } from './ui/YearReels'
+import { yearsWithSpending } from './insights/story'
 import { PlanAheadPage } from './ui/PlanAheadPage'
 import { UpcomingSheet } from './ui/UpcomingSheet'
 import { PwaBanner } from './ui/PwaBanner'
@@ -119,6 +121,7 @@ function Shell() {
   const [upcomingOpen, setUpcomingOpen] = useState(false)
   const [planOpen, setPlanOpen] = useState(false)
   const [aiOpen, setAiOpen] = useState(false)
+  const [reelsOpen, setReelsOpen] = useState(false)
   const [ruleSheet, setRuleSheet] = useState<{ open: boolean; rule: Recurring | null; n: number }>({ open: false, rule: null, n: 0 })
   const [moneySheet, setMoneySheet] = useState<GoalSheetState>({ open: false, goal: null, n: 0 })
 
@@ -491,6 +494,10 @@ function Shell() {
   const openPlan = useCallback(() => setPlanOpen(true), [])
   const closePlan = useCallback(() => setPlanOpen(false), [])
   const openAi = useCallback(() => setAiOpen(true), [])
+  const openReels = useCallback(() => setReelsOpen(true), [])
+  const closeReels = useCallback(() => setReelsOpen(false), [])
+  // The reels button is there once there is some spending to tell a story about.
+  const reelsReady = useMemo(() => yearsWithSpending(ledger.expenses).length > 0, [ledger.expenses])
   const closeAi = useCallback(() => setAiOpen(false), [])
   const closeUpcoming = useCallback(() => setUpcomingOpen(false), [])
   const newRule = useCallback(() => setRuleSheet((s) => ({ open: true, rule: null, n: s.n + 1 })), [])
@@ -517,6 +524,7 @@ function Shell() {
             onExample={fillChat}
             onOpenSettings={openSettings}
             onOpenAppSettings={openSettingsList}
+            onOpenReels={reelsReady ? openReels : undefined}
             onSeeAll={seeAll}
             balanceShown={balanceShown}
             onToggleBalance={toggleBalance}
@@ -535,11 +543,11 @@ function Shell() {
           />
         )}
         {tab === 'activity' && (
-          <Activity ledger={ledger} today={today} categoryFilter={categoryFilter} onCategoryFilter={setCategoryFilter} initialRange={activityRange} onEdit={openEdit} onOpenSettings={openSettingsList} />
+          <Activity ledger={ledger} today={today} categoryFilter={categoryFilter} onCategoryFilter={setCategoryFilter} initialRange={activityRange} onEdit={openEdit} onOpenSettings={openSettingsList} onOpenReels={reelsReady ? openReels : undefined} />
         )}
         {tab === 'insights' && (
           <Suspense fallback={<ScreenSkeleton label="Insights" />}>
-            <Insights ledger={ledger} month={month} onMonth={setMonth} today={today} onOpenSettings={openSettings} onOpenAppSettings={openSettingsList} onPickCategory={pickCategory} onOpenUpcoming={openUpcoming} onOpenAi={openAi} />
+            <Insights ledger={ledger} month={month} onMonth={setMonth} today={today} onOpenSettings={openSettings} onOpenAppSettings={openSettingsList} onOpenReels={reelsReady ? openReels : undefined} onPickCategory={pickCategory} onOpenUpcoming={openUpcoming} onOpenAi={openAi} />
           </Suspense>
         )}
         {tab === 'settings' && (
@@ -612,6 +620,7 @@ function Shell() {
         onAddMoney={goalMoney}
       />
       <AiSheet open={aiOpen} onClose={closeAi} ledger={ledger} month={month} today={today} />
+      <YearReels open={reelsOpen} onClose={closeReels} ledger={ledger} today={today} />
       <PlanAheadPage open={planOpen} onClose={closePlan} ledger={ledger} today={today} onAdd={newRule} onEdit={editRule} onManage={openUpcoming} />
       <UpcomingSheet open={upcomingOpen} onClose={closeUpcoming} ledger={ledger} today={today} onAdd={newRule} onEdit={editRule} />
       <RuleSheet key={`rule-${ruleSheet.n}`} open={ruleSheet.open} rule={ruleSheet.rule} categories={ledger.categories} accounts={ledger.accounts} currency={ledger.currency} today={today} onClose={closeRule} />
