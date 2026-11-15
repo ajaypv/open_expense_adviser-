@@ -1249,6 +1249,86 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 /* Today's bar is a little bottle of water; it is drawn in src/ui/Water.tsx (a clip and a surface line worked out every frame from how the
    phone is held), so it has no styles of its own. */
 
+/* ---------- Your year as reels ---------- */
+
+/* Each tile is a full screen in a deep version of its own colour (--hue, set on it), with a ghost of its icon in the corner. What is on it is
+   hidden until it is the tile in front (data-active, set as the page is scrolled), then rises in one after another (--d is each one's wait),
+   the bars grow across and the columns up, so every tile plays when you get to it, and again if you come back. */
+.reel {
+  background: linear-gradient(165deg, color-mix(in oklab, var(--hue) 82%, #000) 0%, color-mix(in oklab, var(--hue) 38%, #000) 100%);
+}
+.reel-ghost {
+  opacity: 0.12;
+  transform: rotate(-12deg);
+}
+.reel-in {
+  opacity: 0;
+  transform: translateY(22px);
+}
+.reel-bar {
+  clip-path: inset(0 100% 0 0);
+}
+.reel-col {
+  transform: scaleY(0);
+  transform-origin: bottom;
+}
+@keyframes reel-in {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes reel-bar {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes reel-col {
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes reel-nudge {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}
+.reel[data-active='true'] .reel-in {
+  animation: reel-in 0.7s cubic-bezier(0.2, 0.9, 0.25, 1) var(--d, 0ms) both;
+}
+.reel[data-active='true'] .reel-bar {
+  animation: reel-bar 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
+}
+.reel[data-active='true'] .reel-col {
+  animation: reel-col 0.8s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
+}
+.reel[data-active='true'] .reel-nudge {
+  display: inline-flex;
+  animation: reel-nudge 1.2s ease-in-out 1.6s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reel-in {
+    opacity: 1;
+    transform: none;
+  }
+  .reel-bar {
+    clip-path: none;
+  }
+  .reel-col {
+    transform: none;
+  }
+  .reel[data-active='true'] .reel-in,
+  .reel[data-active='true'] .reel-bar,
+  .reel[data-active='true'] .reel-col,
+  .reel[data-active='true'] .reel-nudge {
+    animation: none;
+  }
+}
+
 /* ---------- The first screen a new person sees ---------- */
 
 /* Little cards flow from the right to the left in four lanes, each at its own pace (--t), the one behind slower and smaller; a lane's content

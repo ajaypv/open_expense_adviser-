@@ -43,6 +43,7 @@ import { describeWhen, forecast, TAG_LABELS, tagOf, upcomingPayments, type Upcom
 import { repeatingSpend, type RepeatingSpend } from '../insights/repeats'
 import { categoryBudgetStatus, categoryTrends, monthlyTotals, savingsFor, unusualExpenses } from '../insights/trends'
 import { AiEntry } from '../ui/AiEntry'
+import { ReelsEntry } from '../ui/ReelsEntry'
 import { categoryIcon, spendIcon } from '../ui/categoryIcon'
 import { Figures } from '../ui/Figures'
 import { Icon } from '../ui/Icon'
@@ -500,6 +501,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
           </Section>
 
           {onOpenAi && <AiEntry onOpen={onOpenAi} />}
+          <ReelsEntry ledger={ledger} today={today} />
 
           <section aria-label="Highlights" className="mt-5">
             <p className="text-[clamp(1.5rem,6.8vw,1.875rem)] font-semibold leading-tight tracking-tight [&_b]:font-extrabold">
