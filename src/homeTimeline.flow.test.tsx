@@ -47,9 +47,9 @@ async function open() {
 const view = () => within(screen.getByRole('group', { name: 'Home view' }))
 
 describe('Home: the timeline', () => {
-  it('has a Timeline, an Overview and a Calendar tab at the top, in that order, on the overview', async () => {
+  it('has a Timeline and an Overview tab at the top, in that order, on the overview', async () => {
     await open()
-    expect(view().getAllByRole('button').map((b) => b.textContent)).toEqual(['Timeline', 'Overview', 'Calendar'])
+    expect(view().getAllByRole('button').map((b) => b.textContent)).toEqual(['Timeline', 'Overview'])
     expect(view().getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-pressed', 'true')
     expect(view().getByRole('button', { name: 'Timeline' })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.queryByRole('list', { name: 'Spending, day by day' })).toBeNull()

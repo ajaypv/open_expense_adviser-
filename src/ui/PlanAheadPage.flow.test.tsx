@@ -228,3 +228,32 @@ describe('Plan ahead page: this month', () => {
     })
   })
 })
+
+describe('Plan ahead page: the overview and the calendar', () => {
+  it('opens on the overview, with a Calendar tab beside it, and the calendar page on its right', () => {
+    mount([emi, rent])
+    expect(screen.getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Calendar' })).toHaveAttribute('aria-pressed', 'false')
+    expect(page().querySelector('[data-page="plan-overview"] [data-testid="month-total"]')).toBeInTheDocument()
+    expect(page().querySelector('[data-page="plan-calendar"] [data-grid]')).toBeInTheDocument()
+    // Only one calendar, and it is not in the overview.
+    expect(page().querySelectorAll('[data-grid]')).toHaveLength(1)
+  })
+
+  it('shows the calendar of the regular payments when its tab is pressed', async () => {
+    mount([emi, rent, late])
+    await userEvent.click(screen.getByRole('button', { name: 'Calendar' }))
+    expect(screen.getByRole('button', { name: 'Calendar' })).toHaveAttribute('aria-pressed', 'true')
+    const cal = within(page().querySelector('[data-page="plan-calendar"]') as HTMLElement)
+    expect(cal.getByTestId('bills-month')).toHaveTextContent('October 2026')
+    expect(cal.getByRole('radio', { name: 'Overdue' })).toBeChecked()
+  })
+
+  it('opens a payment from the calendar to change it', async () => {
+    const { onEdit } = mount([emi, rent, late])
+    await userEvent.click(screen.getByRole('button', { name: 'Calendar' }))
+    await userEvent.click(screen.getByRole('button', { name: /^Electricity, Bill, Overdue by 3 days/ }))
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Electricity' })).getByRole('button', { name: 'Edit' }))
+    expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ merchant: 'Electricity' }))
+  })
+})

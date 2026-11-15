@@ -6,9 +6,11 @@ import { daysInMonth, monthLabel } from '../insights/aggregates'
 import { planAhead } from '../insights/ahead'
 import { monthPlan, type MonthPlan } from '../insights/monthPlan'
 import { describeWhen, forecast, TAG_LABELS, tagOf, totalsOf, upcomingPayments, type UpcomingPayment } from '../insights/upcoming'
+import { BillsCalendar } from './BillsCalendar'
 import { Dialog } from './Dialog'
 import { Icon } from './Icon'
 import { DateLeaf, paymentColour, SetAsideCard, toneOf } from './planAheadCards'
+import { PlanPager } from './PlanPager'
 import { paymentName, shortDay, shortfallPhrase, signedAmount } from './upcomingText'
 
 type Ledger = ReturnType<typeof useLedger>
@@ -209,7 +211,8 @@ function WhenItGoes({ items, currency }: { items: UpcomingPayment[]; currency: s
  * The whole plan for the weeks ahead on a page of its own. First the month: what the regular payments come to in all, what has already
  * gone and what is still to go. Then, over 30, 60 or 90 days: what goes out and what comes in, whether the balance is enough (in two
  * numbers and a bar), when the money leaves, what to put aside, and every payment in the order of the days, in bands from overdue to
- * later, each one opening to change it. The summary on Home is the way in.
+ * later, each one opening to change it. It is two pages: the overview, where it opens, and, on its right, a calendar of the regular payments
+ * (swiped to, or chosen from the tabs at the top). The summary on Home is the way in.
  */
 export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onManage }: Props) {
   const [horizon, setHorizon] = useState<(typeof HORIZONS)[number]>(30)
@@ -252,8 +255,11 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
         </header>
 
         {open && (
+          <div className="mt-2">
+            <PlanPager
+              overview={
           <>
-            <div className="mt-2">
+            <div>
               <MonthCard plan={thisMonth} name={monthName} today={today} currency={currency} />
             </div>
 
@@ -365,6 +371,10 @@ export function PlanAheadPage({ open, onClose, ledger, today, onAdd, onEdit, onM
               </span>
             </button>
           </>
+              }
+              calendar={<BillsCalendar ledger={ledger} today={today} onEdit={onEdit} />}
+            />
+          </div>
         )}
       </div>
     </Dialog>

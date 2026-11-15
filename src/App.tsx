@@ -530,8 +530,6 @@ function Shell() {
             onOpenCards={openCards}
             onOpenUpcoming={openUpcoming}
             onOpenPlan={openPlan}
-            onEditRule={editRule}
-            onAddRule={newRule}
             onPickPeriod={pickPeriod}
             onOpenInsights={openInsights}
           />

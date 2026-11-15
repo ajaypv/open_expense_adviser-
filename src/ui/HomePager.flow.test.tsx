@@ -40,17 +40,16 @@ function setup() {
         </div>
       }
       timeline={<p data-testid="timeline">Timeline content</p>}
-      calendar={<p data-testid="calendar">Calendar content</p>}
     />,
   )
 }
 
 const tab = (name: string) => screen.getByRole('button', { name })
-const panel = (id: 'overview' | 'timeline' | 'calendar') => document.querySelector(`[data-page="${id}"]`) as HTMLElement
+const panel = (id: 'overview' | 'timeline') => document.querySelector(`[data-page="${id}"]`) as HTMLElement
 const track = () => document.querySelector('.pager-track') as HTMLElement
 const pill = () => document.querySelector('.pager-pill') as HTMLElement
 
-/** Where the pages are for a given page (the timeline is 0, on the left, the overview 1 and the calendar 2, on the right) and drag, as the component writes it: a page and the 3px between pages. */
+/** Where the pages are for a given page (the timeline is 0, on the left, and the overview 1) and drag, as the component writes it: a page and the 3px between pages. */
 const at = (index: number, px = 0) => `translate3d(calc(${-index * 100}% + ${px - index * 3}px), 0, 0)`
 
 describe('HomePager: the tabs', () => {
@@ -71,60 +70,11 @@ describe('HomePager: the tabs', () => {
     expect(panel('timeline')).toHaveAttribute('data-rest', 'true')
   })
 
-  it('has the timeline first, on the left, the overview after it and the calendar on the right, on the page and in the tabs', () => {
+  it('has the timeline first, on the left, and the overview after it, on the page and in the tabs', () => {
     setup()
-    expect(screen.getAllByRole('button', { name: /^(Timeline|Overview|Calendar)$/ }).map((b) => b.textContent)).toEqual(['Timeline', 'Overview', 'Calendar'])
+    expect(screen.getAllByRole('button', { name: /^(Timeline|Overview)$/ }).map((b) => b.textContent)).toEqual(['Timeline', 'Overview'])
     const pages = [...document.querySelectorAll('[data-page]')].map((p) => (p as HTMLElement).dataset.page)
-    expect(pages).toEqual(['timeline', 'overview', 'calendar'])
-  })
-
-  it('opens on the overview, with the calendar built behind the scenes and then waiting on the right', async () => {
-    setup()
-    expect(screen.queryByTestId('calendar')).toBeNull()
-    await waitFor(() => expect(screen.getByTestId('calendar')).toBeInTheDocument())
-    expect(tab('Overview')).toHaveAttribute('aria-pressed', 'true')
-    expect(panel('calendar')).toHaveAttribute('data-rest', 'true')
-    expect(track().style.transform).toBe(at(1))
-  })
-
-  it('moves to the calendar when its tab is pressed, and back, with the marker two places along', () => {
-    setup()
-    fireEvent.click(tab('Calendar'))
-    expect(tab('Calendar')).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByTestId('calendar')).toBeInTheDocument()
-    expect(track().style.transform).toBe(at(2))
-    expect(pill().style.transform).toBe('translate3d(200%, 0, 0)')
-    fireEvent.click(tab('Overview'))
-    expect(track().style.transform).toBe(at(1))
-    expect(pill().style.transform).toBe('translate3d(100%, 0, 0)')
-  })
-
-  it('swiping to the left from the overview brings the calendar in, and swiping to the right from it goes back', () => {
-    setup()
-    drag(screen.getByTestId('overview'), -160)
-    expect(tab('Calendar')).toHaveAttribute('aria-pressed', 'true')
-    expect(track().style.transform).toBe(at(2))
-    drag(screen.getByTestId('calendar'), 160)
-    expect(tab('Overview')).toHaveAttribute('aria-pressed', 'true')
-    expect(track().style.transform).toBe(at(1))
-  })
-
-  it('goes one page at a time: from the timeline a swipe to the left lands on the overview, not the calendar', () => {
-    setup()
-    fireEvent.click(tab('Timeline'))
-    drag(screen.getByTestId('timeline'), -160)
-    expect(tab('Overview')).toHaveAttribute('aria-pressed', 'true')
-  })
-
-  it('gives only a little past the calendar, the last page, and the overview shows an edge on its right while it is in view', () => {
-    setup()
-    fireEvent.click(tab('Calendar'))
-    const target = screen.getByTestId('calendar')
-    fireEvent(target, pointer('pointerdown', 0, 0))
-    fireEvent(target, pointer('pointermove', -40, 0))
-    fireEvent(target, pointer('pointermove', -120, 0))
-    expect(track().style.transform).toBe(at(2, -30))
-    expect(panel('overview')).toHaveAttribute('data-edge', 'right')
+    expect(pages).toEqual(['timeline', 'overview'])
   })
 
   it('moves to the timeline when its tab is pressed, and back', () => {
@@ -201,8 +151,8 @@ describe('HomePager: dragging the page', () => {
 
   it('stays put for a short movement, a tap, or a drag the wrong way past either end', () => {
     setup()
-    drag(screen.getByTestId('overview'), 20)
-    drag(screen.getByTestId('overview'), -20)
+    drag(screen.getByTestId('overview'), 30)
+    drag(screen.getByTestId('overview'), -160)
     expect(tab('Overview')).toHaveAttribute('aria-pressed', 'true')
     expect(track().style.transform).toBe(at(1))
     fireEvent.click(tab('Timeline'))
@@ -285,13 +235,13 @@ describe('HomePager: dragging the page', () => {
     expect(pill()).toHaveAttribute('data-dragging', 'true')
   })
 
-  it('follows the finger the whole way from the overview towards the calendar', () => {
+  it('gives only a little past the last page (the overview), and springs back', () => {
     setup()
     const target = screen.getByTestId('overview')
     fireEvent(target, pointer('pointerdown', 0, 0))
     fireEvent(target, pointer('pointermove', -40, 0))
     fireEvent(target, pointer('pointermove', -120, 0))
-    expect(track().style.transform).toBe(at(1, -120))
+    expect(track().style.transform).toBe(at(1, -30))
   })
 
   it('gives only a little past the first page (the timeline), too', () => {

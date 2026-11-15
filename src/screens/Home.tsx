@@ -29,8 +29,6 @@ import { MonthSwitcher } from '../ui/MonthSwitcher'
 import { PlanAhead } from '../ui/PlanAhead'
 import { SuggestionList } from '../ui/SuggestionList'
 import { WalletPanel } from '../ui/WalletPanel'
-import type { Recurring } from '../db/schema'
-import { BillsCalendar } from '../ui/BillsCalendar'
 import { HomePager } from '../ui/HomePager'
 import { Icon, type IconName } from '../ui/Icon'
 import { Timeline } from '../ui/Timeline'
@@ -68,10 +66,6 @@ interface Props {
   onOpenPlan?: () => void
   /** Opens the credit cards, from the card that shows what is owed. */
   onOpenCards?: () => void
-  /** Opens one regular payment to change it, from the Calendar page. */
-  onEditRule?: (rule: Recurring) => void
-  /** Opens the form for a new regular payment, from the Calendar page. */
-  onAddRule?: () => void
   /** Opens Activity on what was spent in a period, from the Today, Yesterday and Last 7 days figures. */
   onPickPeriod: (range: { from: string; to: string }) => void
   /** Opens the Insights screen, from the card that points to it. */
@@ -79,8 +73,6 @@ interface Props {
   /** Opens the AI insights page, from the card that points to Insights. */
   onOpenAi?: () => void
 }
-
-const noop = () => {}
 
 const EXAMPLES = ['450 lunch at Cafe', 'Uber 230 yesterday', 'Salary 80,000']
 
@@ -124,8 +116,6 @@ export const Home = memo(function Home({
   onOpenUpcoming,
   onOpenPlan,
   onOpenCards,
-  onEditRule,
-  onAddRule,
   onPickPeriod,
   onOpenInsights,
   onOpenAi,
@@ -313,7 +303,6 @@ export const Home = memo(function Home({
           </>
         }
         timeline={<Timeline expenses={expenses} received={income} categoryById={categoryById} currency={currency} today={today} onPickDay={pickDay} />}
-        calendar={<BillsCalendar ledger={ledger} today={today} onEdit={onEditRule ?? noop} onAdd={onAddRule} />}
       />
     </div>
   )
