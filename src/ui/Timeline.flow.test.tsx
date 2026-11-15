@@ -282,6 +282,29 @@ describe('Timeline: the line', () => {
     expect(seg.querySelector('.tl-head')).toBeInTheDocument()
   })
 
+  it('is coloured from the colour of its day into the colour of the next, not one grey', () => {
+    mount()
+    for (const seg of segs()) {
+      const from = seg.style.getPropertyValue('--from')
+      expect(from).not.toBe('')
+      expect(from).not.toContain('--ink-2') // the old flat grey
+    }
+    // The biggest day and a quiet one do not hand on the same colour.
+    const colour = (date: string) => (dayRow(date).querySelector('[data-seg]') as HTMLElement).style.getPropertyValue('--from')
+    expect(colour('2026-11-03')).not.toBe(colour('2026-11-05'))
+  })
+
+  it('has light streaks sliding down it, at two paces, running only on a stretch that can be seen', () => {
+    mount()
+    const seg = dayRow('2026-11-05').querySelector('[data-seg]') as HTMLElement
+    expect(seg.querySelector('.tl-flow-a')).toBeInTheDocument()
+    expect(seg.querySelector('.tl-flow-b')).toBeInTheDocument()
+    expect(css).toMatch(/\.tl-flow-a \{[^}]*animation-name: tl-flow-a/)
+    expect(css).toMatch(/\.tl-flow-b \{[^}]*animation-name: tl-flow-b/)
+    expect(css).toMatch(/\.tl-river\[data-flow='true'\] :is\(\.tl-flow-a, \.tl-flow-b\) \{\s*animation-play-state: running/)
+    expect(css).toMatch(/prefers-reduced-motion: reduce\)[\s\S]*\.tl-flow-a,\s*\.tl-flow-b \{\s*animation: none/)
+  })
+
   it('runs straight down, with no sway, so it never crosses over itself or the dates', () => {
     mount()
     for (const seg of segs()) {
@@ -325,7 +348,6 @@ describe('Timeline: the line', () => {
     expect(css).toMatch(/\.tl-fill \{[^}]*clip-path: inset\(0 0 calc\(\(1 - var\(--p, 1\)\) \* 100%\) 0\)/)
     expect(css).toMatch(/\.tl-head \{[^}]*top: calc\(var\(--p, 1\) \* 100%\)/)
     expect(css).not.toContain('tl-draw')
-    expect(css).not.toContain('tl-flow')
   })
 
   it('has dates that are dark until the line reaches them, and fill in with a spring', () => {

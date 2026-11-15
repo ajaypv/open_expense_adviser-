@@ -1146,6 +1146,35 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 .tl-river[data-live='true'] .tl-head {
   opacity: 1;
 }
+/* Streaks of light slide down the coloured river, two layers at two paces, so it looks like water running. They move only while the
+   stretch is on screen (data-flow, set as the page is scrolled); off screen, or when motion is reduced, they stand still. */
+@keyframes tl-flow-a {
+  to {
+    transform: translateY(30px);
+  }
+}
+@keyframes tl-flow-b {
+  to {
+    transform: translateY(20px);
+  }
+}
+.tl-flow-a,
+.tl-flow-b {
+  animation-play-state: paused;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+.tl-flow-a {
+  animation-name: tl-flow-a;
+  animation-duration: 2.6s;
+}
+.tl-flow-b {
+  animation-name: tl-flow-b;
+  animation-duration: 1.7s;
+}
+.tl-river[data-flow='true'] :is(.tl-flow-a, .tl-flow-b) {
+  animation-play-state: running;
+}
 
 /* The date sticks at the top as its day is scrolled past, and a pill opens out behind it, with the date and weekday in words. It opens
    only where a browser can tell that the date is stuck (scroll-state queries); elsewhere the date just sticks. */
@@ -1229,6 +1258,10 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   }
   .tl-head {
     display: none;
+  }
+  .tl-flow-a,
+  .tl-flow-b {
+    animation: none;
   }
   .tl-ping {
     animation: none;

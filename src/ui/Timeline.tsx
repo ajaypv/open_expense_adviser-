@@ -38,8 +38,6 @@ const STICK_TOP = '0.5rem'
  * written out, so the colour only backs the words up.
  */
 const LOW = 'var(--heat-low)'
-/** The line between days is one calm grey; only the ring of each date carries the colour of the day. */
-const LINE = 'color-mix(in oklab, var(--ink-2) 45%, var(--bg))'
 /** No money received, when none is given. */
 const NONE: Transaction[] = []
 const mix = (from: string, to: string, share: number) => `color-mix(in oklab, ${to} ${Math.round(share * 100)}%, ${from})`
@@ -125,7 +123,8 @@ function RiverBase({ from, to, wFrom, wTo, edge, top = DOT_Y, left = '50%' }: { 
       <svg aria-hidden="true" viewBox="0 0 24 100" preserveAspectRatio="none" className="absolute inset-0 size-full">
         <path d={d} fill="var(--edge)" opacity="0.5" />
       </svg>
-      {/* The coloured river is shown from the top down as far as the page has been scrolled; a bead of light rides its edge. */}
+      {/* The coloured river is shown from the top down as far as the page has been scrolled; a bead of light rides its edge, and
+          streaks of light slide down it, at two paces, while it is on screen, so it reads as water running. */}
       <svg aria-hidden="true" viewBox="0 0 24 100" preserveAspectRatio="none" className="tl-fill absolute inset-0 size-full">
         <defs>
           <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
@@ -134,6 +133,23 @@ function RiverBase({ from, to, wFrom, wTo, edge, top = DOT_Y, left = '50%' }: { 
           </linearGradient>
         </defs>
         <path d={d} fill={`url(#${id})`} />
+        <clipPath id={`${id}c`}>
+          <path d={d} />
+        </clipPath>
+        <linearGradient id={`${id}a`} x1="0" y1="0" x2="0" y2="0.15" spreadMethod="repeat">
+          <stop offset="0" stopColor="#fff" stopOpacity="0" />
+          <stop offset="0.5" stopColor="#fff" stopOpacity="0.5" />
+          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id={`${id}b`} x1="0" y1="0" x2="0" y2="0.1" spreadMethod="repeat">
+          <stop offset="0" stopColor="#fff" stopOpacity="0" />
+          <stop offset="0.5" stopColor="#fff" stopOpacity="0.3" />
+          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+        </linearGradient>
+        <g clipPath={`url(#${id}c)`}>
+          <rect className="tl-flow-a" x="0" y="-30" width="24" height="200" fill={`url(#${id}a)`} />
+          <rect className="tl-flow-b" x="0" y="-20" width="24" height="200" fill={`url(#${id}b)`} />
+        </g>
       </svg>
       <span className="tl-head absolute size-3 rounded-full" />
     </span>
@@ -174,7 +190,7 @@ function DateChip({ date }: { date: string }) {
 function Spine({ color, next, wFrom, wTo, today, edge, label, children }: { color: string; next: string | null; wFrom: number; wTo: number; today?: boolean; edge?: boolean; label?: { main: string; sub?: string }; children: React.ReactNode }) {
   return (
     <div aria-hidden="true" className="relative">
-      {next !== null && <River from={LINE} to={LINE} wFrom={wFrom} wTo={wTo} edge={edge} />}
+      {next !== null && <River from={color} to={next} wFrom={wFrom} wTo={wTo} edge={edge} />}
       <span data-stick className="tl-stick sticky z-10 mx-auto block size-[2.625rem]" style={{ top: STICK_TOP, marginTop: `calc(${DOT_Y} - 1.3125rem)` }}>
         {label && (
           <span data-pill className="tl-pill pointer-events-none absolute -inset-y-1 -left-1 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-surface/90 pl-[3.25rem] pr-4 shadow-[0_0_0_1px_var(--ring)] backdrop-blur-md">
@@ -460,7 +476,7 @@ export function Timeline({ expenses, received = NONE, categoryById, currency, to
               <li key={r.key} className="relative flex items-baseline justify-between gap-3 pb-3 pl-[3.5rem] pr-1 pt-2">
                 {/* The river goes on behind the heading, from one day's colour and width to the next's. */}
                 {before !== -1 && after !== -1 && (
-                  <River from={LINE} to={LINE} wFrom={widths[before]} wTo={widths[after]} top="0px" left="1.5rem" />
+                  <River from={colors[before]} to={colors[after]} wFrom={widths[before]} wTo={widths[after]} top="0px" left="1.5rem" />
                 )}
                 <h3 className="text-lg font-bold tracking-tight">{label}</h3>
                 <span className="text-sm text-ink-2">
