@@ -19,6 +19,8 @@ interface Props {
   today: Date
   /** Opens one payment to change it. */
   onEdit: (rule: Recurring) => void
+  /** Opens the form for a new regular payment; without it there is no button to add one. */
+  onAdd?: () => void
 }
 
 type Tab = BillState
@@ -107,7 +109,7 @@ function BillRow({ bill: b, today, currency, onOpen }: { bill: Bill; today: Date
  * has been paid. Today is ringed. Pressing a day shows what falls on it. Below, one switch between Upcoming, Overdue and Paid for the month
  * (Overdue is every late payment, in whichever month, since each is waiting for you). The arrows go back and forward a month.
  */
-export function BillsCalendar({ ledger, today, onEdit }: Props) {
+export function BillsCalendar({ ledger, today, onEdit, onAdd }: Props) {
   const { recurring, currency, rates, categoryById, expenses, income, accounts, accountById } = ledger
   const todayKey = localDateString(today)
   const thisMonth = todayKey.slice(0, 7)
@@ -165,6 +167,12 @@ export function BillsCalendar({ ledger, today, onEdit }: Props) {
       <section aria-label="Calendar of regular payments" className={`${card} p-5`}>
         <p className="text-lg font-semibold">Nothing regular yet</p>
         <p className="mt-1 text-[1.0625rem] leading-[1.6] text-ink-2">Add a bill, a subscription or an EMI and it shows here on its day, with a dot for what is still to pay, what is late and what is paid.</p>
+        {onAdd && (
+          <button type="button" onClick={onAdd} className="mt-4 flex min-h-12 items-center justify-center gap-2 rounded-full bg-btn px-5 font-semibold text-btn-ink">
+            <Icon name="plus" size={18} />
+            Add a regular payment
+          </button>
+        )}
       </section>
     )
   }
@@ -305,6 +313,12 @@ export function BillsCalendar({ ledger, today, onEdit }: Props) {
               <BillRow key={b.key} bill={b} today={today} currency={currency} onOpen={setOpenBill} />
             ))}
           </ul>
+        )}
+        {onAdd && (
+          <button type="button" onClick={onAdd} className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-surface-2 px-5 font-semibold">
+            <Icon name="plus" size={18} />
+            Add a regular payment
+          </button>
         )}
       </div>
 

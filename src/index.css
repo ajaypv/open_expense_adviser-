@@ -1087,6 +1087,23 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 .pager-panel[data-page='overview'][data-rest='true']::before {
   left: 0.4rem;
 }
+/* With the calendar in view the overview is the part left showing on its left, so its sheet edge, shadow and handle are on its right. */
+.pager-panel[data-page='overview'][data-edge='right'] {
+  border-radius: 0 1.5rem 1.5rem 0;
+}
+.pager-panel[data-page='overview'][data-edge='right'][data-rest='true'] {
+  box-shadow: 14px 0 26px -8px rgb(0 0 0 / 0.4);
+}
+.pager-panel[data-page='overview'][data-edge='right'][data-rest='true']::before {
+  left: auto;
+  right: 0.4rem;
+}
+/* The calendar is a card beside the overview: while it is not in view, the slice of its edge on the right of the overview is a soft sheet
+   (its contents are not drawn), to say there is another page that way. */
+.pager-panel[data-page='calendar'][data-rest='true'] {
+  background: var(--surface-2);
+  border-radius: 1.5rem 0 0 1.5rem;
+}
 /* The timeline is under it: it rises from a little smaller and dimmer to its full size and place (the component writes where it is as the
    pages move), settling without a bounce while the sheet above it springs. */
 .pager-panel[data-page='timeline'] {

@@ -1,13 +1,17 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import { onHomeViewRequest, takeWaitingHomeView } from './homeView'
 
-export type HomeView = 'overview' | 'timeline'
+export type HomeView = 'overview' | 'timeline' | 'calendar'
 
-/** The pages left to right, as they sit: the Timeline is on the left of the Overview, which is where Home opens. */
+/** The pages left to right, as they sit: the Timeline is on the left of the Overview, which is where Home opens, and the Calendar is on its right. */
 const TABS: { id: HomeView; label: string }[] = [
   { id: 'timeline', label: 'Timeline' },
   { id: 'overview', label: 'Overview' },
+  { id: 'calendar', label: 'Calendar' },
 ]
+const ORDER: HomeView[] = TABS.map((t) => t.id)
+const INDEX: Record<HomeView, number> = { timeline: 0, overview: 1, calendar: 2 }
+const LAST = ORDER.length - 1
 
 /**
  * The space between the two pages, in pixels. The page next to the one in view shows a slice of its edge in the margin beside it (the
@@ -98,12 +102,14 @@ interface Props {
   overview: ReactNode
   /** Built behind the scenes shortly after the first screen is up (or at once if it is asked for), so opening it does not stall the slide. */
   timeline: ReactNode
+  /** The regular payments on a calendar, on the right of the overview; built the same way. */
+  calendar: ReactNode
 }
 
 /**
- * Home as two pages side by side, like the pages of a phone's home screen: the timeline of the days behind you on the left, and the
- * overview, where Home opens, on the right. A pair of tabs at the top moves between them, and so does dragging the page sideways
- * (to the right for the timeline): the page follows the finger, and lets go to the nearer one (or the way a quick flick was
+ * Home as three pages side by side, like the pages of a phone's home screen: the timeline of the days behind you on the left, the
+ * overview, where Home opens, in the middle, and the calendar of regular payments on the right. Tabs at the top move between them, and so does
+ * dragging the page sideways (to the right for the timeline, to the left for the calendar): the page follows the finger, and lets go to the nearer one (or the way a quick flick was
  * going), and it settles with a little spring, going just past its place and back, as if it were on one. The tab's marker slides along with it. The page that is not in view is not drawn in full: it is cut to the height of
  * the page that is, so the screen is as long as that one, and only a slice of its edge (about 5% of the width) shows in the margin
  * beside it, on either page, to say there is more that way. Reduced motion swaps them without sliding.
@@ -111,10 +117,11 @@ interface Props {
  * It stays smooth because a drag never goes through React: the position is written straight onto the track and the marker, and the
  * component only redraws when a drag starts and when it ends, not at every move of the finger.
  */
-export function HomePager({ overview, timeline }: Props) {
+export function HomePager({ overview, timeline, calendar }: Props) {
   // Home opens on the overview, unless the bottom bar was just swiped from another screen towards the timeline.
   const [view, setView] = useState<HomeView>(() => takeWaitingHomeView() ?? 'overview')
   const [built, setBuilt] = useState(view === 'timeline')
+  const [calBuilt, setCalBuilt] = useState(view === 'calendar')
   const [dragging, setDragging] = useState(false)
   // True while the slide plays, when both pages must keep their height.
   const [moving, setMoving] = useState(false)
@@ -124,17 +131,25 @@ export function HomePager({ overview, timeline }: Props) {
   const gesture = useRef<Gesture | null>(null)
   const swallow = useRef(false)
   const timer = useRef(0)
-  // Where the page in view is, from the left: the timeline is 0 and the overview 1.
-  const index = view === 'timeline' ? 0 : 1
-  const panels = useRef<Record<HomeView, HTMLDivElement | null>>({ overview: null, timeline: null })
+  // Where the page in view is, from the left: the timeline is 0, the overview 1 and the calendar 2.
+  const index = INDEX[view]
+  const panels = useRef<Record<HomeView, HTMLDivElement | null>>({ overview: null, timeline: null, calendar: null })
 
   useEffect(() => () => window.clearTimeout(timer.current), [])
   // The timeline is made while nothing else is happening, so the first time it is opened it is already there.
-  useEffect(() => whenIdle(() => setBuilt(true), WARM_UP_MS), [])
+  useEffect(
+    () =>
+      whenIdle(() => {
+        setBuilt(true)
+        setCalBuilt(true)
+      }, WARM_UP_MS),
+    [],
+  )
 
   function go(next: HomeView) {
     if (next === view) return
     if (next === 'timeline') setBuilt(true)
+    if (next === 'calendar') setCalBuilt(true)
     setMoving(true)
     setView(next)
     // The screen scrolls inside the main area, not the window: the other page starts at its top.
@@ -153,10 +168,10 @@ export function HomePager({ overview, timeline }: Props) {
 
   /** Puts the pages and the marker where a drag of `dx` pixels has them, with no redraw. */
   function follow(width: number, dx: number) {
-    const beyond = (index === 0 && dx > 0) || (index === 1 && dx < 0)
+    const beyond = (index === 0 && dx > 0) || (index === LAST && dx < 0)
     const px = beyond ? dx * 0.25 : dx
     if (trackEl.current) trackEl.current.style.transform = trackTransform(index, px)
-    if (pillEl.current) pillEl.current.style.transform = pillTransform(Math.min(1, Math.max(0, index - px / Math.max(width + GAP, 1))))
+    if (pillEl.current) pillEl.current.style.transform = pillTransform(Math.min(LAST, Math.max(0, index - px / Math.max(width + GAP, 1))))
     placeTimeline(panels.current.timeline, 1 - index + px / Math.max(width + GAP, 1), width)
   }
 
@@ -185,7 +200,8 @@ export function HomePager({ overview, timeline }: Props) {
         if (trackEl.current) trackEl.current.dataset.dragging = 'true'
         if (pillEl.current) pillEl.current.dataset.dragging = 'true'
         // The other page is drawn and in place before the finger brings it in.
-        if (view === 'overview') setBuilt(true)
+        setBuilt(true)
+        setCalBuilt(true)
         setDragging(true)
       } else if (ay > DECIDE && ay >= ax) g.mode = 'scrolling'
       else return
@@ -207,11 +223,11 @@ export function HomePager({ overview, timeline }: Props) {
       const dx = e.clientX - g.x
       const speed = Math.abs(dx) / Math.max(e.timeStamp - g.at, 1)
       const far = Math.abs(dx) > Math.max(56, g.width * 0.22) || (speed > FLICK && Math.abs(dx) > 24)
-      if (far && index === 1 && dx > 0) next = 'timeline'
-      else if (far && index === 0 && dx < 0) next = 'overview'
+      // One page along, the way the finger went (to the left brings the page on the right), and no further than the ends.
+      if (far) next = ORDER[Math.min(LAST, Math.max(0, index + (dx < 0 ? 1 : -1)))]
     }
     // Easing comes back and the pages are sent to where they belong, in the same frame, so they glide there from where the finger left them.
-    const to = next === 'timeline' ? 0 : 1
+    const to = INDEX[next]
     placeTimeline(panels.current.timeline, to === 0 ? 1 : 0, g.width)
     if (trackEl.current) {
       trackEl.current.dataset.dragging = 'false'
@@ -235,24 +251,24 @@ export function HomePager({ overview, timeline }: Props) {
 
   useLayoutEffect(() => {
     const active = panels.current[view]
-    const other = panels.current[view === 'overview' ? 'timeline' : 'overview']
-    if (!active || !other) return
-    // The page in view is as tall as what is in it (it may have been cut to size while it was the other one), and so is the other
+    const others = ORDER.filter((id) => id !== view).map((id) => panels.current[id])
+    if (!active || others.some((o) => !o)) return
+    // The page in view is as tall as what is in it (it may have been cut to size while it was another), and so are the others
     // while the pages move.
     active.style.height = ''
     if (!rest) {
-      other.style.height = ''
+      for (const o of others) o!.style.height = ''
       return
     }
     const fit = () => {
-      other.style.height = `${active.offsetHeight}px`
+      for (const o of others) o!.style.height = `${active.offsetHeight}px`
     }
     fit()
     if (typeof ResizeObserver === 'undefined') return
     const watch = new ResizeObserver(fit)
     watch.observe(active)
     return () => watch.disconnect()
-  }, [view, rest, built])
+  }, [view, rest, built, calBuilt])
 
   return (
     <div
@@ -268,8 +284,8 @@ export function HomePager({ overview, timeline }: Props) {
         e.stopPropagation()
       }}
     >
-      <div role="group" aria-label="Home view" className="relative mt-4 grid grid-cols-2 rounded-full bg-surface-2 p-1 shadow-[inset_0_0_0_1px_var(--ring)]">
-        <span ref={pillEl} aria-hidden="true" data-dragging={dragging} className="pager-pill absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-btn" style={{ transform: pillTransform(index) }} />
+      <div role="group" aria-label="Home view" className="relative mt-4 grid grid-cols-3 rounded-full bg-surface-2 p-1 shadow-[inset_0_0_0_1px_var(--ring)]">
+        <span ref={pillEl} aria-hidden="true" data-dragging={dragging} className="pager-pill absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-full bg-btn" style={{ transform: pillTransform(index) }} />
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -290,8 +306,18 @@ export function HomePager({ overview, timeline }: Props) {
           <div ref={(el) => void (panels.current.timeline = el)} data-page="timeline" data-rest={rest && view !== 'timeline'} inert={rest && view !== 'timeline'} className="pager-panel">
             {built && timeline}
           </div>
-          <div ref={(el) => void (panels.current.overview = el)} data-page="overview" data-rest={rest && view !== 'overview'} inert={rest && view !== 'overview'} className="pager-panel">
+          <div
+            ref={(el) => void (panels.current.overview = el)}
+            data-page="overview"
+            data-rest={rest && view !== 'overview'}
+            data-edge={view === 'calendar' ? 'right' : undefined}
+            inert={rest && view !== 'overview'}
+            className="pager-panel"
+          >
             {overview}
+          </div>
+          <div ref={(el) => void (panels.current.calendar = el)} data-page="calendar" data-rest={rest && view !== 'calendar'} inert={rest && view !== 'calendar'} className="pager-panel">
+            {calBuilt && calendar}
           </div>
         </div>
       </div>
