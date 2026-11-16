@@ -150,6 +150,40 @@ function tilesFor(s: YearStory, categoryById: Ledger['categoryById'], currency: 
     })
   }
 
+  if (s.emi) {
+    const e = s.emi
+    tiles.push({
+      id: 'emi',
+      node: ({ index, active, next, last }) => (
+        <Reel id="emi" index={index} active={active} hue="var(--s9)" icon="emi" eyebrow="EMIs and loans" title="Paying off what you owe took" last={last} onNext={next}>
+          <span className={BIG} style={{ '--d': '300ms' } as CSSProperties}>
+            <Money minor={e.totalMinor} currency={currency} active={active} />
+          </span>
+          <Line delay={650}>
+            {`${e.count} ${e.count === 1 ? 'payment' : 'payments'} on EMIs and loans, which is ${percent(e.share)} of your year.`}
+          </Line>
+        </Reel>
+      ),
+    })
+  }
+
+  if (s.card) {
+    const c = s.card
+    tiles.push({
+      id: 'card',
+      node: ({ index, active, next, last }) => (
+        <Reel id="card" index={index} active={active} hue="var(--s11)" icon="card" eyebrow="Credit cards" title="Paying your cards took" last={last} onNext={next}>
+          <span className={BIG} style={{ '--d': '300ms' } as CSSProperties}>
+            <Money minor={c.totalMinor} currency={currency} active={active} />
+          </span>
+          <Line delay={650}>
+            {`${c.count} ${c.count === 1 ? 'payment' : 'payments'} towards credit card bills, which is ${percent(c.share)} of your year.`}
+          </Line>
+        </Reel>
+      ),
+    })
+  }
+
   const highest = Math.max(...s.months)
   tiles.push({
     id: 'months',
@@ -257,13 +291,13 @@ function tilesFor(s: YearStory, categoryById: Ledger['categoryById'], currency: 
     tiles.push({
       id: 'bills',
       node: ({ index, active, next, last }) => (
-        <Reel id="bills" index={index} active={active} hue="var(--s6)" icon="receipt" eyebrow="Bills, recharges and EMIs" title="What you had to pay." last={last} onNext={next}>
+        <Reel id="bills" index={index} active={active} hue="var(--s6)" icon="receipt" eyebrow="Bills" title="What you had to pay." last={last} onNext={next}>
           <span className={BIG} style={{ '--d': '300ms' } as CSSProperties}>
             <Money minor={b.totalMinor} currency={currency} active={active} />
           </span>
           <Line delay={650}>
             <b>{percent(b.shareOfMonth)}</b>
-            {' of your year went on them.'}
+            {' of your year went on bills.'}
           </Line>
           <ul aria-label="What the bills were" className="mt-6 space-y-2.5">
             {b.parts.map((p, i) => (

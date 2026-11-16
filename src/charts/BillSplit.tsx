@@ -10,7 +10,7 @@ const ICON: Record<BillKind, IconName> = { emi: 'emi', recharge: 'recharge', uti
 const COLOR: Record<BillKind, string> = { emi: 'var(--s1)', recharge: 'var(--s2)', utilities: 'var(--s3)', insurance: 'var(--s7)', bills: 'var(--s5)' }
 
 /**
- * How what went on bills, recharges and EMIs divides: one bar cut into its parts, and under it each part with its icon,
+ * How what went on bills divides: one bar cut into its parts, and under it each part with its icon,
  * its share of the bills and its amount. The sentence above says what the whole came to and how much of the month it was.
  */
 export function BillSplit({ split, currency, monthName }: { split: Split; currency: string; monthName: string }) {
@@ -21,7 +21,7 @@ export function BillSplit({ split, currency, monthName }: { split: Split; curren
     <div ref={watch} data-seen={seen} className="when-seen mt-3 rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_var(--ring)]">
       <p data-testid="bill-total" className="text-lg leading-snug">
         <b className="font-semibold">{money(split.totalMinor)}</b>
-        {` went on bills, recharges and EMIs in ${monthName}, ${formatShare(split.shareOfMonth)} of everything you spent.`}
+        {` went on bills in ${monthName}, ${formatShare(split.shareOfMonth)} of everything you spent.`}
       </p>
 
       <div role="img" aria-label={split.parts.map((p) => `${BILL_LABELS[p.kind]} ${formatShare(p.shareOfBills)}`).join(', ')} className="mt-3 flex h-3.5 gap-0.5 overflow-hidden rounded-full">
@@ -35,7 +35,7 @@ export function BillSplit({ split, currency, monthName }: { split: Split; curren
         ))}
       </div>
 
-      <ul aria-label="Bills, recharges and EMIs, by part" className="mt-2 divide-y divide-line">
+      <ul aria-label="Bills, by part" className="mt-2 divide-y divide-line">
         {split.parts.map((p) => (
           <li key={p.kind} data-kind={p.kind} aria-label={`${BILL_LABELS[p.kind]}, ${formatShare(p.shareOfBills)} of your bills, ${money(p.totalMinor)}, ${p.count} ${p.count === 1 ? 'payment' : 'payments'}`} className="flex min-h-14 items-center gap-3 py-2.5">
             <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-full" style={{ background: `color-mix(in oklab, ${COLOR[p.kind]} 22%, var(--surface))` }}>

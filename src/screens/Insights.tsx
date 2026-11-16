@@ -35,7 +35,7 @@ import {
   topMerchants,
   type MonthKey,
 } from '../insights/aggregates'
-import { splitBills, splitCategoryTotals } from '../insights/billSplit'
+import { BILL_ONLY, splitBills, splitCategoryTotals } from '../insights/billSplit'
 import { placesIn } from '../insights/places'
 import { regularPayments } from '../insights/regular'
 import { detectRecurring } from '../insights/recurring'
@@ -192,7 +192,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
     const balanceCheck =
       regular && balanceSet ? forecast(estimatedBalanceMinor, upcomingPayments(recurring, todayKey, 30, moneyIn), todayKey) : null
 
-    const billSplit = splitBills(monthTxs, categoryById, recurring)
+    const billSplit = splitBills(monthTxs, categoryById, recurring, BILL_ONLY)
     // What the category charts draw: bills divided into what they were for, where there is more than one part.
     const catParts = splitCategoryTotals(monthTxs, categoryById, recurring)
 
@@ -593,7 +593,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
           </Section>
 
           {billSplit && (
-            <Section id="bills-h" title="Bills, recharges and EMIs" intro="How the money that went on bills divides, wherever it was filed.">
+            <Section id="bills-h" title="Bills" intro="How the money that went on bills divides. EMIs, recharges and credit cards are counted apart, above.">
               <BillSplit split={billSplit} currency={currency} monthName={name} />
             </Section>
           )}

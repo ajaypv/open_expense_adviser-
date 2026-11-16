@@ -1,6 +1,7 @@
 import type { Category, Recurring, Transaction } from '../db/schema'
 import { byCategory, byWeekday, sum, topMerchants, type CategoryTotal } from './aggregates'
-import { billKindOf, splitBills, type BillSplit } from './billSplit'
+import { BILL_ONLY, billKindOf, splitBills, type BillSplit } from './billSplit'
+import { separateCategoryFor } from '../db/defaultCategories'
 
 /** A category's place in the year. */
 export interface RankedCategory extends CategoryTotal {
@@ -32,7 +33,11 @@ export interface YearStory {
   weekdays: number[]
   /** The weekday spent most on (0 = Monday), with what went on it. */
   busiestWeekday: { weekday: number; totalMinor: number } | null
-  /** Bills, recharges and EMIs together, and how they divide; null when none. */
+  /** What went on EMIs and loans, how many payments and its share of the year; null when nothing did. */
+  emi: { totalMinor: number; count: number; share: number } | null
+  /** What went on paying credit card bills, the same; null when nothing did. */
+  card: { totalMinor: number; count: number; share: number } | null
+  /** Bills as such (electricity, water, internet, insurance, the rest), and how they divide; null when none. EMIs, recharges and cards are told apart. */
   bills: BillSplit | null
   /** Money received in the year, when any was. */
   receivedMinor: number
@@ -76,8 +81,12 @@ export function yearStory(expenses: Transaction[], income: Transaction[], catego
   const weekdays = byWeekday(txs)
   const peak = Math.max(...weekdays)
 
-  const bills = splitBills(txs, categoryById, recurring)
-  const recharge = bills?.parts.find((p) => p.kind === 'recharge')
+  const everything = splitBills(txs, categoryById, recurring)
+  const bills = splitBills(txs, categoryById, recurring, BILL_ONLY)
+  const recharge = everything?.parts.find((p) => p.kind === 'recharge')
+  const emi = everything?.parts.find((p) => p.kind === 'emi')
+  const cardTxs = txs.filter((t) => categoryById.get(t.categoryId)?.name === 'Credit Card' || separateCategoryFor(t.merchant) === 'Credit Card')
+  const cardMinor = sum(cardTxs)
   // Months that had a phone payment, so "a month" is what a month with one cost, not spread over a year that did not have it.
   const phoneMonths = new Set(txs.filter((t) => billKindOf(t, categoryById.get(t.categoryId)?.name) === 'recharge').map((t) => t.date.slice(0, 7))).size
 
@@ -93,6 +102,8 @@ export function yearStory(expenses: Transaction[], income: Transaction[], catego
     perDayMinor: wholeUnits(totalMinor / daysSoFar),
     categories,
     phone: recharge ? { totalMinor: recharge.totalMinor, count: recharge.count, perMonthMinor: wholeUnits(recharge.totalMinor / Math.max(1, phoneMonths)), share: recharge.shareOfMonth } : null,
+    emi: emi ? { totalMinor: emi.totalMinor, count: emi.count, share: emi.shareOfMonth } : null,
+    card: cardTxs.length > 0 ? { totalMinor: cardMinor, count: cardTxs.length, share: totalMinor > 0 ? cardMinor / totalMinor : 0 } : null,
     months,
     priciestMonth,
     cheapestMonth: cheapestMonth && cheapestMonth.month !== priciestMonth.month ? cheapestMonth : null,

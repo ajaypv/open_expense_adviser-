@@ -43,7 +43,7 @@ const ids = () => [...document.querySelectorAll('[data-reel]')].map((t) => (t as
 describe('Year reels', () => {
   it('is a page of full-screen tiles, in order, that snap one at a time as they are scrolled', () => {
     mount()
-    expect(ids()).toEqual(['start', 'category', 'phone', 'months', 'biggest', 'favourite', 'weekday', 'bills', 'end'])
+    expect(ids()).toEqual(['start', 'category', 'phone', 'months', 'biggest', 'favourite', 'weekday', 'end'])
     const scroller = screen.getByRole('region', { name: /one tile at a time/ })
     expect(scroller).toHaveClass('snap-y', 'snap-mandatory', 'overflow-y-auto')
     for (const t of document.querySelectorAll('[data-reel]')) expect(t).toHaveClass('h-dvh', 'snap-start', 'snap-always')
@@ -92,10 +92,24 @@ describe('Year reels', () => {
     expect(tile('favourite')).toHaveTextContent('2×')
   })
 
-  it('says what the bills came to, part by part', () => {
-    mount()
+  it('says what the bills came to, part by part, apart from recharges, EMIs and cards', () => {
+    mount([...full, tx('2026-04-03', 2500, 2, 'BESCOM')])
     const items = within(tile('bills')).getAllByRole('listitem').map((li) => li.textContent)
-    expect(items.some((t) => t?.includes('Mobile and DTH recharges'))).toBe(true)
+    expect(items).toEqual([expect.stringContaining('Electricity, water, gas and internet')])
+    expect(items.some((t) => t?.includes('Mobile and DTH recharges'))).toBe(false)
+  })
+
+  it('tells what went on EMIs and on credit card bills in a tile each, and leaves them out when there were none', () => {
+    mount([...full, tx('2026-05-02', 8000, 2, 'HDFC home loan EMI'), tx('2026-06-02', 8000, 2, 'HDFC home loan EMI'), tx('2026-06-20', 5000, 2, 'CRED card bill')])
+    expect(ids()).toEqual(['start', 'category', 'phone', 'emi', 'card', 'months', 'biggest', 'favourite', 'weekday', 'end'])
+    expect(tile('emi')).toHaveTextContent('₹16,000')
+    expect(tile('emi')).toHaveTextContent('2 payments on EMIs and loans')
+    expect(tile('card')).toHaveTextContent('₹5,000')
+    expect(tile('card')).toHaveTextContent('1 payment towards credit card bills')
+    cleanup()
+    mount()
+    expect(ids()).not.toContain('emi')
+    expect(ids()).not.toContain('card')
   })
 
   it('ends by saying what came in against what went out, when something came in, and can be watched again', async () => {
@@ -112,9 +126,9 @@ describe('Year reels', () => {
   it('has a row of marks, one for each tile, and says how far through it is', () => {
     mount()
     const bar = screen.getByRole('progressbar', { name: 'How far through your year' })
-    expect(bar).toHaveAttribute('aria-valuemax', '9')
+    expect(bar).toHaveAttribute('aria-valuemax', '8')
     expect(bar).toHaveAttribute('aria-valuenow', '1')
-    expect(bar.querySelectorAll('[data-mark]')).toHaveLength(9)
+    expect(bar.querySelectorAll('[data-mark]')).toHaveLength(8)
   })
 
   it('moves to the next tile from the arrow on each, and has none on the last', () => {
