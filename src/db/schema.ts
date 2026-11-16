@@ -218,6 +218,18 @@ db.version(5).stores({ goals: '++id' })
 // v6: people you send money to. A new table only, so nothing existing needs migrating.
 db.version(6).stores({ people: '++id, name' })
 
+// v7: EMI and Recharge are categories of their own, so they stop being counted under Bills & Utilities. Added only when missing; nothing
+// already filed is moved, so every total stays as it was until the person files a payment there.
+db.version(7)
+  .stores({})
+  .upgrade(async (tx) => {
+    const cats = tx.table('categories')
+    for (const c of DEFAULT_CATEGORIES) {
+      if (c.name !== 'EMI' && c.name !== 'Recharge') continue
+      if (!(await cats.where('name').equals(c.name).first())) await cats.add({ name: c.name, color: c.color })
+    }
+  })
+
 db.on('populate', (tx) => {
   void tx.table('categories').bulkAdd(DEFAULT_CATEGORIES.map((c) => ({ ...c })))
   void tx.table('accounts').add({ name: 'Main', openingMinor: null })

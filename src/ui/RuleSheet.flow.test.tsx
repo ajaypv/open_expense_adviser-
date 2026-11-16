@@ -13,6 +13,7 @@ const categories: Category[] = [
   { id: 3, name: 'Entertainment & Travel', color: 'var(--s3)' },
   { id: 4, name: 'Other', color: 'var(--other)' },
   { id: 5, name: 'Income', color: 'var(--ink-2)' },
+  { id: 6, name: 'EMI', color: 'var(--s9)' },
 ]
 const oneAccount: Account[] = [{ id: 1, name: 'Main', openingMinor: null }]
 const twoAccounts: Account[] = [...oneAccount, { id: 2, name: 'HDFC', openingMinor: null }]
@@ -49,7 +50,7 @@ describe('Add a regular payment', () => {
     await waitFor(async () => expect(await rows()).toHaveLength(1))
     expect((await rows())[0]).toMatchObject({
       kind: 'expense', merchant: 'Home loan', amountMinor: 1_250_000, currency: 'INR', frequency: 'monthly',
-      nextDue: '2026-11-05', anchorDay: 5, tag: 'loan', active: true, categoryId: 2,
+      nextDue: '2026-11-05', anchorDay: 5, tag: 'loan', active: true, categoryId: 6,
     })
     expect(onClose).toHaveBeenCalled()
     expect(await screen.findByText('Added Home loan')).toBeInTheDocument()

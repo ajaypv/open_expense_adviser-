@@ -54,7 +54,7 @@ describe('The pop-up shows which category the money goes to', () => {
     ['1200 groceries', 'cart', 'Groceries'],
     ['230 uber', 'car', 'Transport'],
     ['999 electricity', 'receipt', 'Bills & Utilities'],
-    ['299 jio recharge', 'recharge', 'Bills & Utilities'],
+    ['299 jio recharge', 'recharge', 'Recharge'],
     ['600 pharmacy', 'heart', 'Health'],
     ['500 netflix', 'ticket', 'Entertainment & Travel'],
     ['1500 amazon', 'bag', 'Shopping'],

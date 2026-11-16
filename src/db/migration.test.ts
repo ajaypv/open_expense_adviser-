@@ -39,7 +39,7 @@ describe('database v1 -> v2 migration', () => {
     const cats = await db.categories.toArray()
     const names = cats.map((c) => c.name).sort()
     expect(names).toEqual(
-      ['Bills & Utilities', 'Entertainment & Travel', 'Food & Dining', 'Groceries', 'Health', 'Income', 'Other', 'Rent & Housing', 'Shopping', 'Transport'].sort(),
+      ['Bills & Utilities', 'EMI', 'Entertainment & Travel', 'Food & Dining', 'Groceries', 'Health', 'Income', 'Other', 'Recharge', 'Rent & Housing', 'Shopping', 'Transport'].sort(),
     )
 
     const txs = await db.transactions.toArray()
@@ -63,6 +63,16 @@ describe('database v1 -> v2 migration', () => {
     expect((await db.categories.where('name').equals('Income').toArray()).length).toBe(1)
   })
 
+  it('adds EMI and Recharge once to an older database, and leaves what was filed where it was', async () => {
+    const ids = await seedV1()
+    const { db } = await import('./schema')
+    await db.open()
+    expect(await db.categories.where('name').equals('EMI').count()).toBe(1)
+    expect(await db.categories.where('name').equals('Recharge').count()).toBe(1)
+    expect((await db.transactions.toArray()).map((t) => t.categoryId).sort()).toHaveLength(3)
+    void ids
+  })
+
   it('re-colours categories with theme-aware CSS variables', async () => {
     await seedV1()
     const { db } = await import('./schema')
@@ -72,10 +82,10 @@ describe('database v1 -> v2 migration', () => {
     expect(cats.find((c) => c.name === 'Other')!.color).toBe('var(--other)')
   })
 
-  it('creates the ten default categories (including Income) on a brand-new database', async () => {
+  it('creates the twelve default categories (including Income, EMI and Recharge) on a brand-new database', async () => {
     const { db } = await import('./schema')
     await db.open()
-    expect(await db.categories.count()).toBe(10)
+    expect(await db.categories.count()).toBe(12)
   })
 })
 
