@@ -30,7 +30,7 @@ const TAG_DETAIL: Record<RecurringTag, string> = {
 
 /** The category an expense is filed under when none is chosen, by what kind of payment it is. */
 const DEFAULT_CATEGORY: Record<RecurringTag, string> = {
-  loan: 'Bills & Utilities',
+  loan: 'EMI',
   autopay: 'Other',
   subscription: 'Entertainment & Travel',
   bill: 'Bills & Utilities',

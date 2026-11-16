@@ -6,9 +6,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LedgerTx } from '../data/buildLedger'
 import { reloadDisplay } from '../data/display'
 import { useLedger } from '../data/useLedger'
-import { addCreditCard } from '../db/repo'
+import { addCreditCard, setCardStyle } from '../db/repo'
 import { db } from '../db/schema'
 import { CardsCard } from './CardsCard'
+import { defaultCardStyle } from '../db/cardStyles'
 import { CardsSheet } from './CardsSheet'
 import { ToastProvider } from './toast'
 
@@ -250,8 +251,9 @@ describe('Credit cards: paying the bill', () => {
     fireEvent.change(screen.getByLabelText('On'), { target: { value: '2026-11-03' } })
     await user.click(screen.getByRole('button', { name: 'Record payment' }))
     await waitFor(async () => expect((await transfers()).some((t) => t.amountMinor === 120_050 && t.date === '2026-11-03')).toBe(true))
-    expect(await screen.findByText(/You owe/)).toBeInTheDocument()
-    expect(await screen.findByText('₹1,299.50')).toBeInTheDocument() // 2,500 less 1,200.50
+    const standing = await screen.findByRole('region', { name: 'HDFC card standing' })
+    expect(await within(standing).findByText(/You owe/)).toBeInTheDocument()
+    expect(await within(standing).findByText('₹1,299.50')).toBeInTheDocument() // 2,500 less 1,200.50
   })
 
   it('takes a payment back with Undo', async () => {
@@ -330,5 +332,46 @@ describe('The card on Home', () => {
     await addCreditCard('HDFC card', { dueDay: 8 })
     render(<Card onOpen={() => {}} />)
     expect(await screen.findByText('Nothing owed')).toBeInTheDocument()
+  })
+})
+
+function HomeCard() {
+  return <CardsCard ledger={useLedger()} today={today} onOpen={() => {}} />
+}
+
+describe('The card, drawn', () => {
+  it('shows the card itself at the top of the sheet, with its name, what is owed and when the bill is due', async () => {
+    await seedCard({ dueDay: 8 })
+    mount()
+    const art = await screen.findByText('HDFC card', { selector: '[data-card-style] *' })
+    const card = art.closest('[data-card-style]') as HTMLElement
+    expect(card).toHaveAttribute('aria-hidden', 'true')
+    expect(card).toHaveTextContent('You owe')
+    expect(card).toHaveTextContent('₹2,500')
+    expect(card).toHaveTextContent(/Due .*8/)
+  })
+
+  it('gives a card the look chosen for it, and a look of its own until one is', async () => {
+    const id = await seedCard()
+    mount()
+    const first = (await screen.findByText('HDFC card', { selector: '[data-card-style] *' })).closest('[data-card-style]') as HTMLElement
+    expect(first.dataset.cardStyle).toBe(defaultCardStyle(id))
+  })
+
+  it('draws the look that was chosen in Settings', async () => {
+    const id = await seedCard()
+    await setCardStyle(id, 'gray-dark')
+    mount()
+    const card = (await screen.findByText('HDFC card', { selector: '[data-card-style] *' })).closest('[data-card-style]') as HTMLElement
+    expect(card.dataset.cardStyle).toBe('gray-dark')
+  })
+
+  it('says it as a card on Home too, small, in the card’s own look, where the round icon was', async () => {
+    const id = await seedCard()
+    await setCardStyle(id, 'salmon-strip')
+    render(<HomeCard />)
+    const button = await screen.findByRole('button', { name: /Credit cards: you owe/ })
+    expect(button.querySelector('[data-card-style="salmon-strip"]')).not.toBeNull()
+    expect(button.querySelector('[data-icon="card"]')).toBeNull()
   })
 })

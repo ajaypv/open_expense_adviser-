@@ -68,6 +68,22 @@ describe('the back stack, on its own', () => {
     expect(stray).toHaveBeenCalledOnce() // and the next one still works as normal
   })
 
+  it('hands the step over when one thing closes as another opens in the same breath, so back closes the new one', async () => {
+    const second = vi.fn()
+    const done = pushBackEntry(() => {})
+    const before = history.length
+    // One sheet gives up its place and the next takes it, with nothing between: as the quick add hands over to the full form.
+    done()
+    pushBackEntry(second)
+    await settle()
+    // No second step was added, and none was stepped back over.
+    expect(history.length).toBe(before)
+    expect(backDepth()).toBe(1)
+    await pressBack()
+    expect(second).toHaveBeenCalledOnce()
+    expect(backDepth()).toBe(0)
+  })
+
   it('closes the right thing when a lower one is closed while a higher one is still open', async () => {
     const lower = vi.fn()
     const upper = vi.fn()

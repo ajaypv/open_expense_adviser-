@@ -3,7 +3,7 @@ import { currencyOptions } from '../../db/currencies'
 import { setCurrency, setRate } from '../../db/repo'
 import { PickerField } from '../../ui/PickerField'
 import { useToast } from '../../ui/toast'
-import { card, CURRENCIES, field, Group, Status, type Ledger } from './parts'
+import { card, cardTitle, CURRENCIES, field, Group, HowItWorks, Status, type Ledger } from './parts'
 
 /** "1 USD = [83.2] INR". Saves when the field loses focus or Enter is pressed. */
 function RateRow({ code, base, rate }: { code: string; base: string; rate: number | undefined }) {
@@ -32,7 +32,7 @@ function RateRow({ code, base, rate }: { code: string; base: string; rate: numbe
 
   return (
     <li className="flex items-center gap-3 px-4 py-2.5">
-      <label htmlFor={`rate-${code}`} className="flex-1 whitespace-nowrap">
+      <label htmlFor={`rate-${code}`} className="num flex-1 whitespace-nowrap">
         1 {code} =
       </label>
       <input
@@ -91,18 +91,17 @@ export function CurrencySection({ ledger }: { ledger: Ledger }) {
             showDetail
           />
         </div>
-        <p className="mt-2 text-sm text-ink-2">
-          All totals and charts are shown in {currency}. Amounts recorded in another currency are converted using the
-          rates below. If you change this, set a rate for your older amounts too.
-        </p>
+        <p className="mt-2 text-sm text-ink-2">All totals and charts are shown in {currency}.</p>
+        <HowItWorks className="mt-1">
+          <p>Amounts recorded in another currency are converted using the rates below.</p>
+          <p>If you change the main currency, set a rate for your older amounts too.</p>
+        </HowItWorks>
       </div>
 
       {(rows.length > 0 || addable.length > 0) && (
         <div className={`${card} mt-3`}>
-          <p className="px-4 pt-4 font-medium">Exchange rates</p>
-          <p className="px-4 pb-2 text-sm text-ink-2">
-            What one unit of each currency is worth in {currency}. Update them whenever you like; totals recalculate.
-          </p>
+          <p className={`px-4 pt-4 ${cardTitle}`}>Exchange rates</p>
+          <p className="px-4 pb-2 text-sm text-ink-2">What one unit of each currency is worth in {currency}. Totals recalculate when you change one.</p>
           {missingRates.length > 0 && (
             <p role="alert" className="mx-4 mb-2 rounded-xl bg-surface-2 px-3 py-2 text-sm text-critical">
               Set a rate for {missingRates.join(', ')}. Until then those amounts are counted at face value.

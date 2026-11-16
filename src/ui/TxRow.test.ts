@@ -66,10 +66,13 @@ describe('TxRow', () => {
     expect(row(backdated, food, { showTime: true })).not.toMatch(/\d{1,2}:05/)
   })
 
-  it('keeps a spoken label and flags saved locations', () => {
+  it('keeps a spoken label, and shows no pin or mention of a saved location on the row', () => {
     const html = row(tx({ location: { lat: 1, lon: 2, accuracyM: 3 } }))
-    expect(html).toContain('aria-label="Edit spent Swiggy, ₹450, Food &amp; Dining, added with location"')
-    expect(html).toContain('Added with location')
+    expect(html).toContain('aria-label="Edit spent Swiggy, ₹450, Food &amp; Dining"')
+    expect(html).not.toContain('Added with location')
+    expect(html).not.toContain('added with location')
+    expect(html).not.toContain('M12 21s7-6.2 7-11.5') // the pin
+    expect(row(tx())).toBe(html)
   })
 
   it('never prints NaN or undefined', () => {
@@ -77,23 +80,24 @@ describe('TxRow', () => {
   })
 })
 
-describe('TxRow: entries the app added or brought in', () => {
-  it('says "Recurring" on an entry added from a regular payment, and "Imported" on one from a file', () => {
+describe('TxRow: entries the app added', () => {
+  it('says "Recurring" on an entry added from a regular payment, and nothing on one imported from a file', () => {
     expect(row(tx({ source: 'recurring' }))).toContain('>Recurring<')
-    expect(row(tx({ source: 'import' }))).toContain('>Imported<')
+    const imported = row(tx({ source: 'import' }))
+    expect(imported).not.toContain('Imported')
+    expect(imported).not.toContain('imported from a file')
+    expect(imported).toBe(row(tx({ source: 'manual' })))
   })
 
   it('says nothing extra on an entry you typed or entered with the form', () => {
     for (const source of ['manual', 'chat'] as const) {
       const html = row(tx({ source }))
       expect(html).not.toContain('>Recurring<')
-      expect(html).not.toContain('>Imported<')
     }
   })
 
   it('tells a screen reader too', () => {
     expect(row(tx({ source: 'recurring' }))).toContain('added from a regular payment')
-    expect(row(tx({ source: 'import' }))).toContain('imported from a file')
     expect(row(tx({ source: 'manual' }))).not.toContain('added from a regular payment')
   })
 })

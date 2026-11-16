@@ -41,9 +41,14 @@ describe('GoalsButton', () => {
     expect(render([goal({ savedMinor: 2_500_000 }), goal()])).toContain('aria-label="Goals. 2 goals, 60% saved, 1 reached"')
   })
 
-  it('shows a progress ring only once there is a goal to measure', () => {
-    expect((render([]).match(/<circle/g) ?? []).length).toBe(0)
-    expect((render([goal()]).match(/<circle/g) ?? []).length).toBe(2) // the track and the progress
+  it('is drawn as the other places in the bar are: a plain 21 px icon in the same pill, whether or not there are goals', () => {
+    for (const goals of [[], [goal()]]) {
+      const html = render(goals)
+      expect(html).not.toContain('<circle') // no ring of progress
+      expect(html).toContain('flex h-7 w-12 items-center justify-center rounded-full')
+      expect(html).toMatch(/<svg[^>]*width="21"[^>]*height="21"|<svg[^>]*height="21"[^>]*width="21"/)
+      expect(html).toContain('text-muted')
+    }
   })
 
   it('is big enough to tap', () => {

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import '../test/dom'
-import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { cleanup, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
 import type { Category, Recurring } from '../db/schema'
 import { makeLedger } from '../test/ledger'
 import { PlanAhead } from './PlanAhead'
@@ -18,12 +19,12 @@ const emi = rule({ merchant: 'Home loan', amountMinor: 1_250_000, tag: 'loan', n
 const rent = rule({ merchant: 'Rent', amountMinor: 600_000, tag: 'bill', nextDue: '2026-10-31' })
 const salary = rule({ merchant: 'Salary', kind: 'income', amountMinor: 8_000_000, tag: 'income', nextDue: '2026-11-01' })
 
-function mount(rules: Recurring[], balance: number | null = null) {
+function mount(rules: Recurring[], balance: number | null = null, onOpen?: () => void) {
   const ledger = makeLedger({
     categories, expenseCategories: categories, categoryById: new Map(categories.map((c) => [c.id, c])),
     recurring: rules, balanceSet: balance !== null, estimatedBalanceMinor: balance ?? 0,
   })
-  const { container } = render(<PlanAhead ledger={ledger} today={today} />)
+  const { container } = render(<PlanAhead ledger={ledger} today={today} onOpen={onOpen} />)
   return { container }
 }
 
@@ -98,9 +99,43 @@ describe('PlanAhead: what to save', () => {
 })
 
 describe('PlanAhead: around it', () => {
-  it('has no button of its own to open the list, since Coming up has it and two would be read out alike', () => {
+  it('has a View button only where there is a page to open, and it opens it', async () => {
     mount([emi, rent])
     expect(within(section()).queryByRole('button')).toBeNull()
+    cleanup()
+    const onOpen = vi.fn()
+    mount([emi, rent], null, onOpen)
+    await userEvent.click(within(section()).getByRole('button', { name: 'View plan ahead' }))
+    expect(onOpen).toHaveBeenCalledTimes(1)
+    // One button, so a screen reader hears it once; it reads differently from the Coming up card's.
+    expect(within(section()).getAllByRole('button')).toHaveLength(1)
+  })
+
+  it('is a row of cards that scrolls sideways: every payment, soonest first, then the amount to keep aside', () => {
+    mount([emi, rent, salary])
+    const strip = section().querySelector('ul')!
+    expect(strip.className).toContain('overflow-x-auto')
+    expect(strip.className).toContain('snap-x')
+    expect(strip.querySelectorAll(':scope > li')).toHaveLength(4) // rent, salary, EMI, to pay
+    expect(strip.querySelectorAll('[data-icon]')).toHaveLength(3) // each payment has a round icon of what it is for
+    const text = strip.textContent!
+    expect(text.indexOf('Rent')).toBeLessThan(text.indexOf('Salary'))
+    expect(text.indexOf('Salary')).toBeLessThan(text.indexOf('Home loan'))
+  })
+
+  it('says what kind a payment is on its card, unless it is one the plan points out', () => {
+    mount([emi, rent, salary])
+    expect(section().querySelector('[data-kind="payment"]')).toHaveTextContent('Bill') // the rent: the EMI is the biggest, so rent is not
+    expect(section().querySelector('[data-kind="payment"]')).toHaveTextContent('Rent')
+  })
+
+  it('puts the warning first when the balance will not cover what is due, and last otherwise', () => {
+    mount([emi, rent], 1_000_000)
+    expect(section().querySelector('ul > li:first-child')).toHaveAttribute('data-tone', 'short')
+    cleanup()
+    mount([emi, rent])
+    expect(section().querySelector('ul > li:last-child')).toHaveAttribute('data-tone', 'plain')
+    expect(section().querySelector('ul > li:first-child')).toHaveAttribute('data-kind', 'payment') // rent, the soonest
   })
 
   it('is not there at all with no regular payments set up', () => {
@@ -111,5 +146,234 @@ describe('PlanAhead: around it', () => {
   it('is not there when every payment is switched off', () => {
     const { container } = mount([{ ...emi, active: false }])
     expect(container).toBeEmptyDOMElement()
+  })
+})
+
+
+describe('PlanAhead: the sentence, the balance line and the long list', () => {
+  const money = (rules: Recurring[], balance: number | null) => {
+    cleanup()
+    mount(rules, balance)
+    return section()
+  }
+
+  it('says what goes out and what comes in over the next 30 days', () => {
+    const s = money([emi, rent, salary], null)
+    expect(s).toHaveTextContent('In the next 30 days, ₹18,500 goes out and ₹80,000 comes in.')
+  })
+
+  it('leaves out "comes in" when nothing does', () => {
+    expect(money([emi, rent], null)).toHaveTextContent('In the next 30 days, ₹18,500 goes out.')
+    expect(section()).not.toHaveTextContent('comes in')
+  })
+
+  it('says in a line whether the balance covers it, in words as well as an icon', () => {
+    expect(money([emi, rent], 9_000_000)).toHaveTextContent('Your balance covers the next 30 days.')
+    expect(money([emi, rent], 1_000_000)).toHaveTextContent('Your balance will not cover all of these.')
+    expect(money([emi, rent], null)).toHaveTextContent('Set your balance to check these are covered.')
+    expect(section()).not.toHaveTextContent('will not cover')
+  })
+
+  it('shows only the first six, and a last card says how many more, opening the page', async () => {
+    const rules = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((m, i) => rule({ merchant: m, amountMinor: 20_000 - i, nextDue: '2026-11-0' + (i + 1), tag: 'bill' }))
+    const onOpen = vi.fn()
+    cleanup()
+    mount(rules, null, onOpen)
+    expect(within(section()).queryByText('H')).toBeNull()
+    expect(within(section()).getByText('A')).toBeInTheDocument()
+    await userEvent.click(within(section()).getByRole('button', { name: 'See all 8 payments' }))
+    expect(onOpen).toHaveBeenCalledOnce()
+    expect(section()).toHaveTextContent('+2')
+  })
+
+  it('always shows the ones it points out, even when they are far off', () => {
+    const near = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((m, i) => rule({ merchant: m, amountMinor: 10_000, nextDue: '2026-11-0' + (i + 1), tag: 'bill' }))
+    const big = rule({ merchant: 'Insurance', amountMinor: 9_000_000, nextDue: '2026-11-25', tag: 'bill' })
+    const s = money([...near, big], null)
+    expect(within(s).getByText('Insurance')).toBeInTheDocument()
+    expect(s.querySelector('[data-kind="biggest"]')).toHaveTextContent('Biggest payment ahead')
+  })
+
+  it('says so when something is set up but nothing is due soon', () => {
+    expect(money([rule({ nextDue: '2027-03-01' })], null)).toHaveTextContent('Nothing due in the next 30 days.')
+  })
+
+  it('invites a first payment, as one quiet line, when nothing is set up (or all is paused)', async () => {
+    cleanup()
+    const onSetUp = vi.fn()
+    const ledger = makeLedger({ categories, categoryById: new Map(categories.map((c) => [c.id, c])), recurring: [{ ...emi, active: false }] })
+    render(<PlanAhead ledger={ledger} today={today} onSetUp={onSetUp} />)
+    await userEvent.click(screen.getByRole('button', { name: /Track loans, auto-payments and salary/ }))
+    expect(onSetUp).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('region', { name: 'Plan ahead' })).toBeNull()
+  })
+})
+
+describe('PlanAhead: colours', () => {
+  const cats: Category[] = [
+    { id: 1, name: 'Bills', color: 'var(--s1)' },
+    { id: 2, name: 'Entertainment', color: 'var(--s4)' },
+  ]
+  const leaves = (rules: Recurring[]) => {
+    cleanup()
+    const ledger = makeLedger({ categories: cats, expenseCategories: cats, categoryById: new Map(cats.map((c) => [c.id, c])), recurring: rules })
+    render(<PlanAhead ledger={ledger} today={today} />)
+    return Array.from(section().querySelectorAll<HTMLElement>('[data-soon]')).map((l) => l.getAttribute('data-colour'))
+  }
+
+  it('gives each card its category colour, for its bar and badge, so they do not all look alike', () => {
+    const colours = leaves([rule({ merchant: 'Rent', categoryId: 1, nextDue: '2026-10-31' }), rule({ merchant: 'Netflix', categoryId: 2, nextDue: '2026-11-02' })])
+    expect(colours).toEqual(['var(--s1)', 'var(--s4)'])
+  })
+
+  it('keeps a late payment red, whatever its category', () => {
+    const colours = leaves([rule({ merchant: 'Rent', categoryId: 2, nextDue: '2026-10-25' }), rule({ merchant: 'Netflix', categoryId: 2, nextDue: '2026-11-02' })])
+    expect(colours.slice(0, 2)).toEqual(['var(--critical)', 'var(--s4)'])
+  })
+})
+
+describe('PlanAhead: the sentence picks out its two figures in pills', () => {
+  it('sets only the number 30 in bold, and the word days normal', () => {
+    mount([emi, rent, salary])
+    const days = Array.from(section().querySelectorAll('p b')).find((b) => b.textContent === '30')!
+    expect(days).toBeDefined()
+    expect(days.className).toContain('font-bold')
+    expect(days.parentElement!.textContent).toMatch(/^In the next 30 days, /)
+  })
+
+  it('sets what goes out and what comes in each in its own pill, in its own colour', () => {
+    mount([emi, rent, salary])
+    const out = section().querySelector('.mark-out')!
+    const inn = section().querySelector('.mark-in')!
+    expect(out.tagName).toBe('B')
+    expect(inn.tagName).toBe('B')
+    expect(out.textContent).toMatch(/^₹/)
+    expect(inn.textContent).toMatch(/^₹/)
+    expect(inn.className).toContain('text-good')
+  })
+
+  it('points an arrow up at what leaves and down at what arrives, for the eye only', () => {
+    mount([emi, rent, salary])
+    const arrow = (sel: string) => section().querySelector(sel)!.querySelector('span[aria-hidden="true"] svg')
+    expect(arrow('.mark-out')!.querySelector('path')!.getAttribute('d')).toBe('M12 19V6M6 12l6-6 6 6')
+    expect(arrow('.mark-in')!.querySelector('path')!.getAttribute('d')).toBe('M12 5v13M6 12l6 6 6-6')
+    // The figure is still read as the plain amount.
+    expect(section().querySelector('.mark-out')!.textContent).toMatch(/^₹[\d,]+$/)
+  })
+
+  it('has no pill for money in when none comes in', () => {
+    mount([emi, rent])
+    expect(section().querySelector('.mark-out')).not.toBeNull()
+    expect(section().querySelector('.mark-in')).toBeNull()
+  })
+})
+
+describe('PlanAhead: compact cards and a better scroll', () => {
+  const strip = () => section().querySelector('ul')!
+  const outer = () => strip().parentElement as HTMLElement
+
+  it('has compact cards, narrower than before, each with its date as a leaf and a small badge of what it is', () => {
+    mount([emi, rent, salary])
+    const cards = Array.from(strip().querySelectorAll<HTMLElement>(':scope > li[data-kind]'))
+    expect(cards.length).toBeGreaterThanOrEqual(3)
+    for (const c of cards) {
+      expect(c.className).toContain('w-[12.5rem]')
+      expect(c.className).not.toContain('w-[16rem]')
+    }
+    // A round icon leads each card, as in a list; there is no calendar tile with a badge on it, and the date is in words at the foot.
+    const icons = strip().querySelectorAll<HTMLElement>('[data-icon]')
+    expect(icons).toHaveLength(cards.length)
+    expect(icons[0].style.width).toBe('40px')
+    expect(icons[0].className).toContain('rounded-full')
+    expect(strip().querySelector('[data-leaf]')).toBeNull()
+  })
+
+  it('keeps the cards plain: no wash of colour on a card, only the thin bar carries the category colour', () => {
+    mount([emi, rent])
+    const card = strip().querySelector<HTMLElement>('li[data-kind] > div')!
+    expect(card.style.background).toBe('var(--surface)')
+    expect(card.style.boxShadow).toBe('0 0 0 1px var(--ring)')
+    expect(card.querySelector<HTMLElement>('.bar-grow')!.style.background).toContain('var(--s1)')
+  })
+
+  it('tints only a late payment, pale red', () => {
+    mount([rule({ merchant: 'Rent', categoryId: 1, nextDue: '2026-10-25' }), salary])
+    const late = strip().querySelector<HTMLElement>('li[data-kind] > div')!
+    expect(late.style.background).toContain('var(--critical)')
+  })
+
+  it('is a row that settles on a card, lets the next one show, and does not pass the swipe on', () => {
+    mount([emi, rent, salary])
+    expect(strip()).toHaveAttribute('aria-label', 'Payments coming up, scroll sideways')
+    expect(strip().className).toContain('snap-x')
+    expect(strip().className).toContain('snap-mandatory')
+    expect(strip().className).toContain('overscroll-x-contain')
+    expect(strip().className).toContain('scroll-px-5')
+    // A tab stop, so the arrow keys move it.
+    expect(strip()).toHaveAttribute('tabindex', '0')
+    // Every card starts on the left edge when it settles.
+    for (const li of Array.from(strip().querySelectorAll(':scope > li'))) expect(li.className).toContain('snap-start')
+  })
+
+  it('shows no edge fades or progress bar when everything fits', () => {
+    mount([emi])
+    expect(outer().dataset.scrollable).toBe('false')
+    expect(outer().dataset.start).toBe('false')
+    expect(outer().dataset.end).toBe('false')
+  })
+
+  describe('with more cards than fit', () => {
+    const real = { sw: Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollWidth'), cw: Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth') }
+    const withLayout = () => {
+      Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, get: () => 1000 })
+      Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 400 })
+      vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => (cb(0), 1))
+    }
+    const restore = () => {
+      if (real.sw) Object.defineProperty(HTMLElement.prototype, 'scrollWidth', real.sw)
+      else delete (HTMLElement.prototype as unknown as Record<string, unknown>).scrollWidth
+      if (real.cw) Object.defineProperty(HTMLElement.prototype, 'clientWidth', real.cw)
+      else delete (HTMLElement.prototype as unknown as Record<string, unknown>).clientWidth
+      vi.unstubAllGlobals()
+    }
+    const scrollTo = (x: number) => {
+      Object.defineProperty(strip(), 'scrollLeft', { configurable: true, writable: true, value: x })
+      strip().dispatchEvent(new Event('scroll'))
+    }
+
+    it('fades the right edge only, and shows how long the row is, at the start', () => {
+      withLayout()
+      try {
+        mount([emi, rent, salary])
+        expect(outer().dataset.scrollable).toBe('true')
+        expect(outer().dataset.start).toBe('false')
+        expect(outer().dataset.end).toBe('true')
+        const thumb = outer().querySelector<HTMLElement>('[data-thumb]')!
+        expect(parseFloat(thumb.style.width)).toBeCloseTo(40, 0) // 400 of 1000
+      } finally {
+        restore()
+      }
+    })
+
+    it('fades the left edge too in the middle, moves the bar along, and drops the right edge at the end', () => {
+      withLayout()
+      try {
+        mount([emi, rent, salary])
+        scrollTo(300)
+        expect(outer().dataset.start).toBe('true')
+        expect(outer().dataset.end).toBe('true')
+        const thumb = outer().querySelector<HTMLElement>('[data-thumb]')!
+        expect(thumb.style.transform).toMatch(/translateX\(\s*[\d.]+%\)/)
+        const middle = parseFloat(/translateX\(([\d.]+)%/.exec(thumb.style.transform)![1])
+        scrollTo(600)
+        expect(outer().dataset.end).toBe('false')
+        const end = parseFloat(/translateX\(([\d.]+)%/.exec(thumb.style.transform)![1])
+        expect(end).toBeGreaterThan(middle)
+        // At the very end the bar is at the end of its track: its own width (40%) and the rest (60%) of the track, as a share of itself.
+        expect(end).toBeCloseTo(150, 0)
+      } finally {
+        restore()
+      }
+    })
   })
 })

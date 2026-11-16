@@ -14,7 +14,7 @@ import { DataSection } from './settings/DataSection'
 import { DisplaySection } from './settings/DisplaySection'
 import { BackupCard, UpdateCard } from './settings/EssentialCards'
 import { LocationSection } from './settings/LocationSection'
-import { type Ledger } from './settings/parts'
+import { IconCircle, type Ledger } from './settings/parts'
 import { PeopleSection } from './settings/PeopleSection'
 import { RecurringSection } from './settings/RecurringSection'
 import { PAYMENT_POPUPS_ENABLED } from '../payments/enabled'
@@ -49,8 +49,8 @@ const PAGES: { id: SettingsPage; title: string; summary: string; icon: IconName 
   { id: 'money', title: 'Money', summary: 'Currency, accounts and balance, people, monthly budget', icon: 'bank' },
   { id: 'auto', title: 'Automatic', summary: 'Regular payments, reminders, widget', icon: 'autopay' },
   { id: 'suggestions', title: 'Suggestions', summary: 'Your regulars, on Home or above the input bar', icon: 'spark' },
-  { id: 'look', title: 'Appearance', summary: 'Colour theme, light or dark, text size, hide amounts', icon: 'palette' },
-  { id: 'privacy', title: 'Privacy and data', summary: 'App lock, location, export, restore, recently deleted', icon: 'shield' },
+  { id: 'look', title: 'Appearance', summary: 'Colour theme, in light or dark', icon: 'palette' },
+  { id: 'privacy', title: 'Privacy and data', summary: 'App lock, location, export, recently deleted', icon: 'shield' },
 ]
 
 /** The pages, in groups under a quiet title each. */
@@ -93,7 +93,7 @@ export const Settings = memo(function Settings({ ledger, theme, onTheme, palette
           <button type="button" onClick={() => setPage(null)} aria-label="Back to Settings" className="flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-2 active:opacity-70">
             <Icon name="chevLeft" size={22} weight={1.5} />
           </button>
-          <h1 className="text-2xl font-semibold tracking-tight">{open.title}</h1>
+          <h1 className="type-greeting">{open.title}</h1>
         </header>
 
         {open.id === 'money' && (
@@ -113,7 +113,7 @@ export const Settings = memo(function Settings({ ledger, theme, onTheme, palette
           </>
         )}
         {open.id === 'suggestions' && <SuggestionsSection />}
-        {open.id === 'look' && <DisplaySection theme={theme} onTheme={onTheme} palette={palette} onPalette={onPalette} />}
+        {open.id === 'look' && <DisplaySection part="theme" theme={theme} onTheme={onTheme} palette={palette} onPalette={onPalette} />}
         {open.id === 'privacy' && (
           <>
             <DataSection ledger={ledger} />
@@ -127,31 +127,33 @@ export const Settings = memo(function Settings({ ledger, theme, onTheme, palette
 
   return (
     <div className="font-cred pb-8">
-      <h1 className="pt-4 text-3xl font-semibold tracking-tight">Settings</h1>
+      <h1 className="type-greeting pt-4">Settings</h1>
 
       <div className="cred-panel mt-5">
         <BackupCard ledger={ledger} />
         <UpdateCard updateReady={updateReady} onApplyUpdate={onApplyUpdate} onCheckUpdate={onCheckUpdate} onShowWhatsNew={onShowWhatsNew} />
       </div>
 
+      {/* Light or dark, the size of the text, hiding amounts and the way numbers are written: the settings that are reached for most, on the page itself. */}
+      <DisplaySection part="basics" theme={theme} onTheme={onTheme} palette={palette} onPalette={onPalette} />
+
       <nav aria-label="Settings pages">
         {GROUPS.map((g) => (
-          <section key={g.title} aria-label={g.title} className="mt-8">
-            <h2 className="px-3 text-[0.9375rem] font-medium text-ink-2">{g.title}</h2>
-            <ul className="mt-1">
+          <section key={g.title} aria-label={g.title} className="mt-6">
+            <h2 className="px-1 text-[0.9375rem] font-medium text-ink-2">{g.title}</h2>
+            {/* One card for the group, its pages divided by hairlines, like the panel above it. */}
+            <ul className="mt-2 divide-y divide-line overflow-hidden rounded-3xl bg-surface shadow-[0_0_0_1px_var(--ring)]">
               {g.pages.map((id) => {
                 const p = PAGES.find((x) => x.id === id)!
                 return (
                   <li key={p.id}>
-                    <button type="button" onClick={() => setPage(p.id)} className="flex min-h-[4.5rem] w-full items-center gap-5 rounded-2xl px-3 py-3 text-left active:bg-surface-2 [@media(hover:hover)]:hover:bg-surface-2">
-                      <span aria-hidden="true" data-icon={p.icon} className="flex size-7 shrink-0 items-center justify-center">
-                        <Icon name={p.icon} size={28} weight={1.4} />
-                      </span>
+                    <button type="button" onClick={() => setPage(p.id)} className="flex min-h-[4.5rem] w-full items-center gap-4 px-4 py-3 text-left active:bg-surface-2 [@media(hover:hover)]:hover:bg-surface-2">
+                      <IconCircle icon={p.icon} size={44} />
                       <span className="min-w-0 flex-1">
-                        <span className="block text-[1.1875rem] font-medium leading-tight">{p.title}</span>
-                        <span className="mt-0.5 block truncate text-sm text-ink-2">{p.summary}</span>
+                        <span className="block text-[1.0625rem] font-semibold leading-tight">{p.title}</span>
+                        <span className="mt-0.5 line-clamp-2 text-sm text-ink-2">{p.summary}</span>
                       </span>
-                      {glance[p.id] && <span className="shrink-0 font-semibold">{glance[p.id]}</span>}
+                      {glance[p.id] && <span className="num shrink-0 text-sm">{glance[p.id]}</span>}
                       <span aria-hidden="true" className="shrink-0 text-ink-2">
                         <Icon name="chevRight" size={18} weight={1.4} />
                       </span>

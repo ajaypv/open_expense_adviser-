@@ -3,6 +3,10 @@ import { byCategory, type CategoryTotal } from './aggregates'
 import type { IconName } from '../ui/Icon'
 import { nameIcon } from '../ui/categoryIcon'
 import { tagOf } from './upcoming'
+import { BILL_SPLIT_OFF, separateCategoryFor } from '../db/defaultCategories'
+
+/** The parts that are bills as such. EMIs and recharges have categories of their own and are told apart from these. */
+export const BILL_ONLY: readonly BillKind[] = ['utilities', 'insurance', 'bills']
 
 /** The parts the money that goes on bills divides into, in the order they are listed when equal. */
 export type BillKind = 'emi' | 'recharge' | 'utilities' | 'insurance' | 'bills'
@@ -66,6 +70,8 @@ const BILL_CATEGORY = /\b(bill|utilit)/
  */
 export function billKindOf(tx: Pick<Transaction, 'merchant' | 'note'>, categoryName: string | undefined, ruleTag?: Recurring['tag']): BillKind | null {
   if (ruleTag === 'loan') return 'emi'
+  // A card bill is paid to a card, not to a utility: it has its own category and is never one of the bills.
+  if (separateCategoryFor(tx.merchant) === 'Credit Card') return null
   const byName = nameIcon(tx.merchant) ?? nameIcon(categoryName)
   if (byName === 'emi') return 'emi'
   if (byName === 'recharge') return 'recharge'
@@ -99,7 +105,9 @@ export function splitCategoryTotals(monthTxs: Transaction[], categoryById: Map<n
   const parts = new Map<BillKind, { minor: number; byCategory: Map<number, number> }>()
   for (const t of monthTxs) {
     const tag = t.source === 'recurring' ? tagByName.get(t.merchant.trim().toLowerCase()) : undefined
-    const kind = billKindOf(t, categoryById.get(t.categoryId)?.name, tag)
+    const categoryName = categoryById.get(t.categoryId)?.name
+    // What is filed under EMI, Recharge or Credit Card already stands on its own, in its own colour, and is not a part of Bills.
+    const kind = (BILL_SPLIT_OFF as readonly string[]).includes(categoryName ?? '') ? null : billKindOf(t, categoryName, tag)
     if (!kind) {
       rest.push(t)
       continue
@@ -122,8 +130,8 @@ export function splitCategoryTotals(monthTxs: Transaction[], categoryById: Map<n
   return [...byCategory(rest), ...split].sort((a, b) => b.totalMinor - a.totalMinor)
 }
 
-/** How the month's spending on bills, recharges and EMIs divides, biggest part first. Null when none was spent. */
-export function splitBills(monthTxs: Transaction[], categoryById: Map<number, Category>, recurring: Recurring[]): BillSplit | null {
+/** How the month's spending on bills divides, biggest part first (only the kinds asked for, all of them by default). Null when none was spent. */
+export function splitBills(monthTxs: Transaction[], categoryById: Map<number, Category>, recurring: Recurring[], kinds?: readonly BillKind[]): BillSplit | null {
   const spentMinor = monthTxs.reduce((a, t) => a + t.amountMinor, 0)
   const tagByName = ruleTagsByName(recurring)
 
@@ -131,7 +139,7 @@ export function splitBills(monthTxs: Transaction[], categoryById: Map<number, Ca
   for (const t of monthTxs) {
     const tag = t.source === 'recurring' ? tagByName.get(t.merchant.trim().toLowerCase()) : undefined
     const kind = billKindOf(t, categoryById.get(t.categoryId)?.name, tag)
-    if (!kind) continue
+    if (!kind || (kinds && !kinds.includes(kind))) continue
     const s = sums.get(kind) ?? { totalMinor: 0, count: 0 }
     s.totalMinor += t.amountMinor
     s.count += 1

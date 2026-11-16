@@ -13,7 +13,7 @@ interface Props {
 /**
  * On Home, below everything that matters more: the goal that is nearest, with what is saved, what it costs, what is
  * left and how long there is, so a percentage is never left without its meaning. Amber is the colour of goals.
- * Nothing at all when there are none: the Goals button at the top is the way in.
+ * Nothing at all when there are none: Goals in the bottom bar is the way in.
  */
 export function GoalsSummary({ goals, currency, today, onOpen }: Props) {
   if (goals.length === 0) return null
@@ -26,7 +26,7 @@ export function GoalsSummary({ goals, currency, today, onOpen }: Props) {
   return (
     <section aria-label="Goals summary" className="mt-8">
       <div className="mb-3 flex items-center justify-between px-1">
-        <h2 className="text-xl font-bold tracking-tight">Goals</h2>
+        <h2 className="type-title">Goals</h2>
         <button type="button" onClick={onOpen} className="min-h-11 px-2 font-medium underline underline-offset-2">
           See goals
         </button>

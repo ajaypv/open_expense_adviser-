@@ -230,10 +230,10 @@ describe('Input bar', () => {
     await waitFor(() => expect(box).toHaveValue(''))
   })
 
-  it('starts with the text it was given, and opens the full form from the plus', async () => {
+  it('starts with the text it was given, and opens the add sheet from the plus', async () => {
     const { user, onOpenForm, box } = setup(undefined, 'Uber 230 yesterday')
     expect(box).toHaveValue('Uber 230 yesterday')
-    await user.click(screen.getByRole('button', { name: 'Add with the full form' }))
+    await user.click(screen.getByRole('button', { name: 'Add an expense' }))
     expect(onOpenForm).toHaveBeenCalledOnce()
   })
 })

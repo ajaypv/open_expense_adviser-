@@ -46,7 +46,7 @@ describe('First launch', () => {
   it('shows a new person the cards first, and the welcome questions after them', async () => {
     const user = userEvent.setup()
     render(<App />)
-    expect(await screen.findByRole('dialog', { name: /Simple spending/ })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: /Know where your money goes/ })).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: /Welcome/ })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Continue' }))
     // A browser with no notifications has nothing to ask for, so it goes straight on to the questions.
@@ -194,10 +194,33 @@ describe('Logging from the input bar', () => {
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
   })
 
-  it('opens the full form from the plus button', async () => {
+  it('opens the quick add from the plus button, and the full form from More options inside it', async () => {
     const user = await open()
-    await user.click(await screen.findByRole('button', { name: 'Add with the full form' }))
+    await user.click(await screen.findByRole('button', { name: 'Add an expense' }))
+    const quick = await screen.findByRole('dialog', { name: 'New expense' })
+    expect(within(quick).getByRole('group', { name: 'Number pad' })).toBeInTheDocument()
+    await user.click(within(quick).getByRole('button', { name: 'More options' }))
     expect(await screen.findByRole('dialog', { name: 'New transaction' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'New expense' })).toBeNull()
+  })
+
+  it('adds an expense from the number pad, with the day, the likely category and an Undo that takes it away', async () => {
+    const user = await open()
+    await user.click(await screen.findByRole('button', { name: 'Add an expense' }))
+    const quick = await screen.findByRole('dialog', { name: 'New expense' })
+    for (const key of ['4', '5', '0']) await user.click(within(quick).getByRole('button', { name: key }))
+    await user.type(within(quick).getByLabelText(/What was it/), 'lunch at Cafe')
+    expect(within(quick).getByTestId('quick-amount')).toHaveTextContent('₹450')
+    await user.click(within(quick).getByRole('button', { name: 'Yesterday' }))
+    await user.click(within(quick).getByRole('button', { name: 'Add ₹450' }))
+    await waitFor(async () => expect((await db.transactions.toArray()).filter((t) => t.merchant === 'lunch at Cafe')).toHaveLength(1))
+    const saved = (await db.transactions.toArray()).find((t) => t.merchant === 'lunch at Cafe')!
+    expect(saved).toMatchObject({ kind: 'expense', amountMinor: 45_000, source: 'manual' })
+    expect(saved.date).not.toBe(localDateString())
+    expect(await screen.findByText(/^Added ₹450 to .*, yesterday$/)).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'New expense' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Undo' }))
+    await waitFor(async () => expect((await db.transactions.toArray()).filter((t) => t.merchant === 'lunch at Cafe')).toHaveLength(0))
   })
 })
 
@@ -206,11 +229,17 @@ describe('Moving around', () => {
     await tx()
     const user = await open()
     await screen.findByText('Recent transactions')
-    for (const [name, heading] of [['Activity', /Filters/], ['Insights', /./], ['Settings', 'Settings']] as const) {
+    for (const [name, heading] of [['Activity', /Filters/], ['Insights', /./]] as const) {
       await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name }))
       expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name })).toHaveAttribute('aria-current', 'page')
-      if (typeof heading === 'string') expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name, level: 1 })).toBeInTheDocument()
+      expect(heading).toBeDefined()
     }
+    // Settings is not in the bar: it is the round button at the top of a screen, and while it is open no tab of the bar is marked.
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
+    expect(await screen.findByRole('heading', { name: 'Settings', level: 1 })).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).queryByRole('button', { current: 'page' })).toBeNull()
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).queryByRole('button', { name: 'Settings' })).toBeNull()
     await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Home' }))
     expect(await screen.findByText('Recent transactions')).toBeInTheDocument()
   })
@@ -222,9 +251,11 @@ describe('Moving around', () => {
     expect(document.querySelector('main')).toHaveClass('overflow-y-auto', 'overflow-x-hidden')
   })
 
-  it('opens a transaction to edit from the list', async () => {
+  it('opens a transaction to edit from the list in Activity, which the Recent transactions button on Home leads to', async () => {
     await tx({ merchant: 'Cafe' })
     const user = await open()
+    await user.click(await screen.findByRole('button', { name: 'Recent transactions' }))
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Activity' })).toHaveAttribute('aria-current', 'page')
     await user.click(await screen.findByRole('button', { name: /Edit spent Cafe/ }))
     const sheet = await screen.findByRole('dialog', { name: 'Edit transaction' })
     expect(within(sheet).getByLabelText('Merchant')).toHaveValue('Cafe')
@@ -248,15 +279,15 @@ describe('Hide amounts', () => {
     await tx({ merchant: 'Cafe', amountMinor: 45_000 })
     const user = await open()
     await screen.findByText('Recent transactions')
-    await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Settings' }))
-    await user.click(await screen.findByRole('button', { name: /^Appearance/ }))
-    const page = await screen.findByRole('heading', { name: 'Appearance' })
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
+    // Hide amounts is on the Settings page itself, with the rest of Mode, text and numbers.
+    const page = await screen.findByRole('heading', { name: 'Settings', level: 1 })
 
     // Something a rebuild would lose: the page itself and the scroll position.
     const main = document.querySelector('main')!
     main.scrollTop = 420
 
-    await user.click(screen.getByRole('switch', { name: /Hide amounts/ }))
+    await user.click(await screen.findByRole('switch', { name: /Hide amounts/ }))
 
     expect(document.querySelector('main')).toBe(main) // the same element: not remounted
     expect(main.isConnected).toBe(true)
@@ -305,7 +336,7 @@ describe('App lock', () => {
 describe('Goals from Home', () => {
   const goalsButton = () => screen.findByRole('button', { name: /^Goals\./ })
 
-  it('opens from the button at the top right of Home, and is not a tab', async () => {
+  it('opens from Goals in the bottom bar, as a page over the screen, and is not a tab', async () => {
     await tx()
     await db.goals.add({ name: 'Phone', targetMinor: 6_000_000, savedMinor: 0, createdAt: 1 } as never)
     const user = await open()
@@ -313,20 +344,21 @@ describe('Goals from Home', () => {
     // The goals sit in a sheet that is closed, so nothing about them can be reached on the page itself.
     expect(screen.queryByRole('button', { name: 'Edit goal Phone' })).toBeNull()
     expect(screen.queryByRole('dialog', { name: 'Goals' })).toBeNull()
-    expect(within(screen.getByRole('navigation', { name: 'Main' })).queryByRole('button', { name: 'Goals' })).toBeNull()
+    expect(await goalsButton()).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: /^Goals./ })).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).queryByRole('button', { current: 'page' })).toHaveAccessibleName('Home')
     await user.click(await goalsButton())
     const sheet = await screen.findByRole('dialog', { name: 'Goals' })
     expect(within(sheet).getByText('Phone')).toBeInTheDocument()
   })
 
-  it('glows once when the app opens, and not again when coming back to Home', async () => {
+  it('glows once when the app opens, and the button stays in the bar on every screen', async () => {
     await tx()
     const user = await open()
     expect(await goalsButton()).toHaveClass('goal-glow')
-    await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Settings' }))
-    await screen.findByRole('heading', { name: 'Settings' })
-    await user.click(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Home' }))
-    expect(await goalsButton()).not.toHaveClass('goal-glow')
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
+    await screen.findByRole('heading', { name: 'Settings', level: 1 })
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: /^Goals./ })).toBeInTheDocument()
   })
 
   it('makes a goal and sets money aside for it, and the button keeps count', async () => {
@@ -340,8 +372,8 @@ describe('Goals from Home', () => {
     await user.type(within(sheet).getByLabelText('How much does it cost?'), '25,000')
     await user.click(within(sheet).getByRole('button', { name: 'Save goal' }))
     expect(await within(overview).findByText('Goa trip')).toBeInTheDocument()
-    expect(within(overview).getAllByText('saved of ₹25,000')).toHaveLength(2) // in the total and on the goal: the overview stayed open behind the form
-    expect(within(overview).getAllByText('₹25,000 to go').length).toBeGreaterThan(0) // the new goal, with nothing saved yet
+    expect(within(overview).getAllByText(/saved of/)).toHaveLength(2) // in the total and on the goal: the overview stayed open behind the form
+    expect(within(overview).getAllByText('₹25,000').length).toBeGreaterThan(0) // the new goal, with nothing saved yet: what it costs and what is to go
 
     await user.click(within(overview).getByRole('button', { name: 'Add money to Goa trip' }))
     const money = await screen.findByRole('dialog', { name: 'Add money to Goa trip' })
@@ -349,7 +381,7 @@ describe('Goals from Home', () => {
     await user.click(within(money).getByRole('button', { name: 'Add to goal' }))
     await waitFor(async () => expect((await db.goals.toArray())[0].savedMinor).toBe(500_000))
     expect(await within(overview).findByRole('progressbar', { name: 'Goa trip saved' })).toHaveAttribute('aria-valuenow', '20')
-    expect((await within(overview).findAllByText('₹20,000 to go')).length).toBeGreaterThan(0) // updated in place, on the goal and in the total
+    expect((await within(overview).findAllByText('₹20,000')).length).toBeGreaterThan(0) // updated in place, on the goal and in the total
     expect(await screen.findByRole('button', { name: 'Goals. 1 goal, 20% saved' })).toBeInTheDocument()
   })
 
@@ -405,7 +437,7 @@ describe('The page title', () => {
     expect(document.title).toBe('Expense Tracker')
     await user.click(mainNav().getByRole('button', { name: 'Activity' }))
     await waitFor(() => expect(document.title).toBe('Activity - Expense Tracker'))
-    await user.click(mainNav().getByRole('button', { name: 'Settings' }))
+    await user.click(await screen.findByRole('button', { name: 'Settings' }))
     await waitFor(() => expect(document.title).toBe('Settings - Expense Tracker'))
     await user.click(mainNav().getByRole('button', { name: 'Home' }))
     await waitFor(() => expect(document.title).toBe('Expense Tracker'))
@@ -470,19 +502,19 @@ describe('Upcoming payments', () => {
     // The sheet it was added from now lists it, six days away.
     expect(await within(upcoming).findByRole('button', { name: /^Edit Home loan, Loan EMI, In 6 days/ })).toBeInTheDocument()
 
-    // And once the sheet is closed, Home shows it in its card.
+    // And once the sheet is closed, Home shows it among the Plan ahead cards.
     await user.click(within(upcoming).getByRole('button', { name: 'Close' }))
-    const card = await screen.findByRole('region', { name: 'Coming up' })
+    const card = await screen.findByRole('region', { name: 'Plan ahead' })
     expect(within(card).getByText('Home loan')).toBeInTheDocument()
-    expect(card).toHaveTextContent('In 6 days')
+    expect(card).toHaveTextContent('in 6 days')
   })
 
   it('opens a payment from the list to change it', async () => {
     await tx()
     await db.recurring.add({ kind: 'expense', amountMinor: 1_250_000, currency: 'INR', categoryId: 1, merchant: 'Home loan', note: '', paymentMethod: '', frequency: 'monthly', nextDue: localDateString(new Date(Date.now() + 6 * 86_400_000)), active: true, tag: 'loan' } as never)
     const user = await open()
-    await user.click(await screen.findByRole('button', { name: 'See all upcoming payments' }))
-    const upcoming = await screen.findByRole('dialog', { name: 'Upcoming payments' })
+    await user.click(await screen.findByRole('button', { name: 'View plan ahead' }))
+    const upcoming = await screen.findByRole('dialog', { name: 'Plan ahead' })
     await user.click(await within(upcoming).findByRole('button', { name: /^Edit Home loan/ }))
     const edit = await screen.findByRole('dialog', { name: 'Edit regular payment' })
     expect(within(edit).getByLabelText('Name')).toHaveValue('Home loan')
@@ -583,12 +615,26 @@ describe('The redesigned Home', () => {
     expect(goals).toHaveTextContent('₹20,000 to go')
   })
 
-  it('shows the recent transactions before where it went', async () => {
+  it('has buttons to Recent transactions and to where the money flows, not copies of them, before where it went', async () => {
     await tx({ merchant: 'Cafe' })
     await open()
-    const recent = await screen.findByRole('heading', { name: 'Recent transactions' })
+    const recent = await screen.findByRole('button', { name: 'Recent transactions' })
+    const flows = screen.getByRole('button', { name: 'Where the money flows' })
     const where = screen.getByRole('heading', { name: 'Where it went' })
-    expect(recent.compareDocumentPosition(where) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(recent.compareDocumentPosition(flows) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(flows.compareDocumentPosition(where) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // The list and the ribbon are not drawn on Home any more.
+    expect(screen.queryByRole('heading', { name: 'Recent transactions' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Where the money flows' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Edit spent Cafe/ })).toBeNull()
+  })
+
+  it('opens Insights from the Where the money flows button, which starts with the money flow', async () => {
+    await tx({ merchant: 'Cafe' })
+    const user = await open()
+    await user.click(await screen.findByRole('button', { name: 'Where the money flows' }))
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name: 'Insights' })).toHaveAttribute('aria-current', 'page')
+    expect(await screen.findByRole('region', { name: 'Money flow' })).toBeInTheDocument()
   })
 });
 
@@ -611,7 +657,7 @@ describe('Regular payments in Insights', () => {
     const section = await screen.findByRole('region', { name: 'Regular payments' })
     expect(section).toHaveTextContent('Every month₹6,000')
     expect(section).toHaveTextContent('A year₹72,000')
-    expect(within(section).getByText(/Next: Rent, ₹6,000/)).toBeInTheDocument()
+    expect(section).toHaveTextContent(/Next: Rent, ₹6,000/)
 
     await user.click(within(section).getByRole('button', { name: 'See all regular payments' }))
     const upcoming = await screen.findByRole('dialog', { name: 'Upcoming payments' })

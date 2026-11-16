@@ -19,6 +19,9 @@ export interface TimelineDay {
   parts: DayPart[]
   /** The expenses themselves, the latest added first. */
   txs: Transaction[]
+  /** Money received on the day, and what it was, the latest added first. */
+  receivedMinor: number
+  received: Transaction[]
 }
 
 export interface Timeline {
@@ -55,10 +58,11 @@ function partsOf(txs: Transaction[]): DayPart[] {
 const sumOf = (txs: Transaction[]) => txs.reduce((a, t) => a + t.amountMinor, 0)
 
 /**
- * The days behind us, for the Timeline: what was spent on each, and on what. Only money sent counts, and nothing dated after
- * today. `span` is how many days back to go; it stops sooner at the first day anything was spent.
+ * The days behind us, for the Timeline: what was spent on each, and on what, and what was received. The bars and the scale are of money
+ * sent only; money received is told on its day. Nothing dated after today counts. `span` is how many days back to go; it stops sooner at
+ * the first day anything was spent or received.
  */
-export function buildTimeline(expenses: Transaction[], today: Date, span: number): Timeline {
+export function buildTimeline(expenses: Transaction[], today: Date, span: number, received: Transaction[] = []): Timeline {
   const todayKey = localDateString(today)
   const byDate = new Map<string, Transaction[]>()
   let first: string | null = null
@@ -70,13 +74,23 @@ export function buildTimeline(expenses: Transaction[], today: Date, span: number
     if (first === null || t.date < first) first = t.date
   }
 
+  const inByDate = new Map<string, Transaction[]>()
+  for (const t of received) {
+    if (t.kind !== 'income' || t.deletedAt !== undefined || t.date > todayKey) continue
+    const list = inByDate.get(t.date)
+    if (list) list.push(t)
+    else inByDate.set(t.date, [t])
+    if (first === null || t.date < first) first = t.date
+  }
+
   const available = first === null ? 0 : daysBetween(first, todayKey) + 1
   const count = Math.min(span, available)
   const days: TimelineDay[] = []
   for (let n = 0; n < count; n++) {
     const date = keyDaysAgo(today, n)
     const txs = [...(byDate.get(date) ?? [])].sort((a, b) => b.createdAt - a.createdAt || b.id - a.id)
-    days.push({ date, daysAgo: n, totalMinor: sumOf(txs), count: txs.length, parts: partsOf(txs), txs })
+    const incoming = [...(inByDate.get(date) ?? [])].sort((a, b) => b.createdAt - a.createdAt || b.id - a.id)
+    days.push({ date, daysAgo: n, totalMinor: sumOf(txs), count: txs.length, parts: partsOf(txs), txs, receivedMinor: sumOf(incoming), received: incoming })
   }
 
   return {
@@ -93,8 +107,8 @@ export type TimelineRow =
   | { kind: 'quiet'; key: string; from: string; to: string; count: number }
 
 /**
- * The days as the rows the Timeline draws: a heading where a new month starts, a row for each day something was spent
- * (and for today, spent or not), and one line for each run of quiet days, so a quiet fortnight does not take a screen.
+ * The days as the rows the Timeline draws: a heading where a new month starts, a row for each day something was spent or received
+ * (and for today, either or not), and one line for each run of quiet days, so a quiet fortnight does not take a screen.
  */
 export function timelineRows(days: TimelineDay[]): TimelineRow[] {
   const rows: TimelineRow[] = []
@@ -106,14 +120,14 @@ export function timelineRows(days: TimelineDay[]): TimelineRow[] {
       month = d.date.slice(0, 7)
       rows.push({ kind: 'month', key: `m-${month}`, month })
     }
-    if (d.totalMinor > 0 || d.daysAgo === 0) {
+    if (d.totalMinor > 0 || d.receivedMinor > 0 || d.daysAgo === 0) {
       rows.push({ kind: 'day', key: d.date, day: d })
       i++
       continue
     }
     // A quiet run goes on to the next day that has something, or the end of the month.
     let j = i
-    while (j + 1 < days.length && days[j + 1].totalMinor === 0 && days[j + 1].date.slice(0, 7) === month) j++
+    while (j + 1 < days.length && days[j + 1].totalMinor === 0 && days[j + 1].receivedMinor === 0 && days[j + 1].date.slice(0, 7) === month) j++
     rows.push({ kind: 'quiet', key: `q-${d.date}`, from: days[j].date, to: d.date, count: j - i + 1 })
     i = j + 1
   }

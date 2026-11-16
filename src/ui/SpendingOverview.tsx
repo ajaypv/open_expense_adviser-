@@ -32,6 +32,28 @@ interface Props {
   onPickPeriod: (range: { from: string; to: string }) => void
   /** The month in view (YYYY-MM): when it changes, the figures slide in from the side it came from. */
   monthKey?: string
+  /** Opens the graph of the spending, a week at first, from the headline. Without it the headline is only words. */
+  onOpenGraph?: () => void
+}
+
+/**
+ * The headline of the card: what was spent and for which month. With a way to open the graph it is one wide button (named in words, with
+ * the amount, and what it does), so the whole of it can be pressed; without, it is only text.
+ */
+function Headline({ onOpen, name, amount, children }: { onOpen?: () => void; name: string; amount: string; children: React.ReactNode }) {
+  if (!onOpen) return <div data-headline>{children}</div>
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      data-headline
+      aria-haspopup="dialog"
+      aria-label={`${name}: ${amount}. See the graph`}
+      className="-m-2 block w-[calc(100%+1rem)] rounded-2xl p-2 text-left active:bg-surface-2 [@media(hover:hover)]:hover:bg-surface-2/60"
+    >
+      {children}
+    </button>
+  )
 }
 
 /**
@@ -55,6 +77,7 @@ export function SpendingOverview({
   onTogglePrivacy,
   onPickPeriod,
   monthKey,
+  onOpenGraph,
 }: Props) {
   const against = `${partial ? 'the same days in ' : ''}${prevName}`
 
@@ -82,14 +105,19 @@ export function SpendingOverview({
         className={shown.dir === 'next' ? 'month-slide-from-right' : shown.dir === 'prev' ? 'month-slide-from-left' : undefined}
       >
       {totalMinor === 0 ? (
-        <p className="pr-10 text-2xl font-semibold tracking-tight">{`Nothing spent in ${monthName} yet.`}</p>
+        <p className="type-title pr-10">{`Nothing spent in ${monthName} yet.`}</p>
       ) : (
-        <>
-          <p className="text-ink-2">{isCurrent ? `Spent so far in ${monthName}` : `Spent in ${monthName}`}</p>
-          <p className="mt-1 whitespace-nowrap text-[clamp(2.25rem,10vw,2.5rem)] font-extrabold leading-none tracking-[-0.03em] tabular-nums">
+        <Headline onOpen={onOpenGraph} name={`${isCurrent ? 'Spent so far in' : 'Spent in'} ${monthName}`} amount={formatMoney(totalMinor, currency)}>
+          <span className="flex items-center gap-2 pr-10 font-medium text-ink-2">
+            <span aria-hidden="true" data-icon="arrowUp" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink">
+              <Icon name="arrowUp" size={15} weight={2.25} />
+            </span>
+            {isCurrent ? `Spent so far in ${monthName}` : `Spent in ${monthName}`}
+          </span>
+          <span className="type-display mt-1 block whitespace-nowrap">
             <AnimatedMoney minor={totalMinor} currency={currency} id="hero" />
-          </p>
-        </>
+          </span>
+        </Headline>
       )}
 
       {/* With a budget: one plain bar of how much of it is used, and in words where that leaves you. */}
@@ -100,10 +128,23 @@ export function SpendingOverview({
       )}
 
       {totalMinor > 0 && (
-        <p className="mt-3 text-base text-ink-2">
-          {budgetMinor !== null && `Budget ${formatMoney(budgetMinor, currency)} · `}
-          {`${expenseCount} ${expenseCount === 1 ? 'expense' : 'expenses'}`}
-          {dailyAverageMinor > 0 && ` · about ${formatMoney(dailyAverageMinor, currency)} a day`}
+        <p className="mt-3 text-[1.0625rem] leading-[1.6] text-ink-2">
+          {budgetMinor !== null && (
+            <>
+              {'Budget '}
+              <b className="num text-ink">{formatMoney(budgetMinor, currency)}</b>
+              {' · '}
+            </>
+          )}
+          <b className="num text-ink">{expenseCount}</b>
+          {` ${expenseCount === 1 ? 'expense' : 'expenses'}`}
+          {dailyAverageMinor > 0 && (
+            <>
+              {' · about '}
+              <b className="num text-ink">{formatMoney(dailyAverageMinor, currency)}</b>
+              {' a day'}
+            </>
+          )}
         </p>
       )}
 
@@ -128,7 +169,7 @@ export function SpendingOverview({
       )}
 
       {periods.length > 0 && (
-        <section aria-label="Recent spending" className="mt-5 grid grid-cols-3 divide-x divide-line border-t border-line pt-4">
+        <section aria-label="Recent spending" className="mt-5 grid grid-cols-3 gap-2 border-t border-line pt-4">
           {periods.map((p) => {
             const spent = formatMoney(p.amountMinor, currency)
             const body = (
@@ -146,12 +187,12 @@ export function SpendingOverview({
                 type="button"
                 aria-label={`${p.label}: ${spent}. See these transactions`}
                 onClick={() => onPickPeriod({ from: p.from, to: p.to })}
-                className="flex min-h-12 min-w-0 flex-col justify-center px-3 text-left first:pl-0 active:opacity-60 [@media(hover:hover)]:hover:opacity-75"
+                className="flex min-h-14 min-w-0 flex-col justify-center rounded-2xl bg-surface-2 px-3 py-2 text-left active:opacity-60 [@media(hover:hover)]:hover:opacity-75"
               >
                 {body}
               </button>
             ) : (
-              <div key={p.id} role="group" aria-label={`${p.label}: ${spent}`} className="flex min-h-12 min-w-0 flex-col justify-center px-3 first:pl-0">
+              <div key={p.id} role="group" aria-label={`${p.label}: ${spent}`} className="flex min-h-14 min-w-0 flex-col justify-center rounded-2xl bg-surface-2 px-3 py-2">
                 {body}
               </div>
             )

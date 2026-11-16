@@ -1,12 +1,13 @@
-import type { Goal } from '../db/schema'
-import { GoalsButton } from './GoalsButton'
+import { HeaderActions } from './ScreenBar'
 
 let dateFormat: Intl.DateTimeFormat | undefined
 
 interface Props {
   today: Date
-  goals: Goal[]
-  onOpenGoals: () => void
+  /** Opens Settings, from the round button on the right. */
+  onOpenSettings: () => void
+  /** Opens your year as reels, from the round button beside Settings; there is none when there is no spending to tell a story about. */
+  onOpenReels?: () => void
 }
 
 /** "Good morning" until noon, "Good afternoon" until five, then "Good evening" (and through the small hours). */
@@ -19,21 +20,21 @@ export function greetingFor(now: Date): string {
 
 /**
  * The top of Home, laid out like an app bar: a greeting and today's date on the left, the one action that belongs
- * to the whole screen (goals) on the right. The month switcher sits below, since it changes what the page shows
+ * to the whole app (Settings) on the right, as on every screen. The month switcher sits below, since it changes what the page shows
  * rather than being part of the title.
  */
-export function HomeHeader({ today, goals, onOpenGoals }: Props) {
+export function HomeHeader({ today, onOpenSettings, onOpenReels }: Props) {
   const date = (dateFormat ??= new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' })).format(today)
   return (
     <header className="flex items-center justify-between gap-3 pt-3">
       <div className="min-w-0">
-        <h1 className="truncate text-2xl font-bold tracking-tight">
+        <h1 className="type-greeting truncate">
           <span className="sr-only">Home. </span>
           {greetingFor(today)}
         </h1>
         <p className="truncate text-sm text-ink-2">{date}</p>
       </div>
-      <GoalsButton goals={goals} onClick={onOpenGoals} />
+      <HeaderActions onOpenSettings={onOpenSettings} onOpenReels={onOpenReels} />
     </header>
   )
 }

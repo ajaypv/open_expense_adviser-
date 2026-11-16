@@ -1,8 +1,6 @@
-import { memo, useCallback, useMemo } from 'react'
-import type { LedgerTx } from '../data/buildLedger'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { setDisplay, useDisplay } from '../data/display'
 import { CategoryBars } from '../charts/CategoryBars'
-import { DayChart } from '../charts/DayChart'
 import type { useLedger } from '../data/useLedger'
 import { localDateString } from '../db/money'
 import {
@@ -17,7 +15,6 @@ import {
   type MonthKey,
 } from '../insights/aggregates'
 import { isCard } from '../insights/cards'
-import { newestFirst } from '../insights/order'
 import { ScreenSkeleton } from '../ui/ScreenSkeleton'
 import type { Suggestion } from '../insights/suggestions'
 import { BackupNudge, DueCard, LogNudge } from '../ui/HomeCards'
@@ -25,15 +22,15 @@ import { BudgetPrompt } from '../ui/BudgetPrompt'
 import { CardsCard } from '../ui/CardsCard'
 import { GoalsSummary } from '../ui/GoalsSummary'
 import { InsightCard } from '../ui/InsightCard'
+import { SpendingGraphSheet } from '../ui/SpendingGraphSheet'
 import { SpendingOverview } from '../ui/SpendingOverview'
 import { HomeHeader } from '../ui/HomeHeader'
 import { MonthSwitcher } from '../ui/MonthSwitcher'
 import { PlanAhead } from '../ui/PlanAhead'
 import { SuggestionList } from '../ui/SuggestionList'
-import { TxList } from '../ui/TxList'
-import { UpcomingCard } from '../ui/UpcomingCard'
 import { WalletPanel } from '../ui/WalletPanel'
 import { HomePager } from '../ui/HomePager'
+import { Icon, type IconName } from '../ui/Icon'
 import { Timeline } from '../ui/Timeline'
 
 type Ledger = ReturnType<typeof useLedger>
@@ -44,9 +41,12 @@ interface Props {
   onMonth: (month: MonthKey) => void
   today: Date
   onPickCategory: (categoryId: number) => void
-  onEdit: (tx: LedgerTx) => void
   onExample: (text: string) => void
   onOpenSettings: () => void
+  /** The round button at the top: Settings itself, not a page of it. */
+  onOpenAppSettings: () => void
+  /** Opens your year as reels, from the round button beside Settings. */
+  onOpenReels?: () => void
   onSeeAll: () => void
   /** The estimated balance stays hidden until this is true; the app owns it so it survives tab changes. */
   balanceShown: boolean
@@ -64,6 +64,8 @@ interface Props {
   onOpenGoals: () => void
   /** Opens the upcoming payments: loans, auto-payments, subscriptions and salary. */
   onOpenUpcoming: () => void
+  /** Opens the whole plan for the weeks ahead, from the View button on the Plan ahead cards. */
+  onOpenPlan?: () => void
   /** Opens the credit cards, from the card that shows what is owed. */
   onOpenCards?: () => void
   /** Opens Activity on what was spent in a period, from the Today, Yesterday and Last 7 days figures. */
@@ -78,15 +80,33 @@ const EXAMPLES = ['450 lunch at Cafe', 'Uber 230 yesterday', 'Salary 80,000']
 
 const card = 'rounded-3xl bg-surface shadow-[0_0_0_1px_var(--ring)]'
 
+/** A way to another part of the app, as an icon and its name: the list of transactions and the flow of money have their own places, not a copy on Home. */
+function GoTo({ icon, label, onClick }: { icon: IconName; label: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className={`${card} flex min-h-[5.75rem] flex-col justify-between gap-2.5 p-3 text-left active:bg-surface-2`}>
+      <span className="flex items-center justify-between">
+        <span aria-hidden="true" data-icon={icon} className="flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-2">
+          <Icon name={icon} size={22} />
+        </span>
+        <span aria-hidden="true" className="text-ink-2">
+          <Icon name="chevRight" size={18} />
+        </span>
+      </span>
+      <span className="text-[0.9375rem] font-semibold leading-snug">{label}</span>
+    </button>
+  )
+}
+
 export const Home = memo(function Home({
   ledger,
   month,
   onMonth,
   today,
   onPickCategory,
-  onEdit,
   onExample,
   onOpenSettings,
+  onOpenAppSettings,
+  onOpenReels,
   onSeeAll,
   balanceShown,
   onToggleBalance,
@@ -97,6 +117,7 @@ export const Home = memo(function Home({
   onAdd,
   onOpenGoals,
   onOpenUpcoming,
+  onOpenPlan,
   onOpenCards,
   onPickPeriod,
   onOpenInsights,
@@ -110,6 +131,8 @@ export const Home = memo(function Home({
   const currentMonth = todayKey.slice(0, 7)
   const isCurrent = month === currentMonth
   const display = useDisplay()
+  // The graph of the spending, opened from the headline of the card.
+  const [graphOpen, setGraphOpen] = useState(false)
   // The timeline is not redrawn for a handler that is new at every render of Home, so this one keeps its identity.
   const pickDay = useCallback((date: string) => onPickPeriod({ from: date, to: date }), [onPickPeriod])
 
@@ -125,11 +148,10 @@ export const Home = memo(function Home({
       recentlySpent: recentSpending(expenses, today),
       monthTxs,
       categoryTotals: byCategory(monthTxs),
-      recent: inMonth(txs, month).sort(newestFirst).slice(0, 5),
       expenseCount: monthTxs.length,
     }
   }, [txs, expenses, income, month, today])
-  const { total, received, comparison, monthTxs, categoryTotals, recent, recentlySpent, expenseCount } = view
+  const { total, received, comparison, monthTxs, categoryTotals, recentlySpent, expenseCount } = view
   // Months with something in them get a dot in the month picker.
   const activeMonths = useMemo(() => new Set(txs.map((t) => t.date.slice(0, 7))), [txs])
 
@@ -138,9 +160,9 @@ export const Home = memo(function Home({
   if (txs.length === 0) {
     return (
       <div>
-        <HomeHeader today={today} goals={ledger.goals} onOpenGoals={onOpenGoals} />
+        <HomeHeader today={today} onOpenSettings={onOpenAppSettings} onOpenReels={onOpenReels} />
         <div className="pt-10">
-        <h2 className="text-3xl font-bold tracking-tight">Let’s add your first one.</h2>
+        <h2 className="type-headline text-balance">Let’s add your first one.</h2>
         <p className="mt-3 max-w-sm text-lg text-ink-2">
           Type what you spent or received in the bar below, as you would say it. Tap an example, then press send. Or use + for the full form.
         </p>
@@ -169,8 +191,8 @@ export const Home = memo(function Home({
   const elapsedDays = isCurrent ? today.getDate() : daysInMonth(month)
 
   return (
-    <div className="pb-4">
-      <HomeHeader today={today} goals={ledger.goals} onOpenGoals={onOpenGoals} />
+    <div className="font-text pb-4">
+      <HomeHeader today={today} onOpenSettings={onOpenAppSettings} onOpenReels={onOpenReels} />
       <HomePager
         overview={
           <>
@@ -204,9 +226,26 @@ export const Home = memo(function Home({
               onTogglePrivacy={() => setDisplay({ privacy: !display.privacy })}
               onPickPeriod={onPickPeriod}
               monthKey={month}
+              onOpenGraph={() => setGraphOpen(true)}
+            />
+            {/* Keyed by the month, so a week gone back to in one month does not carry into the next. */}
+            <SpendingGraphSheet
+              key={month}
+              open={graphOpen}
+              onClose={() => setGraphOpen(false)}
+              expenses={expenses}
+              monthTxs={monthTxs}
+              categoryById={categoryById}
+              month={month}
+              today={today}
+              currency={currency}
+              budgetMinor={budgetMinor}
+              categoryTotals={categoryTotals}
+              onPickDay={pickDay}
+              onPickCategory={onPickCategory}
             />
 
-            {isCurrent && <PlanAhead ledger={ledger} today={today} card />}
+            {isCurrent && <PlanAhead ledger={ledger} today={today} onOpen={onOpenPlan} onSetUp={onOpenUpcoming} />}
 
             <WalletPanel
               monthName={name}
@@ -222,14 +261,11 @@ export const Home = memo(function Home({
 
             {onOpenCards && <CardsCard ledger={ledger} today={today} onOpen={onOpenCards} />}
 
-            {isCurrent && <UpcomingCard ledger={ledger} today={today} onOpen={onOpenUpcoming} />}
-
             {isCurrent && suggestions.length > 0 && (
-              <section aria-labelledby="suggest-h" className="mt-8">
-                <h2 id="suggest-h" className="px-1 text-xl font-bold tracking-tight">
-                  Suggested for now
+              <section aria-labelledby="suggest-h" className="mt-6">
+                <h2 id="suggest-h" className="mb-2 px-1 text-[0.9375rem] font-semibold text-ink-2">
+                  Add again, one tap
                 </h2>
-                <p className="mb-3 mt-0.5 px-1 text-[0.9375rem] text-ink-2">Your usual ones around this time. Tap + to add one now, or tap the tile to check it first.</p>
                 <SuggestionList
                   items={suggestions}
                   categoryById={categoryById}
@@ -237,7 +273,7 @@ export const Home = memo(function Home({
                   onPick={onSuggestion}
                   onQuickAdd={onQuickAddSuggestion}
                   tone="page"
-                  variant="tile"
+                  variant="quick"
                 />
               </section>
             )}
@@ -247,39 +283,14 @@ export const Home = memo(function Home({
 
             {total > 0 && (
               <>
-                <section aria-labelledby="daily-h" className="mt-8">
-                  <h2 id="daily-h" className="mb-3 px-1 text-xl font-bold tracking-tight">
-                    Day by day
-                  </h2>
-                  <div className={`${card} p-4`}>
-                    {/* Keyed by the month, so each month's columns rise afresh and a day chosen in one does not carry to the next. */}
-                    <DayChart
-                      key={month}
-                      txs={monthTxs}
-                      categoryById={categoryById}
-                      monthKey={month}
-                      lastDay={isCurrent ? today.getDate() : null}
-                      currency={currency}
-                      budgetMinor={budgetMinor}
-                      onPickDay={pickDay}
-                    />
-                  </div>
-                </section>
-
-                <section aria-labelledby="recent-h" className="mt-8">
-                  <div className="mb-1 flex items-center justify-between px-1">
-                    <h2 id="recent-h" className="text-xl font-bold tracking-tight">
-                      Recent transactions
-                    </h2>
-                    <button type="button" onClick={onSeeAll} className="min-h-11 px-2 font-medium underline underline-offset-2">
-                      See all
-                    </button>
-                  </div>
-                  <TxList rows={recent} categoryById={categoryById} accountById={ledger.accountById} currency={currency} showDate onEdit={onEdit} />
-                </section>
+                {/* The list of what was spent is Activity, and where the money flows is in Insights: one tap to each, not a copy here. */}
+                <nav aria-label="More about this month" className="mt-8 grid grid-cols-2 gap-3">
+                  <GoTo icon="list" label="Recent transactions" onClick={onSeeAll} />
+                  {onOpenInsights && <GoTo icon="bars" label="Where the money flows" onClick={onOpenInsights} />}
+                </nav>
 
                 <section aria-labelledby="cats-h" className="mt-8">
-                  <h2 id="cats-h" className="mb-1 px-1 text-xl font-bold tracking-tight">
+                  <h2 id="cats-h" className="type-title mb-1 px-1">
                     Where it went
                   </h2>
                   <div className="px-1">
@@ -294,7 +305,7 @@ export const Home = memo(function Home({
             <GoalsSummary goals={ledger.goals} currency={currency} today={today} onOpen={onOpenGoals} />
           </>
         }
-        timeline={<Timeline expenses={expenses} categoryById={categoryById} currency={currency} today={today} onPickDay={pickDay} />}
+        timeline={<Timeline expenses={expenses} received={income} categoryById={categoryById} currency={currency} today={today} onPickDay={pickDay} />}
       />
     </div>
   )

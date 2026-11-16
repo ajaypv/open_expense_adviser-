@@ -46,3 +46,12 @@ describe('WalletPanel', () => {
     expect(render({ shown: true, balanceMinor: -45_000 })).toMatch(/-₹450|₹-450|−₹450/)
   })
 })
+
+describe('WalletPanel: the pattern of the other cards', () => {
+  it('shows what came in and the balance as two soft tiles, each with a round icon, not two columns split by a line', () => {
+    const html = render({})
+    expect((html.match(/rounded-2xl bg-surface-2 p-3/g) ?? []).length).toBe(2)
+    expect(html).not.toContain('border-l')
+    expect((html.match(/rounded-full bg-surface /g) ?? []).length).toBeGreaterThanOrEqual(2)
+  })
+})

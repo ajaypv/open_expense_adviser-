@@ -40,3 +40,17 @@ describe('InsightCard', () => {
     expect(render([{ categoryId: 1, totalMinor: 100 }], 100)).toContain('var(--accent)')
   })
 })
+
+describe('InsightCard: the pattern of the other cards', () => {
+  const one = [{ categoryId: 1, totalMinor: 45_000 }, { categoryId: 2, totalMinor: 23_000 }]
+
+  it('leads the sentence with a round icon of the category, not a dot', () => {
+    const html = render(one, 68_000)
+    expect(html).toMatch(/data-icon="utensils"[^>]*class="[^"]*rounded-full/)
+    expect(html).not.toContain('size-2 shrink-0')
+  })
+
+  it('sets the share in bold and the words around it as they were', () => {
+    expect(render(one, 68_000)).toMatch(/Food &amp; Dining is <b class="num text-ink">66%<\/b> of what you have spent in October\./)
+  })
+})

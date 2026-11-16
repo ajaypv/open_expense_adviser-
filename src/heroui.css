@@ -1,0 +1,262 @@
+/*
+ * HeroUI (Apache License 2.0, https://heroui.com), used on the Insights page only.
+ *
+ * Nothing here reaches the rest of the app. HeroUI's own stylesheet would set its colours on :root and so repaint everything, so it is not
+ * imported. Instead:
+ *   1. Only the stylesheets of the components Insights uses are imported. Their rules are all under their own class names (.button, .card,
+ *      .chip, .alert, .toggle-button), which nothing else in the app uses.
+ *   2. The colours those components read (--foreground, --default, --success...) are set on those class names alone, from the app's own
+ *      tokens, so they are in the app's colours, in every theme, light or dark, and they are set nowhere else.
+ *   3. The Tailwind names for those colours (bg-default, text-success-soft-foreground...) are new names; none of the app's is changed, and the
+ *      radii are not touched.
+ */
+@import '@heroui/styles/utilities';
+@import '@heroui/styles/components/button.css' layer(components);
+@import '@heroui/styles/components/card.css' layer(components);
+@import '@heroui/styles/components/chip.css' layer(components);
+@import '@heroui/styles/components/alert.css' layer(components);
+@import '@heroui/styles/components/toggle-button.css' layer(components);
+@import '@heroui/styles/components/toggle-button-group.css' layer(components);
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-surface-hover: var(--surface-hover);
+
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-secondary-foreground: var(--surface-secondary-foreground);
+
+  --color-surface-tertiary: var(--surface-tertiary);
+  --color-surface-tertiary-foreground: var(--surface-tertiary-foreground);
+
+  --color-overlay: var(--overlay);
+  --color-overlay-foreground: var(--overlay-foreground);
+
+  --color-muted: var(--muted);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-segment: var(--segment);
+  --color-segment-foreground: var(--segment-foreground);
+
+  --color-border: var(--border);
+  --color-separator: var(--separator);
+  --color-focus: var(--focus);
+  --color-link: var(--link);
+
+  --color-default: var(--default);
+  --color-default-foreground: var(--default-foreground);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+
+  --color-backdrop: var(--backdrop);
+
+  --shadow-surface: var(--surface-shadow);
+  --shadow-overlay: var(--overlay-shadow);
+  --shadow-field: var(--field-shadow);
+
+  /* Form Field Tokens */
+  --color-field: var(--field-background, var(--default));
+  --color-field-hover: var(--field-hover);
+  --color-field-foreground: var(--field-foreground, var(--foreground));
+  --color-field-placeholder: var(--field-placeholder, var(--muted));
+  --color-field-border: var(--field-border, var(--border));
+  --radius-field: var(--field-radius, calc(var(--radius) * 1.5));
+  --border-width-field: var(--field-border-width, var(--border-width));
+
+  /* Color Tokens */
+  --color-background-secondary: var(--background-secondary);
+  --color-background-tertiary: var(--background-tertiary);
+  --color-background-inverse: var(--background-inverse);
+
+  --color-default-hover: var(--default-hover);
+  --color-accent-hover: var(--accent-hover);
+  --color-success-hover: var(--success-hover);
+  --color-warning-hover: var(--warning-hover);
+  --color-danger-hover: var(--danger-hover);
+
+  /* Form Field Colors */
+  --color-field-focus: var(--field-focus);
+  --color-field-border-hover: var(--field-border-hover);
+  --color-field-border-focus: var(--field-border-focus);
+
+  /* Soft Colors */
+  --color-default-soft: var(--default-soft);
+  --color-default-soft-foreground: var(--default-soft-foreground);
+  --color-default-soft-hover: var(--default-soft-hover);
+
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-foreground: var(--accent-soft-foreground);
+  --color-accent-soft-hover: var(--accent-soft-hover);
+
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-soft-foreground: var(--danger-soft-foreground);
+  --color-danger-soft-hover: var(--danger-soft-hover);
+
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft-foreground: var(--warning-soft-foreground);
+  --color-warning-soft-hover: var(--warning-soft-hover);
+
+  --color-success-soft: var(--success-soft);
+  --color-success-soft-foreground: var(--success-soft-foreground);
+  --color-success-soft-hover: var(--success-soft-hover);
+
+  /* Separator Colors - Levels */
+  --color-separator-secondary: var(--separator-secondary);
+  --color-separator-tertiary: var(--separator-tertiary);
+
+  /* Border Colors - Levels */
+  --color-border-secondary: var(--border-secondary);
+  --color-border-tertiary: var(--border-tertiary);
+
+
+  /* Transition Timing Functions  */
+  --ease-smooth: ease; /* same as transition: ease; */
+  /* These custom curves are made by https://twitter.com/bdc */
+
+  /* From smoother to faster */
+  --ease-in-quad: cubic-bezier(0.55, 0.085, 0.68, 0.53);
+  --ease-in-cubic: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+  --ease-in-quart: cubic-bezier(0.895, 0.03, 0.685, 0.22);
+  --ease-in-quint: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+  --ease-in-expo: cubic-bezier(0.95, 0.05, 0.795, 0.035);
+  --ease-in-circ: cubic-bezier(0.6, 0.04, 0.98, 0.335);
+  /* From slower to faster */
+  --ease-out-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-out-cubic: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
+  --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+  --ease-out-circ: cubic-bezier(0.075, 0.82, 0.165, 1);
+  /* Custom smooth-out curve: fast start, smooth stop - Apple style */
+  --ease-out-fluid: cubic-bezier(0.32, 0.72, 0, 1);
+  /* From slower to faster */
+  --ease-in-out-quad: cubic-bezier(0.455, 0.03, 0.515, 0.955);
+  --ease-in-out-cubic: cubic-bezier(0.645, 0.045, 0.355, 1);
+  --ease-in-out-quart: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-in-out-quint: cubic-bezier(0.86, 0, 0.07, 1);
+  --ease-in-out-expo: cubic-bezier(1, 0, 0, 1);
+  --ease-in-out-circ: cubic-bezier(0.785, 0.135, 0.15, 0.86);
+
+  /* Linear */
+  --ease-linear: linear;
+
+  /* Animations */
+  --animate-spin-fast: spin 0.75s linear infinite;
+  --animate-skeleton: skeleton 2s linear infinite;
+  --animate-caret-blink: caret-blink 1.2s ease-out infinite;
+
+  @keyframes skeleton {
+    100% {
+      transform: translateX(200%);
+    }
+  }
+
+  @keyframes caret-blink {
+    0%,
+    70%,
+    100% {
+      opacity: 1;
+    }
+    20%,
+    50% {
+      opacity: 0;
+    }
+  }
+}
+
+/* The colours the HeroUI components read, from the app's own. Only on the components themselves. */
+.button,
+.card,
+.chip,
+.alert,
+.toggle-button,
+.toggle-button-group {
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --muted: var(--ink-2);
+  --surface-foreground: var(--ink);
+  --surface-hover: var(--surface-2);
+  --surface-secondary: var(--surface-2);
+  --surface-secondary-foreground: var(--ink);
+  --surface-tertiary: var(--line);
+  --surface-tertiary-foreground: var(--ink);
+  --overlay: var(--surface);
+  --overlay-foreground: var(--ink);
+
+  /* The app's own pill is what HeroUI calls accent. */
+  --accent: var(--btn);
+  --accent-foreground: var(--btn-ink);
+  --accent-hover: color-mix(in oklab, var(--btn) 88%, var(--bg));
+  --accent-soft: color-mix(in oklab, var(--btn) 9%, var(--surface));
+  --accent-soft-foreground: var(--ink);
+  --accent-soft-hover: color-mix(in oklab, var(--btn) 14%, var(--surface));
+
+  --default: var(--surface-2);
+  --default-hover: color-mix(in oklab, var(--surface-2) 92%, var(--ink));
+  --default-foreground: var(--ink);
+  --default-soft: var(--surface-2);
+  --default-soft-foreground: var(--ink-2);
+  --default-soft-hover: color-mix(in oklab, var(--surface-2) 92%, var(--ink));
+
+  --success: var(--good-text);
+  --success-foreground: var(--surface);
+  --success-hover: color-mix(in oklab, var(--good-text) 88%, var(--bg));
+  --success-soft: color-mix(in oklab, var(--good-text) 13%, var(--surface));
+  --success-soft-foreground: var(--good-text);
+  --success-soft-hover: color-mix(in oklab, var(--good-text) 19%, var(--surface));
+
+  --warning: var(--warn-ui);
+  --warning-foreground: var(--surface);
+  --warning-hover: color-mix(in oklab, var(--warn-ui) 88%, var(--bg));
+  --warning-soft: color-mix(in oklab, var(--warn-ui) 16%, var(--surface));
+  --warning-soft-foreground: var(--ink);
+  --warning-soft-hover: color-mix(in oklab, var(--warn-ui) 22%, var(--surface));
+
+  --danger: var(--critical);
+  --danger-foreground: #fff;
+  --danger-hover: color-mix(in oklab, var(--critical) 88%, var(--bg));
+  --danger-soft: color-mix(in oklab, var(--critical) 12%, var(--surface));
+  --danger-soft-foreground: var(--critical-text);
+  --danger-soft-hover: color-mix(in oklab, var(--critical) 18%, var(--surface));
+
+  --segment: var(--surface);
+  --segment-foreground: var(--ink);
+  --border: var(--line);
+  --separator: var(--line);
+  --focus: var(--ink);
+  --link: var(--ink);
+  --backdrop: var(--scrim);
+
+  /* A card is the app's own: white on the page, with the thin ring round it and no shadow. */
+  --surface-shadow: 0 0 0 1px var(--ring);
+  --overlay-shadow: 0 0 0 1px var(--ring);
+  --field-shadow: none;
+
+  --radius: 0.5rem;
+  --border-width: 1px;
+  --disabled-opacity: 0.5;
+  --ring-offset-width: 2px;
+  --cursor-interactive: pointer;
+  --cursor-disabled: not-allowed;
+}
+
+/* The chosen one of a group is the app's own solid pill (black on light, white on dark), as the segmented choices of the other pages are,
+   not HeroUI's pale tint, which does not stand out from the grey of the group. */
+.toggle-button {
+  --toggle-button-bg-selected: var(--btn);
+  --toggle-button-bg-selected-hover: var(--btn);
+  --toggle-button-bg-selected-pressed: var(--btn);
+  --toggle-button-fg-selected: var(--btn-ink);
+}

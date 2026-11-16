@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
@@ -75,21 +76,25 @@ describe('Home', () => {
 
   it('shows suggestions on Home only when it is given some, and only for the current month', () => {
     const html = render(false, 0, [regular])
-    expect(html).toContain('Suggested for now')
+    expect(html).toContain('Add again, one tap')
     expect(html).toContain('Usually on Wednesdays')
     expect(html).toContain('₹450')
-    expect(render(false, 0, [])).not.toContain('Suggested for now') // placement is elsewhere, or off
-    expect(render(false, 0, [regular], '2026-09')).not.toContain('Suggested for now') // a past month
+    expect(render(false, 0, [])).not.toContain('Add again, one tap') // placement is elsewhere, or off
+    expect(render(false, 0, [regular], '2026-09')).not.toContain('Add again, one tap') // a past month
   })
 
-  it('lists received money in Recent transactions with a plus sign, not just spending', () => {
+  it('does not list the transactions or draw the ribbon of where the money flows: each is a button to its own place', () => {
     const html = render(false)
-    expect(html).toContain('Employer')
-    expect(html).toContain('+₹80,000')
+    expect(html).not.toContain('Employer')
+    expect(html).not.toContain('+₹80,000')
+    expect(html).not.toContain('Share of spending by category')
+    expect(html).toContain('aria-label="More about this month"')
+    expect(html).toMatch(/<button[^>]*>.*Recent transactions<\/span><\/button>/)
+    expect(html).toContain('data-icon="list"') // the icon of Activity, which it leads to
   })
 })
 
-describe('Home goals button', () => {
+describe('Home goals and the Settings button', () => {
   const renderWith = (goals: Goal[], list = txs) =>
     renderToStaticMarkup(
       createElement(Home, {
@@ -98,21 +103,18 @@ describe('Home goals button', () => {
           expenseCategories: categories.slice(0, 1), categoryById: new Map(categories.map((c) => [c.id, c])), goals,
         }),
         month: '2026-10', onMonth: () => {}, today, onPickCategory: () => {}, onEdit: () => {}, onExample: () => {},
-        onOpenSettings: () => {}, onSeeAll: () => {}, balanceShown: false, onToggleBalance: () => {}, suggestions: [],
+        onOpenSettings: () => {}, onOpenAppSettings: () => {}, onSeeAll: () => {}, balanceShown: false, onToggleBalance: () => {}, suggestions: [],
         onSuggestion: () => {}, logNudge: false, onAdd: () => {}, onOpenGoals: () => {},
       }),
     )
 
-  it('puts the goals button in a header, at the right of the greeting and date and above the month switcher', () => {
+  it('puts the Settings button in a header, at the right of the greeting and date and above the month switcher, and the goals button is in the bottom bar instead', () => {
     const dateTitle = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(today)
     const html = renderWith([])
     expect(html).toContain('<header')
-    expect(html.indexOf(dateTitle)).toBeLessThan(html.indexOf('aria-label="Goals. None yet"'))
-    expect(html.indexOf('aria-label="Goals. None yet"')).toBeLessThan(html.indexOf('aria-label="Previous month"'))
-  })
-
-  it('says on the button how much is saved overall', () => {
-    expect(renderWith([{ id: 1, name: 'Goa trip', targetMinor: 2_500_000, savedMinor: 500_000, createdAt: 1 }])).toContain('aria-label="Goals. 1 goal, 20% saved"')
+    expect(html.indexOf(dateTitle)).toBeLessThan(html.indexOf('aria-label="Settings"'))
+    expect(html.indexOf('aria-label="Settings"')).toBeLessThan(html.indexOf('aria-label="Previous month"'))
+    expect(html).not.toContain('aria-label="Goals.')
   })
 
   it('shows the goal that matters most on Home, with what it means, near the bottom', () => {
@@ -127,10 +129,10 @@ describe('Home goals button', () => {
     expect(renderWith([])).not.toContain('See goals')
   })
 
-  it('is there on a first launch too, so a goal can be set before anything is logged', () => {
+  it('has Settings at the top on a first launch too', () => {
     const html = renderWith([], [])
     expect(html).toContain('Let’s add your first one.')
-    expect(html).toContain('aria-label="Goals. None yet"')
+    expect(html).toContain('aria-label="Settings"')
   })
 })
 
@@ -205,18 +207,20 @@ describe('Home: the budget invitation', () => {
       }),
     )
 
-  it('sits below the suggestions, and above the day-by-day chart', () => {
+  it('sits below the suggestions, and above the recent transactions', () => {
     const html = renderBudget(null, '2026-10', true)
     const at = (s: string) => html.indexOf(s)
-    expect(at('Suggested for now')).toBeGreaterThan(-1)
-    expect(at('Set a monthly budget')).toBeGreaterThan(at('Suggested for now'))
-    expect(at('Set a monthly budget')).toBeLessThan(at('Day by day'))
+    expect(at('Add again, one tap')).toBeGreaterThan(-1)
+    expect(at('Set a monthly budget')).toBeGreaterThan(at('Add again, one tap'))
+    expect(at('Set a monthly budget')).toBeLessThan(at('Recent transactions'))
   })
 
-  it('shows the suggestions as tiles with a line saying what to do', () => {
+  it('shows the suggestions as round pills that add at once, with the reason for a screen reader', () => {
     const html = renderBudget(3_000_000, '2026-10', true)
-    expect(html).toContain('Your usual ones around this time. Tap + to add one now, or tap the tile to check it first.')
-    expect(html).toContain('w-[9.5rem]') // a tile, not a slim chip
+    expect(html).toContain('Add again, one tap')
+    expect(html).toContain('data-quick')
+    expect(html).not.toContain('w-[9.5rem]') // not a tile
+    expect(html).not.toContain('Your usual ones around this time')
     expect(html).toContain('Usually on Wednesdays')
   })
 
@@ -225,7 +229,7 @@ describe('Home: the budget invitation', () => {
     expect(html).toContain('Set a monthly budget to see how much you have left.')
     const at = (s: string) => html.indexOf(s)
     expect(at('Set a monthly budget')).toBeGreaterThan(at('aria-label="Money received and your balance"'))
-    expect(at('Set a monthly budget')).toBeGreaterThan(at('aria-label="Coming up"'))
+    expect(at('Set a monthly budget')).toBeGreaterThan(at('aria-label="Plan ahead"'))
     expect(at('Set a monthly budget')).toBeLessThan(at('Recent transactions'))
     // and not part of the overview card above
     const overview = html.slice(at('aria-label="Summary"'), at('aria-label="Money received and your balance"'))
@@ -264,14 +268,13 @@ describe('Home: what comes first', () => {
     )
   }
 
-  it('answers "where do I stand" first, then cash, what is coming, the day-by-day chart, recent activity, where it went, advice and goals', () => {
+  it('answers "where do I stand" first, then cash, what is coming, recent activity, where it went, advice and goals; the days are in the graph the card opens', () => {
     const html = renderFull()
     const order = [
       'aria-label="Summary"',
+      'aria-label="Plan ahead"',
       'aria-label="Money received and your balance"',
-      'aria-label="Coming up"',
       'aria-label="Budget"',
-      'Day by day',
       'Recent transactions',
       'Where it went',
       'Understand your spending',
@@ -282,9 +285,55 @@ describe('Home: what comes first', () => {
     expect(positions).toEqual([...positions].sort((a, b) => a - b))
   })
 
+  it('has a button, with the icon of its tab, to Recent transactions and to where the money flows, in that order, before where it went', () => {
+    const html = renderFull()
+    expect(html).toMatch(/<button[^>]*>(?:(?!<\/button>).)*data-icon="list"(?:(?!<\/button>).)*Recent transactions<\/span><\/button>/)
+    expect(html).toMatch(/<button[^>]*>(?:(?!<\/button>).)*data-icon="bars"(?:(?!<\/button>).)*Where the money flows<\/span><\/button>/)
+    const at = (s: string) => html.indexOf(s)
+    expect(at('Recent transactions')).toBeLessThan(at('Where the money flows'))
+    expect(at('Where the money flows')).toBeLessThan(at('Where it went'))
+  })
+
   it('has one calm headline number, then the tools around it, not a stack of equal cards', () => {
     const html = renderFull()
-    expect((html.match(/text-\[clamp\(2\.25rem,10vw,2\.5rem\)\]/g) ?? []).length).toBe(1)
+    expect((html.match(/type-display/g) ?? []).length).toBe(1)
+  })
+
+  describe('type: two voices, not one weight for everything', () => {
+    // The words on Home, the greeting and the title of each section included, are in Figtree; the figures are in the theme's bold sans.
+    const classes = (html: string, name: string) => (html.match(new RegExp(`class="[^"]*\\b${name}\\b[^"]*"`, 'g')) ?? []).length
+
+    it('sets the greeting in the Home voice, and every section title in the same one size', () => {
+      const html = renderFull()
+      expect(classes(html, 'type-greeting')).toBe(1)
+      // Plan ahead, Where it went, Goals and the insights card.
+      expect(classes(html, 'type-title')).toBeGreaterThanOrEqual(3)
+      for (const title of ['Plan ahead', 'Where it went']) {
+        expect(html).toMatch(new RegExp(`<h2[^>]*class="[^"]*type-title[^"]*"[^>]*>${title}<`))
+      }
+    })
+
+    it('sets the numbers in the theme’s sans, bold and level, and only the words in Figtree', () => {
+      const html = renderFull()
+      expect(classes(html, 'type-display')).toBe(1)
+      expect(classes(html, 'type-figure')).toBeGreaterThanOrEqual(2)
+      // No figure is set in the words' face.
+      expect(html).not.toMatch(/class="[^"]*type-(headline|title|greeting)[^"]*"[^>]*>[^<]*₹/)
+      const css = readFileSync('src/index.css', 'utf8')
+      expect(css).toMatch(/\.type-display,\s*\.type-figure \{\s*font-family: var\(--font-ui, var\(--font-sans\)\);\s*font-variant-numeric: tabular-nums/)
+      expect(css).toMatch(/\.type-greeting,\s*\.type-headline,\s*\.type-title \{\s*font-family: var\(--font-voice\)/)
+      expect(css).toMatch(/--font-voice:\s*'Figtree Variable'/)
+      // The whole page takes it for its words, so the small text is in it too.
+      expect(html).toMatch(/<div class="font-text pb-4"/)
+    })
+
+    it('does not give any section a sans of its own: Plan ahead is in the theme font like the rest', () => {
+      expect(renderFull()).not.toContain('font-cred')
+    })
+
+    it('does not put the old bold-sans heading on any title', () => {
+      expect(renderFull()).not.toMatch(/<h2[^>]*class="[^"]*text-xl font-bold tracking-tight/)
+    })
   })
 
   it('offers the insights as the next step, in words and a button', () => {

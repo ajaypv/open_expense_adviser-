@@ -36,16 +36,16 @@ async function open() {
   } as never)
   const user = userEvent.setup()
   render(<App />)
-  await screen.findByRole('button', { name: 'Add Cafe, ₹450 now' })
+  await screen.findByRole('button', { name: /^Add Cafe, ₹450 now/ })
   return user
 }
 
 const cafes = async () => (await db.transactions.toArray()).filter((t) => t.merchant === 'Cafe')
 
-describe('Home suggestions: the plus adds at once', () => {
+describe('Home suggestions: a tap on a chip adds at once', () => {
   it('adds the usual amount for today, with the usual category and way of paying, and no form', async () => {
     const user = await open()
-    await user.click(screen.getByRole('button', { name: 'Add Cafe, ₹450 now' }))
+    await user.click(screen.getByRole('button', { name: /^Add Cafe, ₹450 now/ }))
     await waitFor(async () => expect(await cafes()).toHaveLength(2))
     const added = (await cafes()).find((t) => t.date === localDateString())!
     expect(added).toMatchObject({ kind: 'expense', amountMinor: 45_000, categoryId: 1, merchant: 'Cafe', paymentMethod: 'UPI', source: 'manual' })
@@ -55,7 +55,7 @@ describe('Home suggestions: the plus adds at once', () => {
 
   it('says what was added, with an Undo that takes it away completely', async () => {
     const user = await open()
-    await user.click(screen.getByRole('button', { name: 'Add Cafe, ₹450 now' }))
+    await user.click(screen.getByRole('button', { name: /^Add Cafe, ₹450 now/ }))
     expect(await screen.findByText('Added Cafe, ₹450')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Undo' }))
     await waitFor(async () => expect(await cafes()).toHaveLength(1))
@@ -65,20 +65,10 @@ describe('Home suggestions: the plus adds at once', () => {
 
   it('adds it only once however fast it is tapped', async () => {
     const user = await open()
-    const plus = screen.getByRole('button', { name: 'Add Cafe, ₹450 now' })
+    const plus = screen.getByRole('button', { name: /^Add Cafe, ₹450 now/ })
     await user.dblClick(plus)
     await waitFor(async () => expect(await cafes()).toHaveLength(2))
     await new Promise((resolve) => setTimeout(resolve, 100))
     expect(await cafes()).toHaveLength(2)
-  })
-})
-
-describe('Home suggestions: the tile opens the form first', () => {
-  it('opens the add form filled in, and adds nothing until it is saved', async () => {
-    const user = await open()
-    await user.click(screen.getByRole('button', { name: /^Cafe, ₹450\..*Fill in the form$/ }))
-    const form = await screen.findByRole('dialog')
-    expect(within(form).getByLabelText(/amount/i)).toHaveValue('450')
-    expect(await cafes()).toHaveLength(1)
   })
 })

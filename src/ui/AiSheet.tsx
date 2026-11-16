@@ -4,9 +4,11 @@ import { formatMoney, localDateString, parseLocalDate } from '../db/money'
 import { buildAiSummary, type AiDeduction, type AiSummary } from '../insights/ai'
 import { monthLabel } from '../insights/aggregates'
 import { TAG_LABELS } from '../insights/upcoming'
-import { CountUp, DeductionTimeline, MonthBar, MonthBars, Scene, ShareBar, TrajectoryChart } from './AiCharts'
+import { CountUp, DeductionTimeline, MonthBar, MonthBars, Scene, ShareBar, TrajectoryChart, whole } from './AiCharts'
+import { categoryIcon } from './categoryIcon'
 import { Dialog } from './Dialog'
-import { Icon } from './Icon'
+import { Figures } from './Figures'
+import { Icon, type IconName } from './Icon'
 import { PaymentBadge } from './PaymentBadge'
 
 type Ledger = ReturnType<typeof useLedger>
@@ -28,6 +30,29 @@ const dateOf = (date: string) => (shortDate ??= new Intl.DateTimeFormat(undefine
 const DAY_MS = 86_400_000
 const delay = (ms: number): CSSProperties => ({ '--d': `${ms}ms` }) as CSSProperties
 
+/** A round icon, as on the other pages: soft grey, washed with a colour of its own, or amber for a warning. */
+function Round({ icon, size = 36, color, warn, onTile }: { icon: IconName; size?: number; color?: string; warn?: boolean; /** On a soft tile the circle is the lighter surface, so it still shows. */ onTile?: boolean }) {
+  const style: CSSProperties = warn
+    ? { color: 'var(--warn-ui)', background: 'color-mix(in oklab, var(--warn-ui) 16%, var(--surface))' }
+    : color
+      ? { background: `color-mix(in oklab, ${color} 20%, var(--surface))` }
+      : {}
+  return (
+    <span aria-hidden="true" data-icon={icon} className={`flex shrink-0 items-center justify-center rounded-full ${warn || color ? '' : onTile ? 'bg-surface' : 'bg-surface-2'} ${warn ? '' : 'text-ink'}`} style={{ width: size, height: size, ...style }}>
+      <Icon name={icon} size={Math.round(size * 0.5)} />
+    </span>
+  )
+}
+
+/** The icon for each kind of leak: the category's own where it is about one, otherwise what the leak is. */
+function leakIcon(key: string, nameOf: (id: number) => string): IconName {
+  if (key.startsWith('usual-')) return categoryIcon(nameOf(Number(key.slice(6))))
+  if (key.startsWith('repeat-') || key === 'subscriptions') return 'repeat'
+  if (key === 'rate') return 'swap'
+  if (key === 'weekend') return 'sun'
+  return 'tag'
+}
+
 /** The question a section answers, as its heading, and a line to say what it will show. */
 function Heading({ id, children, lead }: { id: string; children: string; lead?: string }) {
   return (
@@ -35,7 +60,7 @@ function Heading({ id, children, lead }: { id: string; children: string; lead?: 
       <h3 id={id} className="font-ai-display text-balance text-[1.75rem] font-semibold leading-[1.1] tracking-tight">
         {children}
       </h3>
-      {lead && <p className="mt-1 text-[0.9375rem] leading-snug text-ink-2">{lead}</p>}
+      {lead && <p className="mt-1 text-[1.0625rem] leading-[1.6] text-ink-2">{lead}</p>}
     </>
   )
 }
@@ -54,15 +79,13 @@ export function AiSheet({ open, onClose, ledger, month, today }: Props) {
       <div className="mx-auto w-full max-w-xl px-5 pb-[max(3rem,env(safe-area-inset-bottom))]">
         <header className="sticky top-0 z-10 -mx-5 flex items-center justify-between gap-3 bg-bg/80 px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-md">
           <div className="min-w-0">
-            <h2 id="ai-title" className="font-ai-display flex items-center gap-2 text-xl font-semibold tracking-tight">
-              <span aria-hidden="true" style={{ color: 'var(--accent)' }}>
-                <Icon name="spark" size={20} />
-              </span>
+            <h2 id="ai-title" className="font-ai-display flex items-center gap-2.5 text-xl font-semibold tracking-tight">
+              <Round icon="spark" size={32} color="var(--accent)" />
               AI insights
             </h2>
-            <p className="truncate text-xs text-ink-2">{`${monthLabel(month)}${isCurrent ? ', so far' : ''}`}</p>
+            <p className="truncate pl-[2.625rem] text-sm text-ink-2">{`${monthLabel(month)}${isCurrent ? ', so far' : ''}`}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="-mr-2 flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-surface-2">
+          <button type="button" onClick={onClose} aria-label="Close" className="flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-2 active:opacity-70">
             <Icon name="close" />
           </button>
         </header>
@@ -75,7 +98,7 @@ export function AiSheet({ open, onClose, ledger, month, today }: Props) {
 
 function AiBody({ ledger, month, today }: { ledger: Ledger; month: string; today: Date }) {
   const { currency, categoryById } = ledger
-  const money: Fmt = (m) => formatMoney(m, currency)
+  const money: Fmt = (m) => formatMoney(whole(m), currency)
   const s = useMemo(
     () =>
       buildAiSummary({
@@ -88,7 +111,7 @@ function AiBody({ ledger, month, today }: { ledger: Ledger; month: string; today
   const nameOf = (id: number) => categoryById.get(id)?.name ?? 'No category'
   const colorOf = (id: number) => categoryById.get(id)?.color ?? 'var(--other)'
 
-  const disclosure = <p className="text-xs text-ink-2">Worked out on this phone from your own entries. Nothing is sent anywhere.</p>
+  const disclosure = <p className="text-sm text-ink-2">Worked out on this phone from your own entries. Nothing is sent anywhere.</p>
 
   if (!s.hasData) {
     return (
@@ -107,7 +130,7 @@ function AiBody({ ledger, month, today }: { ledger: Ledger; month: string; today
         <Briefing s={s} money={money} currency={currency} />
       </div>
       {s.deductions || s.isCurrent ? <Deductions s={s} money={money} today={today} /> : null}
-      <Leaking s={s} money={money} currency={currency} />
+      <Leaking s={s} money={money} currency={currency} nameOf={nameOf} />
       <Pace s={s} money={money} currency={currency} />
       <Rest s={s} money={money} nameOf={nameOf} colorOf={colorOf} />
       <Ahead s={s} money={money} currency={currency} />
@@ -117,7 +140,7 @@ function AiBody({ ledger, month, today }: { ledger: Ledger; month: string; today
             <Heading id="ai-habits">What your days look like</Heading>
             <ul className="mt-2 space-y-1.5">
               {s.habits.slice(0, 3).map((h) => (
-                <li key={h} className="text-[0.9375rem] leading-snug">
+                <li key={h} className="text-[1.0625rem] leading-[1.6]">
                   {h}
                 </li>
               ))}
@@ -125,15 +148,15 @@ function AiBody({ ledger, month, today }: { ledger: Ledger; month: string; today
           </section>
         </Scene>
       )}
-      <p className="text-xs leading-snug text-ink-2">These are estimates from what you have logged and set up, worked out by simple sums. They are a guide, not financial advice.</p>
+      <p className="text-sm leading-snug text-ink-2">These are estimates from what you have logged and set up, worked out by simple sums. They are a guide, not financial advice.</p>
     </div>
   )
 }
 
 /** The sentence to open on, and what stands behind it. */
-function briefing(s: AiSummary, money: Fmt): { lead: string; sub: string[] } {
+function briefing(s: AiSummary, money: Fmt): { lead: string; sub: { text: string; figures: string[] }[] } {
   const t = s.trajectory
-  const sub: string[] = []
+  const sub: { text: string; figures: string[] }[] = []
   let lead: string
   if (t.projectedMinor !== null) {
     if (t.overBudget?.already) lead = `You have already passed your ${money(t.budgetMinor!)} budget, by ${money(t.overBudget.byMinor)}.`
@@ -143,20 +166,20 @@ function briefing(s: AiSummary, money: Fmt): { lead: string; sub: string[] } {
     const last = t.previous.at(-1)
     if (last) {
       const pct = Math.round(((t.projectedMinor - last) / last) * 100)
-      sub.push(pct === 0 ? `About the same as ${s.prevName}, which ended at ${money(last)}.` : `${Math.abs(pct)}% ${pct > 0 ? 'more' : 'less'} than ${s.prevName}, which ended at ${money(last)}.`)
+      sub.push({ text: pct === 0 ? `About the same as ${s.prevName}, which ended at ${money(last)}.` : `${Math.abs(pct)}% ${pct > 0 ? 'more' : 'less'} than ${s.prevName}, which ended at ${money(last)}.`, figures: [`${Math.abs(pct)}%`, money(last)] })
     }
   } else if (s.isCurrent) {
     lead = t.overBudget?.already ? `You have already passed your ${money(t.budgetMinor!)} budget, by ${money(t.overBudget.byMinor)}.` : `You have spent ${money(s.spentMinor)} in ${s.monthName} so far.`
-    sub.push('Give it a few more days and this page will say where the month is heading.')
+    sub.push({ text: 'Give it a few more days and this page will say where the month is heading.', figures: [] })
   } else {
     lead = `You spent ${money(s.spentMinor)} in ${s.monthName}.`
     const pct = s.previous.deltaPct
-    if (pct !== null) sub.push(pct === 0 ? `The same as ${s.prevName}.` : `${Math.abs(pct)}% ${pct > 0 ? 'more' : 'less'} than ${s.prevName}.`)
+    if (pct !== null) sub.push({ text: pct === 0 ? `The same as ${s.prevName}.` : `${Math.abs(pct)}% ${pct > 0 ? 'more' : 'less'} than ${s.prevName}.`, figures: [`${Math.abs(pct)}%`] })
   }
   const d = s.deductions
   if (d && d.totalMinor > 0) {
     const split = d.doneMinor > 0 && d.dueMinor > 0 ? `: ${money(d.doneMinor)} already, ${money(d.dueMinor)} still to come` : d.dueMinor > 0 ? ', all of it still to come' : ' and already has'
-    sub.push(`${money(d.totalMinor)} of that leaves on its own${split}.`)
+    sub.push({ text: `${money(d.totalMinor)} of that leaves on its own${split}.`, figures: [money(d.totalMinor), money(d.doneMinor), money(d.dueMinor)] })
   }
   return { lead, sub }
 }
@@ -172,8 +195,8 @@ function Briefing({ s, money, currency }: { s: AiSummary; money: Fmt; currency: 
         {sub.length > 0 && (
           <ul className="mt-3 space-y-1">
             {sub.map((line) => (
-              <li key={line} className="text-pretty text-[1.0625rem] leading-snug text-ink-2">
-                {line}
+              <li key={line.text} className="text-pretty text-[1.0625rem] leading-[1.6] text-ink-2">
+                <Figures text={line.text} figures={line.figures} />
               </li>
             ))}
           </ul>
@@ -184,12 +207,10 @@ function Briefing({ s, money, currency }: { s: AiSummary; money: Fmt; currency: 
           </div>
         )}
         {s.alerts.length > 0 && (
-          <ul aria-label="Needs attention" className="mt-6 divide-y divide-line border-y border-line">
+          <ul aria-label="Needs attention" className="mt-6 space-y-2">
             {s.alerts.slice(0, 3).map((a) => (
-              <li key={a.key} data-alert={a.key} className="flex items-start gap-3 py-3">
-                <span aria-hidden="true" className="mt-0.5 shrink-0" style={{ color: 'var(--critical-text)' }}>
-                  <Icon name="warn" size={20} />
-                </span>
+              <li key={a.key} data-alert={a.key} className="flex items-start gap-3 rounded-2xl bg-surface-2 p-3">
+                <Round icon="warn" warn />
                 <div className="min-w-0">
                   <p className="font-semibold leading-snug">{a.title}</p>
                   <p className="text-sm leading-snug text-ink-2">{a.detail}</p>
@@ -219,17 +240,23 @@ function Deductions({ s, money, today }: { s: AiSummary; money: Fmt; today: Date
       <section aria-labelledby="ai-auto">
         <Heading id="ai-auto">What leaves on its own</Heading>
         {!d ? (
-          <p className="mt-2 text-[0.9375rem] leading-snug text-ink-2">
+          <p className="mt-2 text-[1.0625rem] leading-[1.6] text-ink-2">
             Nothing is set up to repeat yet. Add your EMIs, subscriptions and autopays under Upcoming payments, and the month’s end here will count them on the day each one leaves.
           </p>
         ) : (
           <>
-            <p className="mt-1 text-[0.9375rem] leading-snug text-ink-2">
-              {d.items.length === 0
-                ? 'Nothing has left on its own this month.'
-                : s.isCurrent
-                  ? `${money(d.totalMinor)} in ${s.monthName}: ${money(d.doneMinor)} has left, ${money(d.dueMinor)} is still to come.`
-                  : `${money(d.doneMinor)} left on its own in ${s.monthName}.`}
+            <p className="mt-1 text-[1.0625rem] leading-[1.6] text-ink-2">
+              <Figures
+                every
+                figures={[money(d.totalMinor), money(d.doneMinor), money(d.dueMinor)]}
+                text={
+                  d.items.length === 0
+                    ? 'Nothing has left on its own this month.'
+                    : s.isCurrent
+                      ? `${money(d.totalMinor)} in ${s.monthName}: ${money(d.doneMinor)} has left, ${money(d.dueMinor)} is still to come.`
+                      : `${money(d.doneMinor)} left on its own in ${s.monthName}.`
+                }
+              />
             </p>
             {d.items.length > 0 && <DeductionTimeline deductions={d} days={s.days} elapsed={s.elapsed} isCurrent={s.isCurrent} />}
             {d.items.length > 0 && (
@@ -241,19 +268,26 @@ function Deductions({ s, money, today }: { s: AiSummary; money: Fmt; today: Date
                       <p className="truncate font-medium">{i.name}</p>
                       <p className={`text-sm ${i.state === 'late' ? 'font-medium text-critical' : 'text-ink-2'}`}>{`${TAG_LABELS[i.tag]}. ${statusOf(i, today)}`}</p>
                     </div>
-                    <p className={`shrink-0 font-semibold tabular-nums ${i.state === 'done' ? 'text-ink-2' : ''}`}>{money(i.amountMinor)}</p>
+                    <p className={`num shrink-0 ${i.state === 'done' ? 'text-ink-2' : ''}`}>{money(i.amountMinor)}</p>
                   </li>
                 ))}
               </ul>
             )}
             {d.monthlyMinor > 0 && (
-              <p data-line="monthly" className="mt-3 text-[0.9375rem] leading-snug">
-                {`In an average month these come to ${money(d.monthlyMinor)}${c?.sharePct != null ? `, ${c.sharePct}% of your income${c.emiSharePct != null ? ` (EMIs alone ${c.emiSharePct}%)` : ''}` : ''}${c?.keepsMinor != null ? `, which leaves ${money(Math.max(c.keepsMinor, 0))} for everything else` : ''}.`}
+              <p data-line="monthly" className="mt-3 text-[1.0625rem] leading-[1.6]">
+                <Figures
+                  every
+                  figures={[money(d.monthlyMinor), `${c?.sharePct}%`, `${c?.emiSharePct}%`, money(Math.max(c?.keepsMinor ?? 0, 0))]}
+                  text={`In an average month these come to ${money(d.monthlyMinor)}${c?.sharePct != null ? `, ${c.sharePct}% of your income${c.emiSharePct != null ? ` (EMIs alone ${c.emiSharePct}%)` : ''}` : ''}${c?.keepsMinor != null ? `, which leaves ${money(Math.max(c.keepsMinor, 0))} for everything else` : ''}.`}
+                />
               </p>
             )}
             {c?.nextEmi && (
-              <p data-line="next-emi" className="mt-1 text-[0.9375rem] leading-snug text-ink-2">
-                {`Next EMI: ${c.nextEmi.name}, ${money(c.nextEmi.amountMinor)} on ${dateOf(c.nextEmi.date)}${c.nextEmi.daysLeft >= 0 ? `, in ${c.nextEmi.daysLeft} ${c.nextEmi.daysLeft === 1 ? 'day' : 'days'}` : `, ${-c.nextEmi.daysLeft} ${c.nextEmi.daysLeft === -1 ? 'day' : 'days'} late`}.`}
+              <p data-line="next-emi" className="mt-1 text-[1.0625rem] leading-[1.6] text-ink-2">
+                <Figures
+                  figures={[money(c.nextEmi.amountMinor), dateOf(c.nextEmi.date)]}
+                  text={`Next EMI: ${c.nextEmi.name}, ${money(c.nextEmi.amountMinor)} on ${dateOf(c.nextEmi.date)}${c.nextEmi.daysLeft >= 0 ? `, in ${c.nextEmi.daysLeft} ${c.nextEmi.daysLeft === 1 ? 'day' : 'days'}` : `, ${-c.nextEmi.daysLeft} ${c.nextEmi.daysLeft === -1 ? 'day' : 'days'} late`}.`}
+                />
               </p>
             )}
           </>
@@ -277,10 +311,10 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (on: boolean) 
 }
 
 /** Where money is going that could stay, biggest first. Each can be switched off, and the total says what is left. */
-function Leaking({ s, money, currency }: { s: AiSummary; money: Fmt; currency: string }) {
+function Leaking({ s, money, currency, nameOf }: { s: AiSummary; money: Fmt; currency: string; nameOf: (id: number) => string }) {
   const [off, setOff] = useState<ReadonlySet<string>>(new Set())
   const chosen = s.leaks.filter((l) => !off.has(l.key))
-  const monthly = chosen.reduce((a, l) => a + l.monthlyMinor, 0)
+  const monthly = whole(chosen.reduce((a, l) => a + l.monthlyMinor, 0))
   const top = Math.max(...s.leaks.map((l) => l.monthlyMinor), 1)
   const projected = s.trajectory.projectedMinor
   const toggle = (key: string, on: boolean) =>
@@ -298,50 +332,51 @@ function Leaking({ s, money, currency }: { s: AiSummary; money: Fmt; currency: s
           Where it is leaking
         </Heading>
         {s.leaks.length === 0 ? (
-          <p className="mt-2 text-[0.9375rem] leading-snug">Nothing stands out. Your spending looks steady, so there is no one thing to cut.</p>
+          <p className="mt-2 text-[1.0625rem] leading-[1.6]">Nothing stands out. Your spending looks steady, so there is no one thing to cut.</p>
         ) : (
           <>
-            <div data-testid="leak-total" className="mt-4">
+            <div data-testid="leak-total" className="mt-4 rounded-2xl bg-surface-2 p-4">
               <p className="text-sm text-ink-2">{chosen.length === 0 ? 'Nothing switched on' : chosen.length === s.leaks.length ? 'Stopping all of these keeps you' : `Stopping these ${chosen.length} keeps you`}</p>
               <p className="font-ai-display text-5xl font-medium leading-none tracking-tight">
                 <CountUp minor={monthly} currency={currency} delay={150} />
                 <span className="font-theme ml-2 text-base font-medium text-ink-2">a month</span>
               </p>
-              <p className="text-[0.9375rem] leading-snug text-ink-2">
+              <p className="mt-1 text-[1.0625rem] leading-[1.6] text-ink-2">
                 {'That is '}
-                <span className="font-semibold text-ink tabular-nums">
-                  <CountUp minor={monthly * 12} currency={currency} delay={300} />
+                <span className="num text-ink">
+                  <CountUp minor={whole(monthly * 12)} currency={currency} delay={300} />
                 </span>
                 {' a year'}
                 {projected !== null && monthly > 0 ? (
                   <>
                     {`, and ${s.monthName} would end near `}
-                    <span className="font-semibold text-ink tabular-nums">
-                      <CountUp minor={Math.max(projected - monthly, 0)} currency={currency} delay={450} />
+                    <span className="num text-ink">
+                      <CountUp minor={whole(Math.max(projected - monthly, 0))} currency={currency} delay={450} />
                     </span>
                   </>
                 ) : null}
                 {'.'}
               </p>
             </div>
-            <ul aria-label="Where money is leaking" className="mt-5 divide-y divide-line border-y border-line">
+            <ul aria-label="Where money is leaking" className="mt-3 space-y-2">
               {s.leaks.map((l, i) => {
                 const on = !off.has(l.key)
                 return (
-                  <li key={l.key} data-leak={l.key} data-on={on ? 'true' : 'false'} className="py-3.5">
+                  <li key={l.key} data-leak={l.key} data-on={on ? 'true' : 'false'} className="rounded-2xl bg-surface-2 p-3">
                     <div className="flex items-start gap-3">
-                      <Toggle on={on} onChange={(v) => toggle(l.key, v)} label={`Count ${l.title}`} />
+                      <Round icon={leakIcon(l.key, nameOf)} onTile />
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold leading-snug">{l.title}</p>
                         <p className="mt-0.5 text-sm leading-snug text-ink-2">{l.evidence}</p>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <p className="font-semibold tabular-nums">{money(l.monthlyMinor)}</p>
+                      <div className="flex shrink-0 flex-col items-end text-right">
+                        <Toggle on={on} onChange={(v) => toggle(l.key, v)} label={`Count ${l.title}`} />
+                        <p className="num mt-1.5">{money(l.monthlyMinor)}</p>
                         <p className="text-xs text-ink-2">a month</p>
-                        <p className="text-xs text-ink-2 tabular-nums">{`${money(l.yearlyMinor)} a year`}</p>
+                        <p className="num text-xs font-medium text-ink-2">{`${money(l.yearlyMinor)} a year`}</p>
                       </div>
                     </div>
-                    <span aria-hidden="true" className="mt-2.5 block h-1.5 rounded-full bg-surface-2">
+                    <span aria-hidden="true" className="mt-2.5 block h-1.5 rounded-full bg-surface">
                       <span
                         className="ai-bar-right block h-full rounded-full transition-opacity duration-300 motion-reduce:transition-none"
                         style={{ width: `${Math.max((l.monthlyMinor / top) * 100, 4)}%`, background: 'var(--accent)', opacity: on ? 1 : 0.2, ...delay(i * 110) }}
@@ -354,7 +389,7 @@ function Leaking({ s, money, currency }: { s: AiSummary; money: Fmt; currency: s
           </>
         )}
         {s.goal && (
-          <p data-line="goal" className="mt-4 text-[0.9375rem] leading-snug">
+          <p data-line="goal" className="mt-4 text-[1.0625rem] leading-[1.6]">
             <span className="font-semibold">{s.goal.title}. </span>
             {s.goal.detail}
           </p>
@@ -373,6 +408,13 @@ function Pace({ s, money, currency }: { s: AiSummary; money: Fmt; currency: stri
   else if (t.budgetMinor !== null && t.overBudget && t.committedLeftMinor > 0) lines.push(`What is still to leave on its own, ${money(t.committedLeftMinor)}, is more than the ${money(Math.max(t.budgetMinor - s.spentMinor, 0))} of the budget that is left.`)
   if (t.overBudget && !t.overBudget.already && t.overBudget.onDay) lines.push(`At this pace the budget runs out around the ${t.overBudget.onDay}${suffix(t.overBudget.onDay)}.`)
   const last = t.previous.at(-1)
+  const day = t.overBudget?.onDay
+  const paceFigures = [
+    ...(t.perDayAllowedMinor !== null ? [money(t.perDayAllowedMinor)] : []),
+    money(t.committedLeftMinor),
+    ...(t.budgetMinor !== null ? [money(t.budgetMinor), money(Math.max(t.budgetMinor - s.spentMinor, 0))] : []),
+    ...(day ? [`${day}${suffix(day)}`] : []),
+  ]
   return (
     <Scene>
       <section aria-labelledby="ai-pace">
@@ -401,8 +443,8 @@ function Pace({ s, money, currency }: { s: AiSummary; money: Fmt; currency: stri
         {lines.length > 0 && (
           <ul className="mt-3 space-y-1">
             {lines.map((l) => (
-              <li key={l} data-budget={t.overBudget ? 'over' : 'inside'} className={`text-[0.9375rem] leading-snug ${t.overBudget ? 'font-medium' : ''}`}>
-                {l}
+              <li key={l} data-budget={t.overBudget ? 'over' : 'inside'} className="text-[1.0625rem] leading-[1.6]">
+                <Figures text={l} figures={paceFigures} />
               </li>
             ))}
           </ul>
@@ -421,7 +463,7 @@ function Rest({ s, money, nameOf, colorOf }: { s: AiSummary; money: Fmt; nameOf:
   return (
     <Scene>
       <section aria-labelledby="ai-where">
-        <Heading id="ai-where" lead={`Against the same days of ${s.prevName}.`}>
+        <Heading id="ai-where" lead={s.previous.minor > 0 ? `Against the same days of ${s.prevName}.` : undefined}>
           Where the money went
         </Heading>
         <div className="mt-4">
@@ -429,18 +471,22 @@ function Rest({ s, money, nameOf, colorOf }: { s: AiSummary; money: Fmt; nameOf:
         </div>
         <ul className="mt-3 divide-y divide-line">
           {shown.map((c) => {
+            // Said only where there is something to compare with: when last month had nothing, every row would be "New".
+            const compare = s.previous.minor > 0
             const chip = c.deltaPct === null ? 'New' : c.deltaPct === 0 ? 'Same' : `${c.deltaPct > 0 ? '▲' : '▼'} ${Math.abs(c.deltaPct)}%`
             return (
               <li key={c.categoryId} data-category={c.categoryId} className="flex items-center gap-3 py-2.5">
-                <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ background: colorOf(c.categoryId) }} />
-                <span className="min-w-0 flex-1 truncate font-medium">{nameOf(c.categoryId)}</span>
-                <span className="shrink-0 text-right tabular-nums">
-                  <span className="font-semibold">{money(c.minor)}</span>
-                  <span className="ml-2 text-sm text-ink-2">{`${c.sharePct}%`}</span>
-                  <span className={`ml-2 text-xs ${c.deltaPct !== null && c.deltaPct > 0 ? 'text-critical' : c.deltaPct !== null && c.deltaPct < 0 ? 'text-good' : 'text-ink-2'}`}>
-                    {chip}
-                    <span className="sr-only">{` on ${s.prevName}`}</span>
-                  </span>
+                <Round icon={categoryIcon(nameOf(c.categoryId))} color={colorOf(c.categoryId)} />
+                <span className="min-w-0 flex-1 truncate font-semibold">{nameOf(c.categoryId)}</span>
+                <span className="shrink-0 text-right">
+                  <span className="num">{money(c.minor)}</span>
+                  <span className="ml-2 text-sm tabular-nums text-ink-2">{`${c.sharePct}%`}</span>
+                  {compare && (
+                    <span className={`ml-2 text-xs tabular-nums ${c.deltaPct !== null && c.deltaPct > 0 ? 'text-critical' : c.deltaPct !== null && c.deltaPct < 0 ? 'text-good' : 'text-ink-2'}`}>
+                      {chip}
+                      <span className="sr-only">{` on ${s.prevName}`}</span>
+                    </span>
+                  )}
                 </span>
               </li>
             )
@@ -465,30 +511,34 @@ function Ahead({ s, money, currency }: { s: AiSummary; money: Fmt; currency: str
           <div data-testid="outlook" className="mt-3">
             <p className="text-sm text-ink-2">Next month will probably cost</p>
             <p className="font-ai-display text-5xl font-medium leading-none tracking-tight">
-              <CountUp minor={o.totalMinor} currency={currency} delay={150} />
+              <CountUp minor={whole(o.totalMinor)} currency={currency} delay={150} />
             </p>
-            <p data-line="range" className="text-[0.9375rem] leading-snug text-ink-2">{`Most likely between ${money(o.lowMinor)} and ${money(o.highMinor)}.`}</p>
-            <dl className="mt-4 grid grid-cols-2 divide-x divide-line border-y border-line py-3">
-              <div className="pr-4">
+            <p data-line="range" className="mt-1 text-[1.0625rem] leading-[1.6] text-ink-2">
+              <Figures text={`Most likely between ${money(o.lowMinor)} and ${money(o.highMinor)}.`} figures={[money(o.lowMinor), money(o.highMinor)]} />
+            </p>
+            <dl className="mt-4 grid grid-cols-2 gap-2">
+              <div className="rounded-2xl bg-surface-2 px-3 py-3">
                 <dt className="text-sm text-ink-2">Leaves on its own</dt>
                 <dd data-part="fixed" className="font-ai-display text-2xl font-medium">{money(o.fixedMinor)}</dd>
               </div>
-              <div className="pl-4">
+              <div className="rounded-2xl bg-surface-2 px-3 py-3">
                 <dt className="text-sm text-ink-2">Everything else</dt>
                 <dd data-part="everyday" className="font-ai-display text-2xl font-medium">{money(o.everydayMinor)}</dd>
               </div>
             </dl>
-            <p data-line="year" className="mt-3 text-[0.9375rem] leading-snug">{`At this rate a year comes to about ${money(o.yearMinor)}.`}</p>
+            <p data-line="year" className="mt-3 text-[1.0625rem] leading-[1.6]">
+              <Figures text={`At this rate a year comes to about ${money(o.yearMinor)}.`} figures={[money(o.yearMinor)]} />
+            </p>
           </div>
         ) : (
-          <p className="mt-2 text-[0.9375rem] leading-snug text-ink-2">A few more months of entries and this will say what the next one is likely to cost.</p>
+          <p className="mt-2 text-[1.0625rem] leading-[1.6] text-ink-2">A few more months of entries and this will say what the next one is likely to cost.</p>
         )}
         <MonthBars months={s.months} currency={currency} />
         {sentences.length > 0 && (
           <ul className="mt-2 space-y-1">
             {sentences.map((line) => (
-              <li key={line} data-trend={trend.direction} className="text-[0.9375rem] leading-snug">
-                {line}
+              <li key={line} data-trend={trend.direction} className="text-[1.0625rem] leading-[1.6]">
+                <Figures text={line} figures={[`${trend.monthlyChangePct}%`, `${Math.abs(trend.monthlyChangePct ?? 0)}%`]} />
               </li>
             ))}
           </ul>

@@ -29,7 +29,7 @@ const txs = [
   spend('2026-10-12', 50, 1, 'Snack'),
 ]
 // ₹1,090 over 12 days.
-const average = formatMoney(9083, 'INR')
+const average = formatMoney(9100, 'INR') // the average day, 90.83, to a whole rupee
 
 const label = (d: number) => new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(2026, 9, d))
 
@@ -82,7 +82,8 @@ describe('DayChart: the columns', () => {
   it('labels the first of each week and marks the axis top', () => {
     mount()
     expect(within(plot().parentElement!.parentElement!).getByText('15')).toBeInTheDocument()
-    expect(screen.getByText('₹400')).toBeInTheDocument()
+    // The axis top is the small label; the same amount may also stand, in bold, in a sentence below.
+    expect(screen.getAllByText('₹400').some((e) => e.className.includes('text-xs'))).toBe(true)
   })
 })
 
@@ -114,7 +115,10 @@ describe('DayChart: reading a day', () => {
     mount()
     expect(screen.getByText('a day on average')).toBeInTheDocument()
     expect(screen.getByText(average)).toBeInTheDocument()
-    expect(screen.getByText(`${formatMoney(109_000, 'INR')} over 12 days`)).toBeInTheDocument()
+    const total = screen.getByText('a day on average').nextElementSibling!
+    expect(total.textContent).toBe(`${formatMoney(109_000, 'INR')} over 12 days`)
+    // The amount and the number of days are in bold; the words are not.
+    expect(Array.from(total.querySelectorAll('b')).map((b) => b.textContent)).toEqual([formatMoney(109_000, 'INR'), '12'])
   })
 
   it('moves through the days with the arrow keys, starting from today', () => {
@@ -287,7 +291,7 @@ describe('DayChart: a finished month', () => {
   it('treats every day as having happened, with no marker for today', () => {
     mount({ monthKey: '2026-10', lastDay: null })
     expect(bar(31)).not.toBeNull()
-    expect(screen.getByText(/over 31 days/)).toBeInTheDocument()
+    expect(screen.getByText('a day on average').nextElementSibling!.textContent).toMatch(/over 31 days/)
     key('End')
     expect(screen.queryByText(/, today/)).toBeNull()
   })
@@ -396,5 +400,50 @@ describe.skipIf(typeof PointerEvent === 'undefined')('DayChart: touch and mouse'
     expect(selectedDays()).toEqual([1])
     pointer('pointerout', 5, 'mouse') // React's onPointerLeave comes from pointerout with nothing entered
     expect(selectedDays()).toEqual([12])
+  })
+})
+
+describe('DayChart: one day that towers over the rest', () => {
+  // The same month, with a day of ₹10,000 on the 6th: more than two and a half times anything else.
+  const towering = [...txs, spend('2026-10-06', 10_000, 1, 'Laptop')]
+
+  it('cuts that day short, with a break through it and its amount above it, so the others can be read', () => {
+    mount({ txs: towering })
+    expect(column(6)).toHaveAttribute('data-cut', 'true')
+    expect(parseFloat(bar(6)!.style.height)).toBe(100)
+    expect(bar(6)!.querySelector('[data-break]')).toBeInTheDocument()
+    expect(within(column(6)).getByTestId('day-cut-label')).toHaveTextContent(/10.2K/i)
+    // The others are drawn against the second biggest, not against the tower: ₹400 is no sliver.
+    expect(parseFloat(bar(3)!.style.height)).toBeGreaterThan(30)
+  })
+
+  it('says in words that the day is cut short, with its amount', () => {
+    mount({ txs: towering })
+    expect(screen.getByTestId('day-cut-note')).toHaveTextContent(`${label(6)} (${formatMoney(1_020_000, 'INR')}) is cut short`)
+  })
+
+  it('leaves the average line out when it is above the top of the axis, rather than drawing it off the chart', () => {
+    mount({ txs: towering })
+    expect(screen.queryByTestId('day-average')).toBeNull()
+  })
+
+  it('shows the amount in the chosen day’s own tag, and not twice', () => {
+    mount({ txs: towering })
+    key('ArrowLeft') // keys start from today, the 12th
+    for (let i = 0; i < 6; i++) key('ArrowLeft')
+    expect(selectedDays()).toEqual([6])
+    expect(within(column(6)).queryByTestId('day-cut-label')).toBeNull()
+    expect(screen.getByTestId('day-tag')).toBeInTheDocument()
+  })
+
+  it('does not cut anything when no day towers, or when there are too few days to say what the rest are', () => {
+    mount()
+    expect(plot().querySelector('[data-cut]')).toBeNull()
+    expect(screen.queryByTestId('day-cut-note')).toBeNull()
+  })
+
+  it('does not cut when there are only two days with spending, since there is no rest to protect', () => {
+    mount({ txs: [spend('2026-10-02', 10, 1, 'A'), spend('2026-10-03', 10_000, 1, 'B')] })
+    expect(plot().querySelector('[data-cut]')).toBeNull()
   })
 })

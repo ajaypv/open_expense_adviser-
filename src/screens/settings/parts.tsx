@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { useLedger } from '../../data/useLedger'
-import { Icon } from '../../ui/Icon'
+import { Icon, type IconName } from '../../ui/Icon'
 
 export type Ledger = ReturnType<typeof useLedger>
 
@@ -12,29 +12,60 @@ export const saveButton = 'min-h-12 shrink-0 rounded-full bg-btn px-5 font-semib
 export const secondaryButton = 'min-h-12 rounded-full bg-surface-2 px-5 font-medium disabled:opacity-50'
 export const dangerLink = 'mt-1 min-h-11 rounded-full font-medium text-critical'
 
+/** The title of a card inside a group ("Exchange rates", "Add a credit card"): one weight everywhere. */
+export const cardTitle = 'font-semibold'
+
+/** A round soft icon, as on the other pages. */
+export function IconCircle({ icon, size = 40, onTile }: { icon: IconName; size?: number; /** On a soft tile, the circle is the lighter surface so it still shows. */ onTile?: boolean }) {
+  return (
+    <span aria-hidden="true" data-icon={icon} className={`flex shrink-0 items-center justify-center rounded-full text-ink ${onTile ? "bg-surface" : "bg-surface-2"}`} style={{ width: size, height: size }}>
+      <Icon name={icon} size={Math.round(size * 0.5)} />
+    </span>
+  )
+}
+
+/** The longer explanation of a group, folded away under a small "How this works" so the page opens on the settings, not a paragraph. */
+export function HowItWorks({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return (
+    <details className={`group ${className}`}>
+      <summary className="inline-flex min-h-8 cursor-pointer list-none items-center gap-1 text-sm font-medium text-ink-2 [&::-webkit-details-marker]:hidden">
+        How this works
+        <span aria-hidden="true" className="transition-transform group-open:rotate-90 motion-reduce:transition-none">
+          <Icon name="chevRight" size={14} />
+        </span>
+      </summary>
+      <div className="mt-1 space-y-2 text-sm text-ink-2">{children}</div>
+    </details>
+  )
+}
+
 /** A titled group: heading outside the card, content inside. */
 export function Group({
   id,
   title,
   hint,
+  more,
   status,
   children,
 }: {
   id: string
   title: string
   hint?: string
+  /** What is too long for the one line under the title; shown when "How this works" is opened. */
+  more?: ReactNode
   status?: ReactNode
   children: ReactNode
 }) {
   return (
     <section aria-labelledby={id} className="mt-6">
-      <div className="mb-3 flex items-center justify-between gap-3 px-1">
-        <h3 id={id} className="text-lg font-bold tracking-tight">
+      <div className="mb-2 flex items-center justify-between gap-3 px-1">
+        <h3 id={id} className="type-title">
           {title}
         </h3>
         {status}
       </div>
-      {hint && <p className="-mt-1 mb-3 px-1 text-ink-2">{hint}</p>}
+      {hint && <p className="mb-3 px-1 text-sm text-ink-2">{hint}</p>}
+      {more && <HowItWorks className="-mt-1 mb-3 px-1">{more}</HowItWorks>}
       {children}
     </section>
   )
@@ -60,6 +91,8 @@ export function Switch({
   checked,
   disabled,
   describedBy,
+  labelHidden,
+  icon,
   onChange,
 }: {
   label: string
@@ -67,11 +100,16 @@ export function Switch({
   checked: boolean
   disabled?: boolean
   describedBy?: string
+  /** Only the switch is drawn; its name is still there for a screen reader. For a row that already says what it is. */
+  labelHidden?: boolean
+  /** A round icon before the name. */
+  icon?: IconName
   onChange: (on: boolean) => void
 }) {
   return (
-    <label className="flex min-h-12 cursor-pointer items-center justify-between gap-4">
-      <span className="min-w-0">
+    <label className={`flex min-h-12 cursor-pointer items-center justify-between gap-4 ${labelHidden ? 'min-h-11 w-auto' : ''}`}>
+      {icon && <IconCircle icon={icon} size={36} />}
+      <span className={labelHidden ? 'sr-only' : 'min-w-0 flex-1'}>
         <span className="block font-medium">{label}</span>
         {detail && <span className="block text-sm text-ink-2">{detail}</span>}
       </span>

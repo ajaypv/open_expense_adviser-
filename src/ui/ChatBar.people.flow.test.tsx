@@ -114,7 +114,7 @@ describe('Input bar: @ and a name', () => {
     const { user, box } = setup()
     await user.click(box())
     await user.type(box(), '@sh')
-    await user.click(screen.getByRole('button', { name: 'Add with the full form' }))
+    await user.click(screen.getByRole('button', { name: 'Add an expense' }))
     expect(screen.queryByRole('listbox')).toBeNull()
   })
 })

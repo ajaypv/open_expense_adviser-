@@ -61,7 +61,7 @@ function PersonRow({ stat, currency }: { stat: PersonStat; currency: string }) {
               {stat.pending.map((t) => (
                 <li key={t.id} className="flex min-h-12 items-center gap-3 py-2">
                   <span className="min-w-0 flex-1">
-                    <span className="block font-medium tabular-nums">{money(t.amountMinor)}</span>
+                    <span className="num block">{money(t.amountMinor)}</span>
                     <span className="block text-sm text-ink-2">{`Sent ${shortDay(t.date)}`}</span>
                   </span>
                   <button type="button" onClick={() => markReceived([t.id])} className="min-h-11 shrink-0 rounded-full bg-btn px-4 text-sm font-semibold text-btn-ink">
@@ -129,12 +129,13 @@ export function PeopleSection({ ledger }: { ledger: Ledger }) {
     <Group
       id="people-h"
       title="People"
-      hint="Everyone you send money to. When you add a payment to a person, their name shows up as you type. Mark a payment Received once they have it."
+      hint="Everyone you send money to. Mark a payment Received once they have it."
+      more={<p>When you add a payment to a person, their name shows up as you type.</p>}
       status={<Status on={waiting.count === 0 && ledger.personStats.some((s) => s.count > 0)}>{waiting.count > 0 ? `${waiting.count} not received` : 'All received'}</Status>}
     >
       {waiting.count > 0 && (
         <p className={`${card} mb-3 px-4 py-3`}>
-          <span className="font-semibold tabular-nums">{formatMoney(waiting.minor, ledger.currency)}</span>
+          <span className="num">{formatMoney(waiting.minor, ledger.currency)}</span>
           <span className="text-ink-2">{` sent across ${waiting.count} ${waiting.count === 1 ? 'payment' : 'payments'} and not received yet.`}</span>
         </p>
       )}

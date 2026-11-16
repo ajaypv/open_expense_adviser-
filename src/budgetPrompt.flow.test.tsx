@@ -40,8 +40,8 @@ describe('The budget invitation on Home', () => {
     expect(cash.compareDocumentPosition(prompt) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(screen.getByRole('region', { name: 'Summary' })).queryByText(/Set a monthly budget/)).toBeNull()
     await user.click(within(prompt).getByRole('button', { name: 'Set budget' }))
-    const nav = within(screen.getByRole('navigation', { name: 'Main' }))
-    await waitFor(() => expect(nav.getByRole('button', { current: 'page' })).toHaveAccessibleName('Settings'))
+    // Settings is open, on the Money page.
+    expect(await screen.findByRole('heading', { name: 'Money' })).toBeInTheDocument()
   })
 
   it('goes away once a budget has been set', async () => {

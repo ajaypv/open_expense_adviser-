@@ -17,7 +17,7 @@ describe('Settings: the list', () => {
   it('is a short list: a backup, the app update, and five pages to go to', () => {
     const html = render()
     expect(html).toMatch(/<h1[^>]*>Settings<\/h1>/)
-    expect(html).toContain('aria-label="Backup"')
+    expect(html).toContain('aria-label="Backup and restore"')
     expect(html).toContain('aria-label="App update"')
     const nav = html.slice(html.indexOf('aria-label="Settings pages"'))
     for (const page of ['Money', 'Automatic', 'Suggestions', 'Appearance', 'Privacy and data']) expect(nav).toContain(`>${page}</span>`)
@@ -26,22 +26,31 @@ describe('Settings: the list', () => {
 
   it('says in a line what is on each page', () => {
     const html = render()
-    for (const line of ['Currency, accounts and balance, people, monthly budget', 'Regular payments, reminders, widget', 'Your regulars, on Home or above the input bar', 'Colour theme, light or dark, text size, hide amounts', 'App lock, location, export, restore, recently deleted']) {
+    for (const line of ['Currency, accounts and balance, people, monthly budget', 'Regular payments, reminders, widget', 'Your regulars, on Home or above the input bar', 'Colour theme, in light or dark', 'App lock, location, export, recently deleted']) {
       expect(html).toContain(line)
     }
   })
 
   it('keeps the settings themselves off the list, so it stays short', () => {
     const html = render()
-    for (const text of ['Main currency', 'Monthly budget</h3>', 'Remind me at', 'Hide amounts', 'App lock</h3>', 'Recently deleted']) {
+    for (const text of ['Main currency', 'Monthly budget</h3>', 'Remind me at', 'App lock</h3>', 'Recently deleted']) {
       expect(html, text).not.toContain(text)
     }
+  })
+
+  it('has Mode, text and numbers on the page itself: light or dark, the text size, hiding amounts and the number format', () => {
+    const html = render()
+    expect(html).toMatch(/<h3[^>]*>Mode, text and numbers<\/h3>/)
+    for (const text of ['Mode', 'Text size', 'Hide amounts', 'Number format']) expect(html, text).toContain(text)
+    // After the backup and the update, before the pages.
+    expect(html.indexOf('aria-label="App update"')).toBeLessThan(html.indexOf('>Mode, text and numbers</h3>'))
+    expect(html.indexOf('>Mode, text and numbers</h3>')).toBeLessThan(html.indexOf('aria-label="Settings pages"'))
   })
 
   it('puts the backup first, then the update, then the pages', () => {
     const html = render()
     const at = (s: string) => html.indexOf(s)
-    expect(at('aria-label="Backup"')).toBeLessThan(at('aria-label="App update"'))
+    expect(at('aria-label="Backup and restore"')).toBeLessThan(at('aria-label="App update"'))
     expect(at('aria-label="App update"')).toBeLessThan(at('aria-label="Settings pages"'))
   })
 
@@ -87,7 +96,7 @@ describe('Settings: a page', () => {
     expect(html).toMatch(/<h1[^>]*>Money<\/h1>/)
     expect(html).toContain('aria-label="Back to Settings"')
     expect(html).not.toContain('aria-label="Settings pages"')
-    expect(html).not.toContain('aria-label="Backup"')
+    expect(html).not.toContain('aria-label="Backup and restore"')
   })
 
   it('Money: the currency, accounts and balance, and monthly budget', () => {
@@ -119,12 +128,11 @@ describe('Settings: a page', () => {
     expect(html).toContain('Loans, auto-payments, subscriptions, rent and salary')
   })
 
-  it('Appearance: the colour theme first, then light or dark, text size, hiding amounts and number format', () => {
+  it('Appearance: the colour theme alone, since the rest of how the app is read is on the Settings page', () => {
     const html = page('look')
     expect(html).toMatch(/<h3[^>]*>Colour theme<\/h3>/)
-    expect(html).toMatch(/<h3[^>]*>Mode, text and numbers<\/h3>/)
-    expect(html.indexOf('>Colour theme</h3>')).toBeLessThan(html.indexOf('>Mode, text and numbers</h3>'))
-    for (const text of ['Mode', 'Text size', 'Hide amounts', 'Number format']) expect(html, text).toContain(text)
+    expect(html).not.toContain('Mode, text and numbers')
+    for (const text of ['Text size', 'Hide amounts', 'Number format']) expect(html, text).not.toContain(text)
   })
 
   it('Appearance: offers every colour theme, each with a line about it, and shows the chosen one', () => {
@@ -148,9 +156,10 @@ describe('Settings: a page', () => {
     expect(at('App lock')).toBeLessThan(at('Location'))
   })
 
-  it('Privacy and data: backup, export, restore and the trash', () => {
+  it('Privacy and data: export and the trash, with backup and restore left to the top of Settings', () => {
     const html = page('privacy')
-    for (const text of ['Back up everything', 'Export transactions', 'Restore from a backup', 'Recently deleted']) expect(html, text).toContain(text)
+    for (const text of ['Export transactions', 'Recently deleted']) expect(html, text).toContain(text)
+    for (const text of ['Back up everything', 'Restore from a backup']) expect(html, text).not.toContain(text)
   })
 
   it('shows each page only its own settings', () => {
@@ -171,10 +180,37 @@ describe('Settings: the list, set in the reference style', () => {
     expect(html.indexOf('Make it work for you')).toBeLessThan(html.indexOf('Safe and private'))
   })
 
-  it('gives each row a thin line icon of its own: bank, circling A, palette, shield', () => {
+  it('gives each row a round icon of its own: bank, circling A, palette, shield', () => {
     const html = render()
-    for (const icon of ['bank', 'autopay', 'palette', 'shield']) expect(html, icon).toContain('data-icon="' + icon + '"')
-    expect(html).toContain('stroke-width="1.4"')
+    for (const icon of ['bank', 'autopay', 'palette', 'shield']) expect(html, icon).toMatch(new RegExp('data-icon="' + icon + '" class="[^"]*rounded-full'))
+  })
+
+  it('keeps each group of pages in one card, divided by hairlines, with the summary allowed two lines', () => {
+    const html = render()
+    expect(html).toContain('divide-y divide-line overflow-hidden rounded-3xl')
+    expect(html).toContain('line-clamp-2')
+    expect(html.slice(html.indexOf('aria-label="Settings pages"'))).not.toContain('truncate')
+  })
+
+  it('sets the page title in the one title size, and each group title too', () => {
+    expect(render()).toMatch(/<h1 class="type-greeting pt-4">Settings<\/h1>/)
+    expect(render({ initialPage: 'money' })).toMatch(/<h3 id="currency-h" class="type-title">Currency<\/h3>/)
+  })
+
+  it('folds the long explanations away under How this works, so a page opens on the settings', () => {
+    const html = render({ initialPage: 'money' })
+    expect(html).toContain('How this works')
+    expect(html).toContain('<details class="group')
+    expect(html).toContain('What each account holds today. The total stays hidden on Home until you tap Show balance.')
+  })
+
+  it('shows each account with a round bank icon', () => {
+    expect(render({ initialPage: 'money' })).toMatch(/data-icon="bank" class="[^"]*rounded-full/)
+  })
+
+  it('gives each of Mode, text and numbers a round icon', () => {
+    const html = render()
+    for (const icon of ['sun', 'sliders', 'eyeOff', 'swap']) expect(html, icon).toMatch(new RegExp('data-icon="' + icon + '" class="[^"]*rounded-full'))
   })
 
   it('says at a glance, on the right, the currency', () => {

@@ -40,9 +40,10 @@ import { LockScreen } from './security/LockScreen'
 import { useLockState, watchVisibility } from './security/lock'
 import { useTheme } from './theme/useTheme'
 import { AddSheet } from './ui/AddSheet'
+import { QuickAdd, type QuickEntry } from './ui/QuickAdd'
 import { useBackClose } from './ui/backStack'
 import { spendIcon } from './ui/categoryIcon'
-import { BottomNav, TABS, type Tab } from './ui/BottomNav'
+import { BottomNav, TAB_LABELS, TAB_ORDER, type Tab } from './ui/BottomNav'
 import { openHomeOn, showHomeView } from './ui/homeView'
 import { ChatBar } from './ui/ChatBar'
 import { GoalMoneySheet, GoalSheet } from './ui/GoalSheets'
@@ -50,6 +51,9 @@ import { CardsSheet } from './ui/CardsSheet'
 import { GoalsOverview } from './ui/GoalsOverview'
 import { RuleSheet } from './ui/RuleSheet'
 import { AiSheet } from './ui/AiSheet'
+import { YearReels } from './ui/YearReels'
+import { yearsWithSpending } from './insights/story'
+import { PlanAheadPage } from './ui/PlanAheadPage'
 import { UpcomingSheet } from './ui/UpcomingSheet'
 import { PwaBanner } from './ui/PwaBanner'
 import { ScreenSkeleton } from './ui/ScreenSkeleton'
@@ -115,12 +119,16 @@ function Shell() {
   const monthRef = useRef(month)
   monthRef.current = month
   const [sheet, setSheet] = useState<Sheet>({ open: false, editing: null, prefill: null, startKind: 'expense' })
+  // The quick way to add an expense; the count starts it afresh each time it is opened, so nothing typed last time is left in it.
+  const [quick, setQuick] = useState({ open: false, n: 0 })
   const [goalsOpen, setGoalsOpen] = useState(false)
   const [cardsOpen, setCardsOpen] = useState(false)
   const [goalSheet, setGoalSheet] = useState<GoalSheetState>({ open: false, goal: null, n: 0 })
   // Upcoming payments are a sheet, and adding or changing one is a second sheet on top of it.
   const [upcomingOpen, setUpcomingOpen] = useState(false)
+  const [planOpen, setPlanOpen] = useState(false)
   const [aiOpen, setAiOpen] = useState(false)
+  const [reelsOpen, setReelsOpen] = useState(false)
   const [ruleSheet, setRuleSheet] = useState<{ open: boolean; rule: Recurring | null; n: number }>({ open: false, rule: null, n: 0 })
   const [moneySheet, setMoneySheet] = useState<GoalSheetState>({ open: false, goal: null, n: 0 })
 
@@ -156,8 +164,7 @@ function Shell() {
 
   // The browser tab, history and screen readers all announce the title, so it names the screen that is open.
   useEffect(() => {
-    const label = TABS.find((t) => t.id === tab)?.label
-    document.title = tab === 'home' || !label ? 'Expense Tracker' : `${label} - Expense Tracker`
+    document.title = tab === 'home' ? 'Expense Tracker' : `${TAB_LABELS[tab]} - Expense Tracker`
   }, [tab])
 
   // Fetch the other screens in the idle moment after the first one is up, so opening a tab is instant.
@@ -237,7 +244,7 @@ function Shell() {
       setCategoryFilter(null)
       setActivityRange(null)
     }
-    const direction = TABS.findIndex((t) => t.id === next) > TABS.findIndex((t) => t.id === current) ? 'forward' : 'backward'
+    const direction = TAB_ORDER.indexOf(next) > TAB_ORDER.indexOf(current) ? 'forward' : 'backward'
     const update = () => {
       tabRef.current = next
       flushSync(() => setTab(next))
@@ -249,8 +256,8 @@ function Shell() {
   // Swiping along the bottom bar moves between Home's two pages, which sit like the pages of a phone's home screen: to the right for
   // the timeline, which is on the left, and to the left for the overview. From another screen it opens Home on that page. It never goes
   // to Activity, Insights or Settings; those are for tapping.
-  // A page is shown on the pager if there is one on screen. If there is not (Home is another screen, or is still loading, as when the app
-  // has just been started), the request is left for the pager about to be built, which opens on it.
+  // A page is shown on the pager if there is one on screen. If there is not (Home is another screen, or is still loading), the request is
+  // left for the pager about to be built, which opens on it.
   const showHomePage = useCallback(
     (page: 'timeline' | 'overview') => {
       if (tabRef.current === 'home') {
@@ -360,7 +367,54 @@ function Shell() {
     (kind: Transaction['kind'] = 'expense') => setSheet({ open: true, editing: null, prefill: null, startKind: kind }),
     [],
   )
-  const openAddDefault = useCallback(() => openAdd('expense'), [openAdd])
+  // The plus on the input bar, and every "add" on a screen, open the quick way to add an expense; the full form is under its "More options".
+  const openAddDefault = useCallback(() => setQuick((q) => ({ open: true, n: q.n + 1 })), [])
+  const closeQuick = useCallback(() => setQuick((q) => ({ ...q, open: false })), [])
+  const moreOptions = useCallback(() => {
+    setQuick((q) => ({ ...q, open: false }))
+    openAdd('expense')
+  }, [openAdd])
+  // What goes in the chips, most used first, so the likely one is within reach.
+  const quickCategories = useMemo(() => {
+    const used = new Map<number, number>()
+    for (const t of ledger.expenses) used.set(t.categoryId, (used.get(t.categoryId) ?? 0) + 1)
+    return [...ledger.expenseCategories].sort((a, b) => (used.get(b.id) ?? 0) - (used.get(a.id) ?? 0))
+  }, [ledger.expenses, ledger.expenseCategories])
+  const learnedFor = useCallback((merchant: string) => learnedCategoryId(merchant, dataRef.current.txs, dataRef.current.categoryById), [])
+  const saveQuick = useCallback(
+    async (e: QuickEntry) => {
+      const { txs, categoryById } = dataRef.current
+      try {
+        const id = await addTransaction({
+          kind: 'expense',
+          amountMinor: e.amountMinor,
+          currency,
+          categoryId: e.categoryId,
+          merchant: e.merchant,
+          note: '',
+          date: e.date,
+          // How you usually pay for this name, as when it is typed in the bar.
+          paymentMethod: e.merchant ? learnedPaymentMethod(e.merchant, 'expense', txs) : '',
+          source: 'manual',
+        })
+        void attachLocation(id) // no-op unless the user turned location recording on
+        setMonth(monthOf(e.date)) // show the month it landed in
+        const cat = categoryById.get(e.categoryId)
+        const when = describeDay(e.date)
+        toast({
+          message: `Added ${formatMoney(e.amountMinor, currency)} to ${cat?.name ?? 'Other'}${when ? `, ${when}` : ''}`,
+          actionLabel: 'Undo',
+          onAction: () => void purgeTransaction(id),
+          icon: spendIcon(e.merchant, cat?.name),
+          color: cat?.color,
+        })
+      } catch (err) {
+        toast({ message: err instanceof Error ? err.message : 'Couldn’t add that. Try again.' })
+        throw err
+      }
+    },
+    [currency, toast],
+  )
   const openEdit = useCallback((tx: LedgerTx) => setSheet({ open: true, editing: tx, prefill: null, startKind: 'expense' }), [])
   const openSuggestion = useCallback((s: Suggestion) => setSheet({ open: true, editing: null, prefill: s, startKind: s.kind }), [])
 
@@ -421,6 +475,11 @@ function Shell() {
   const newGoal = useCallback(() => setGoalSheet((s) => ({ open: true, goal: null, n: s.n + 1 })), [])
   const editGoal = useCallback((goal: Goal) => setGoalSheet((s) => ({ open: true, goal, n: s.n + 1 })), [])
   const openGoals = useCallback(() => setGoalsOpen(true), [])
+  // The round button at the top of a screen: Settings as it is, on its list of pages, not on a page of it.
+  const openSettingsList = useCallback(() => {
+    setSettingsPage(null)
+    go('settings')
+  }, [go])
   const closeGoals = useCallback(() => setGoalsOpen(false), [])
   const openCards = useCallback(() => setCardsOpen(true), [])
   const closeCards = useCallback(() => setCardsOpen(false), [])
@@ -466,7 +525,13 @@ function Shell() {
   }, [go])
   const openInsights = useCallback(() => go('insights'), [go])
   const openUpcoming = useCallback(() => setUpcomingOpen(true), [])
+  const openPlan = useCallback(() => setPlanOpen(true), [])
+  const closePlan = useCallback(() => setPlanOpen(false), [])
   const openAi = useCallback(() => setAiOpen(true), [])
+  const openReels = useCallback(() => setReelsOpen(true), [])
+  const closeReels = useCallback(() => setReelsOpen(false), [])
+  // The reels button is there once there is some spending to tell a story about.
+  const reelsReady = useMemo(() => yearsWithSpending(ledger.expenses).length > 0, [ledger.expenses])
   const closeAi = useCallback(() => setAiOpen(false), [])
   const closeUpcoming = useCallback(() => setUpcomingOpen(false), [])
   const newRule = useCallback(() => setRuleSheet((s) => ({ open: true, rule: null, n: s.n + 1 })), [])
@@ -490,9 +555,10 @@ function Shell() {
             onMonth={setMonth}
             today={today}
             onPickCategory={pickCategory}
-            onEdit={openEdit}
             onExample={fillChat}
             onOpenSettings={openSettings}
+            onOpenAppSettings={openSettingsList}
+            onOpenReels={reelsReady ? openReels : undefined}
             onSeeAll={seeAll}
             balanceShown={balanceShown}
             onToggleBalance={toggleBalance}
@@ -505,16 +571,17 @@ function Shell() {
             onOpenGoals={openGoals}
             onOpenCards={openCards}
             onOpenUpcoming={openUpcoming}
+            onOpenPlan={openPlan}
             onPickPeriod={pickPeriod}
             onOpenInsights={openInsights}
           />
         )}
         {tab === 'activity' && (
-          <Activity ledger={ledger} today={today} categoryFilter={categoryFilter} onCategoryFilter={setCategoryFilter} initialRange={activityRange} onEdit={openEdit} />
+          <Activity ledger={ledger} today={today} categoryFilter={categoryFilter} onCategoryFilter={setCategoryFilter} initialRange={activityRange} onEdit={openEdit} onOpenSettings={openSettingsList} onOpenReels={reelsReady ? openReels : undefined} />
         )}
         {tab === 'insights' && (
           <Suspense fallback={<ScreenSkeleton label="Insights" />}>
-            <Insights ledger={ledger} month={month} onMonth={setMonth} today={today} onOpenSettings={openSettings} onPickCategory={pickCategory} onOpenUpcoming={openUpcoming} onOpenAi={openAi} />
+            <Insights ledger={ledger} month={month} onMonth={setMonth} today={today} onOpenSettings={openSettings} onOpenAppSettings={openSettingsList} onOpenReels={reelsReady ? openReels : undefined} onPickCategory={pickCategory} onOpenUpcoming={openUpcoming} onOpenAi={openAi} />
           </Suspense>
         )}
         {tab === 'settings' && (
@@ -555,7 +622,7 @@ function Shell() {
           )}
           <ChatBar key={draft.n} initialText={draft.text} onSubmit={logFromChat} onOpenForm={openAddDefault} people={ledger.people} />
         </div>
-        <BottomNav current={tab} onSelect={go} onSwipe={swipeBar} />
+        <BottomNav current={tab} onSelect={go} goals={ledger.goals} onOpenGoals={openGoals} onSwipe={swipeBar} />
       </div>
 
       <AddSheet
@@ -572,6 +639,8 @@ function Shell() {
         onClose={closeSheet}
       />
 
+      <QuickAdd key={`quick-${quick.n}`} open={quick.open} onClose={closeQuick} categories={quickCategories} currency={ledger.currency} today={today} onSave={saveQuick} learned={learnedFor} onMore={moreOptions} />
+
       <CardsSheet open={cardsOpen} onClose={closeCards} ledger={ledger} today={today} onEdit={openEdit} />
 
       <GoalsOverview
@@ -585,13 +654,15 @@ function Shell() {
         onAddMoney={goalMoney}
       />
       <AiSheet open={aiOpen} onClose={closeAi} ledger={ledger} month={month} today={today} />
+      <YearReels open={reelsOpen} onClose={closeReels} ledger={ledger} today={today} />
+      <PlanAheadPage open={planOpen} onClose={closePlan} ledger={ledger} today={today} onAdd={newRule} onEdit={editRule} onManage={openUpcoming} />
       <UpcomingSheet open={upcomingOpen} onClose={closeUpcoming} ledger={ledger} today={today} onAdd={newRule} onEdit={editRule} />
       <RuleSheet key={`rule-${ruleSheet.n}`} open={ruleSheet.open} rule={ruleSheet.rule} categories={ledger.categories} accounts={ledger.accounts} currency={ledger.currency} today={today} onClose={closeRule} />
       <GoalSheet key={`goal-${goalSheet.n}`} open={goalSheet.open} goal={goalSheet.goal} today={today} onClose={closeGoalSheet} />
       <GoalMoneySheet key={`money-${moneySheet.n}`} open={moneySheet.open} goal={moneySheet.goal} currency={ledger.currency} onClose={closeMoneySheet} />
 
       {/* A new person sees the cards and the ask for notifications first, then the three questions. */}
-      <Intro open={notice === 'welcome' && introSeen === false} onDone={() => void markIntroSeen()} />
+      <Intro open={notice === 'welcome' && introSeen === false} onDone={() => void markIntroSeen()} theme={theme.pref} onTheme={theme.setPref} />
       <Welcome open={notice === 'welcome' && introSeen === true} currency={ledger.currency} accounts={ledger.accounts} />
       <WhatsNew open={notice === 'whats-new' || whatsNewByHand} onClose={closeWhatsNew} />
     </div>

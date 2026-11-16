@@ -32,6 +32,9 @@ export function CountUp({ minor, currency, delay = 0, compact = false }: { minor
   return <>{compact ? formatMoneyCompact(shown, currency) : formatMoney(shown, currency)}</>
 }
 
+/** An amount in whole units, as every other page shows it: no paise on a figure that is only an estimate. */
+export const whole = (minor: number) => Math.round(minor / 100) * 100
+
 /** A start delay for an animation, passed to the style sheet as a variable. */
 const delay = (ms: number): CSSProperties => ({ '--d': `${ms}ms` }) as CSSProperties
 
@@ -53,7 +56,7 @@ const SEGMENTS = {
  * its amount underneath, so the colours are never all there is.
  */
 export function MonthBar({ bar, currency }: { bar: AiMonthBar; currency: string }) {
-  const money = (m: number) => formatMoney(m, currency)
+  const money = (m: number) => formatMoney(whole(m), currency)
   const parts = [
     { key: 'everyday' as const, minor: bar.everydayMinor },
     { key: 'autoDone' as const, minor: bar.autoDoneMinor },
@@ -92,12 +95,12 @@ export function MonthBar({ bar, currency }: { bar: AiMonthBar; currency: string 
         {budgetAt !== null && <span className="pointer-events-none absolute bottom-[-4px] top-5 w-0.5 rounded bg-ink" style={{ left: `calc(${budgetAt}% - 1px)` }} />}
       </div>
 
-      <ul aria-label="What the month is made of" className="mt-3 space-y-1.5">
+      <ul aria-label="What the month is made of" className="mt-3 space-y-2">
         {[...parts.map((p) => ({ ...p })), ...(room > 0 ? [{ key: 'room' as const, minor: room }] : [])].map((p) => (
-          <li key={p.key} data-legend={p.key} className="flex items-center gap-2.5 text-[0.9375rem]">
+          <li key={p.key} data-legend={p.key} className="flex items-center gap-3 rounded-2xl bg-surface-2 px-3 py-2.5 text-base">
             <span aria-hidden="true" className="h-3 w-5 shrink-0 rounded-[4px]" style={SEGMENTS[p.key].style} />
             <span className="min-w-0 flex-1">{SEGMENTS[p.key].label}</span>
-            <span className="shrink-0 font-semibold tabular-nums">{money(p.minor)}</span>
+            <span className="num shrink-0">{money(p.minor)}</span>
           </li>
         ))}
       </ul>

@@ -13,17 +13,15 @@ import { PickerField } from './PickerField'
 
 const toNumber = (text: string) => Number(text.replace(/,/g, ''))
 
-const GRADIENT = 'linear-gradient(135deg,#e24fd0 0%,#f4577a 45%,#f7a23b 100%)'
-
 /** The three questions, one to a screen. */
 const STEPS = ['currency', 'balance', 'budget'] as const
 type Step = (typeof STEPS)[number]
 
-const field = 'mt-8 min-h-16 w-full rounded-2xl bg-white/10 px-5 text-2xl text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.14)] placeholder:text-white/30 focus:outline-none focus:shadow-[inset_0_0_0_2px_rgb(255_255_255/0.6)]'
+const field = 'mt-8 min-h-16 w-full rounded-2xl bg-surface px-5 text-2xl text-ink shadow-[inset_0_0_0_1px_var(--ring)] placeholder:text-muted focus:outline-none focus:shadow-[inset_0_0_0_2px_var(--ink)]'
 
 /**
- * First launch, after the cards and the ask for notifications: three optional questions, one to a screen, in the same dark
- * look so it reads as one way in. A bar of dots says how far along it is, Skip leaves at any point, and nothing is saved until the
+ * First launch, after the cards and the ask for notifications: three optional questions, one to a screen, in the same theme colours
+ * (light unless the person has chosen otherwise) so it reads as one way in. A bar of dots says how far along it is, Skip leaves at any point, and nothing is saved until the
  * last screen (or the Skip, which saves nothing). Everything can be left empty.
  */
 export function Welcome({ open, currency, accounts }: { open: boolean; currency: string; accounts: Account[] }) {
@@ -88,31 +86,31 @@ export function Welcome({ open, currency, accounts }: { open: boolean; currency:
 
   return (
     <Dialog open={open} onClose={() => void finish()} labelledBy={titleId} variant="page">
-      <div className="min-h-dvh bg-[#0a0a0b] text-white">
+      <div className="min-h-dvh bg-bg text-ink">
         <form onSubmit={(e) => void next(e)} className="mx-auto flex min-h-dvh max-w-xl flex-col px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
           <div className="flex items-center justify-between">
-            <button type="button" onClick={back} aria-label="Back" disabled={index === 0} className="flex size-11 items-center justify-center rounded-full text-white disabled:opacity-0">
+            <button type="button" onClick={back} aria-label="Back" disabled={index === 0} className="flex size-11 items-center justify-center rounded-full text-ink disabled:opacity-0">
               <Icon name="chevLeft" size={24} />
             </button>
             <div role="img" aria-label={`Question ${index + 1} of ${STEPS.length}`} className="flex gap-1.5">
               {STEPS.map((s, i) => (
-                <span key={s} className={`h-1.5 rounded-full transition-all duration-300 ${i === index ? 'w-6 bg-white' : 'w-1.5 bg-white/30'}`} />
+                <span key={s} className={`h-1.5 rounded-full transition-all duration-300 ${i === index ? 'w-6 bg-ink' : 'w-1.5 bg-ink/25'}`} />
               ))}
             </div>
-            <button type="button" onClick={() => void finish()} aria-label="Skip for now" className="min-h-11 rounded-full px-3 text-lg font-medium text-white">
+            <button type="button" onClick={() => void finish()} aria-label="Skip for now" className="min-h-11 rounded-full px-3 text-lg font-medium text-ink">
               Skip
             </button>
           </div>
 
           <div ref={main} key={step} className="intro-rise mt-10 flex-1">
-            <p className="text-sm font-medium uppercase tracking-wide text-white/50">{`${index + 1} of ${STEPS.length}`}</p>
+            <p className="text-sm font-medium tracking-wide text-ink-2">{`${index + 1} of ${STEPS.length}`}</p>
 
             {step === 'currency' && (
               <>
-                <h2 id={titleId} className="mt-2 text-3xl font-semibold leading-tight tracking-tight">
+                <h2 id={titleId} className="type-title mt-2 text-[clamp(1.875rem,1.6rem+1.3vw,2.25rem)] font-medium">
                   Welcome. Which currency do you use?
                 </h2>
-                <p className="mt-3 text-lg text-white/60">Everything stays on this device. Three quick questions, all optional.</p>
+                <p className="mt-3 text-lg text-ink-2 text-pretty">Everything stays on this device. Three quick questions, all optional.</p>
                 <label htmlFor="w-currency" className="sr-only">
                   Currency
                 </label>
@@ -130,16 +128,16 @@ export function Welcome({ open, currency, accounts }: { open: boolean; currency:
 
             {step === 'balance' && (
               <>
-                <h2 id={titleId} className="mt-2 text-3xl font-semibold leading-tight tracking-tight">
+                <h2 id={titleId} className="type-title mt-2 text-[clamp(1.875rem,1.6rem+1.3vw,2.25rem)] font-medium">
                   How much money do you have today?
                 </h2>
-                <p className="mt-3 text-lg text-white/60">Used for an estimated balance that stays hidden until you show it.</p>
+                <p className="mt-3 text-lg text-ink-2 text-pretty">Used for an estimated balance that stays hidden until you show it.</p>
                 <label htmlFor="w-balance" className="sr-only">
                   Money you have today ({chosen})
                 </label>
                 <div className="relative">
                   <input id="w-balance" inputMode="decimal" autoComplete="off" placeholder="Optional" value={balance} onChange={(e) => setBalance(e.target.value)} className={`${field} pr-20`} />
-                  <span aria-hidden="true" className="absolute right-5 top-1/2 mt-4 -translate-y-1/2 text-lg text-white/50">
+                  <span aria-hidden="true" className="absolute right-5 top-1/2 mt-4 -translate-y-1/2 text-lg text-ink-2">
                     {chosen}
                   </span>
                 </div>
@@ -148,20 +146,20 @@ export function Welcome({ open, currency, accounts }: { open: boolean; currency:
 
             {step === 'budget' && (
               <>
-                <h2 id={titleId} className="mt-2 text-3xl font-semibold leading-tight tracking-tight">
+                <h2 id={titleId} className="type-title mt-2 text-[clamp(1.875rem,1.6rem+1.3vw,2.25rem)] font-medium">
                   Want to set a monthly budget?
                 </h2>
-                <p className="mt-3 text-lg text-white/60">You will see how much is left as you spend.</p>
+                <p className="mt-3 text-lg text-ink-2 text-pretty">You will see how much is left as you spend.</p>
                 <label htmlFor="w-budget" className="sr-only">
                   Monthly budget ({chosen})
                 </label>
                 <div className="relative">
                   <input id="w-budget" inputMode="decimal" autoComplete="off" placeholder="Optional" value={budget} onChange={(e) => setBudget(e.target.value)} className={`${field} pr-20`} />
-                  <span aria-hidden="true" className="absolute right-5 top-1/2 mt-4 -translate-y-1/2 text-lg text-white/50">
+                  <span aria-hidden="true" className="absolute right-5 top-1/2 mt-4 -translate-y-1/2 text-lg text-ink-2">
                     {chosen}
                   </span>
                 </div>
-                <p className="mt-8 rounded-2xl bg-white/[0.07] p-4 text-white/70">
+                <p className="mt-8 rounded-2xl bg-surface-2 p-4 text-ink-2">
                   After this, just type what you spend in the bar at the bottom, like “Uber 230 yesterday”. Back up from Settings now and then, since your data lives only here.
                 </p>
               </>
@@ -177,8 +175,7 @@ export function Welcome({ open, currency, accounts }: { open: boolean; currency:
           <button
             type="submit"
             data-primary
-            className="mt-6 min-h-14 w-full rounded-full text-xl font-semibold text-white active:opacity-80"
-            style={step === 'budget' ? { background: GRADIENT } : { background: 'white', color: 'black' }}
+            className="mt-6 min-h-14 w-full rounded-full bg-btn text-xl font-semibold text-btn-ink active:opacity-80"
           >
             {step === 'budget' ? 'Get started' : 'Continue'}
           </button>

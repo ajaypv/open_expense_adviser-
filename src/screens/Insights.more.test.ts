@@ -164,3 +164,81 @@ describe('TrendBars wording', () => {
     expect(render2()).toContain('Oldest to newest')
   })
 })
+
+describe('the pattern of the other pages', () => {
+  const rows = [...october, tx('2026-10-12', 4000, 1, { merchant: 'Big Bazaar' }), salary('2026-10-01', 5000)]
+  const page = render(rows, '2026-10', { budgetMinor: 3_000_000, categoryBudgets: new Map([[1, 150_000]]) })
+
+  it('shows the three numbers under the headline as three soft tiles, not a row split by lines', () => {
+    expect(page).not.toContain('divide-x')
+    expect(page).toMatch(/<dl class="mt-8 grid grid-cols-3 gap-2">/)
+    expect((page.match(/flex min-w-0 flex-col-reverse justify-center rounded-2xl bg-surface-2/g) ?? []).length).toBe(3)
+  })
+
+  it('shows the daily average in whole rupees, not as ₹959.1', () => {
+    // 4,680 over 28 days is 167.14 a day.
+    const t = text(render(rows, '2026-10'))
+    expect(t).toContain('Daily average₹167Biggest expense')
+  })
+
+  it('tells money in and out as two tiles with a round arrow each', () => {
+    const html = render(rows, '2026-10')
+    expect(html).toMatch(/data-icon="arrowDown"[^>]*class="[^"]*rounded-full/)
+    expect(html).toMatch(/data-icon="arrowUp"[^>]*class="[^"]*rounded-full/)
+    expect(html).toMatch(/<dd class="num mt-2 truncate text-xl text-good">₹5,000<\/dd>/)
+  })
+
+  it('sets the figures of the headline sentences in bold', () => {
+    expect(page).toMatch(/Food &amp; Dining was the biggest part, <b class="num text-ink">\d+%<\/b>/)
+  })
+
+  it('gives each category budget the round icon of its category, not a dot', () => {
+    const budgets = page.slice(page.indexOf('Budgets by category'))
+    expect(budgets).toMatch(/data-icon="utensils"[^>]*class="[^"]*rounded-full/)
+    expect(budgets.slice(0, budgets.indexOf('</ul>'))).not.toContain('size-2.5')
+  })
+
+  it('sets every section title in the one title size', () => {
+    expect(page).toMatch(/<h2 id="cats-h" class="type-title">Where it went<\/h2>/)
+    expect(page).toMatch(/<h2 id="pace-h" class="type-title mb-3">Spending pace<\/h2>/)
+  })
+})
+
+describe('HeroUI on this page', () => {
+  const rows = [...october, tx('2026-10-12', 4000, 1, { merchant: 'Big Bazaar' }), salary('2026-10-01', 5000)]
+
+  it('sets the cards in HeroUI Cards', () => {
+    const page = render(rows, '2026-10', { budgetMinor: 3_000_000, categoryBudgets: new Map([[1, 150_000]]) })
+    expect(page).toMatch(/class="card card--default mt-3 gap-0 p-3"[^>]*><dl class="grid grid-cols-2 gap-2">/)
+    expect(page).toMatch(/<section aria-labelledby="pace-h" class="mt-8"><div class="card card--default"/)
+    expect((page.match(/class="card card--default/g) ?? []).length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('shows the note about exchange rates as a HeroUI Alert, with a HeroUI Button that goes to Settings', () => {
+    const html = render(october, '2026-10', { missingRates: ['USD'] })
+    expect(html).toMatch(/<div class="alert alert--warning mt-4"[^>]*role="note"/)
+    expect(html).toContain('class="alert__description"')
+    expect(html).toMatch(/class="button button--sm button--secondary[^"]*"[^>]*>Set exchange rates<\/button>/)
+  })
+
+  it('chooses how to show the categories with a HeroUI toggle group, one of three, the first chosen', () => {
+    const page = render(rows, '2026-10')
+    expect(page).toMatch(/class="toggle-button-group[^"]*"[^>]*aria-label="How to show the categories"[^>]*role="radiogroup"/)
+    expect((page.match(/class="toggle-button /g) ?? []).length).toBe(3)
+    expect(page).toMatch(/aria-checked="true"[^>]*data-selected="true"[^>]*>Bubbles/)
+  })
+
+  it('shows when a regular payment is due as a HeroUI Chip, coloured by how soon', () => {
+    const recurring = [{ id: 90, kind: 'expense' as const, amountMinor: 100_000, currency: 'INR', categoryId: 1, merchant: 'Rent', note: '', paymentMethod: '', frequency: 'monthly' as const, nextDue: '2026-10-29', active: true }]
+    const html = render(rows, '2026-10', { recurring } as never)
+    expect(html).toMatch(/class="chip chip--[a-z]+ chip--sm chip--soft"/)
+    expect(html).toMatch(/data-status="(soon|later|late)"/)
+  })
+
+  it('goes on saying the same things in the same words', () => {
+    const t = text(render(rows, '2026-10', { missingRates: ['USD'] }))
+    expect(t).toContain('Some USD amounts are counted at face value, so the totals here are off.')
+    expect(t).toContain('Set exchange rates')
+    expect(t).toContain('BubblesDonutList')
+  })
+})

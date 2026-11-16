@@ -61,14 +61,14 @@ describe('Insights: Regular payments, the totals', () => {
 
   it('names the next payment, how much, and how soon', () => {
     mount({ rules: all })
-    expect(within(section()).getByText(/Next: Maid, ₹200/)).toBeInTheDocument()
+    expect(section()).toHaveTextContent(/Next: Maid, ₹200/)
     expect(within(section()).getByText(/in 2 days/)).toBeInTheDocument()
   })
 
   it('says what share of the regular income it takes', () => {
     mount({ rules: all })
     // 19,366.67 of 80,000 a month
-    expect(within(section()).getByText(/24% of the ₹80,000 you expect each month/)).toBeInTheDocument()
+    expect(section()).toHaveTextContent(/24% of the ₹80,000 you expect each month/)
   })
 
   it('splits a month by kind of payment, biggest first', () => {
@@ -125,12 +125,12 @@ describe('Insights: Regular payments, status pills', () => {
 describe('Insights: Regular payments, warnings', () => {
   it('says when payments are late and have not been added', () => {
     mount({ rules: [rent, rule({ merchant: 'Electricity', nextDue: '2026-10-25' })] })
-    expect(within(section()).getByText('1 payment is late and has not been added.')).toBeInTheDocument()
+    expect(section()).toHaveTextContent('1 payment is late and has not been added.')
   })
 
   it('says the estimated balance covers everything, with what is left', () => {
     mount({ rules: all, balanceMinor: 5_000_000 })
-    expect(within(section()).getByText(/Your estimated balance covers all of it/)).toBeInTheDocument()
+    expect(section()).toHaveTextContent(/Your estimated balance covers all of it/)
   })
 
   it('warns when the balance would run short, and from when', () => {
