@@ -40,7 +40,6 @@ const orient = (gamma: number, beta = 55) => window.dispatchEvent(Object.assign(
 const motion = (x: number, y = 0, z = 0) => window.dispatchEvent(Object.assign(new Event('devicemotion'), { acceleration: { x, y, z } }))
 const mount = (over: Record<string, unknown> = {}) => render(<CategoryFlow totals={totals} categoryById={categoryById} currency="INR" sourceLabel="Spent in October" {...over} />)
 const root = () => document.querySelector<HTMLElement>('[data-flow]')!
-const toggle = () => screen.getByRole('button', { name: /the chest$/ })
 
 /** Where each coin is drawn: "translate(x y) rotate(deg)", and whether it is showing. */
 const coins = () =>
@@ -58,34 +57,15 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('CategoryFlow: the chest opens', () => {
-  it('is closed to begin with, with a button that says how to open it and no coin showing', () => {
+describe('CategoryFlow: the chest is open', () => {
+  it('is open from the start, with no button to close it and no coin out of place', () => {
     mount()
-    expect(toggle()).toHaveAccessibleName('Open the chest')
-    expect(toggle()).toHaveAttribute('aria-expanded', 'false')
-    expect(root().dataset.open).toBe('false')
-    expect(document.querySelectorAll('[data-coin]')).toHaveLength(26)
-    expect(shown()).toHaveLength(0)
-  })
-
-  it('opens from the button, lifts the lid, and closes again', () => {
-    mount()
-    fireEvent.click(toggle())
-    expect(toggle()).toHaveAccessibleName('Close the chest')
-    expect(toggle()).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.queryByRole('button', { name: /the chest$/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^(Open|Close)$/ })).toBeNull()
+    expect(document.querySelector('button[aria-hidden="true"]')).toBeNull()
     expect(root().dataset.open).toBe('true')
     expect(document.querySelector('[data-chest]')).toHaveAttribute('data-open', 'true')
-    fireEvent.click(toggle())
-    expect(root().dataset.open).toBe('false')
-    play(5)
-    expect(shown()).toHaveLength(0)
-  })
-
-  it('opens by a tap on the chest itself, as well', () => {
-    mount()
-    const chest = document.querySelector('button[aria-hidden="true"]')!
-    fireEvent.click(chest)
-    expect(root().dataset.open).toBe('true')
+    expect(document.querySelectorAll('[data-coin]')).toHaveLength(26)
   })
 
   it('has a lid, the inside of a lid, an inside and a layer of coins, for the opening to move', () => {
@@ -95,7 +75,6 @@ describe('CategoryFlow: the chest opens', () => {
 
   it('still has the total and what it is on the chest, wherever the lid is', () => {
     mount()
-    fireEvent.click(toggle())
     const chest = document.querySelector('[data-chest]')!
     expect(chest.textContent).toContain('Spent in October')
     expect(chest.textContent).toContain('₹1,000')
@@ -106,7 +85,6 @@ describe('CategoryFlow: the chest opens', () => {
 describe('CategoryFlow: gold coins with real physics', () => {
   it('pours the coins in one after another, and they fall into the chest and lie there', () => {
     mount()
-    fireEvent.click(toggle())
     play(20)
     const early = shown().length
     expect(early).toBeLessThan(26)
@@ -124,7 +102,6 @@ describe('CategoryFlow: gold coins with real physics', () => {
 
   it('turns each coin as it rolls, so the faces do not stay as they were poured', () => {
     mount()
-    fireEvent.click(toggle())
     play(20)
     const poured = coins().map((c) => c.a)
     play(120)
@@ -135,7 +112,6 @@ describe('CategoryFlow: gold coins with real physics', () => {
   it('slides them down the way the phone is tipped (the gyroscope)', () => {
     mount()
     orient(0)
-    fireEvent.click(toggle())
     play(360)
     const level = meanX()
     orient(45)
@@ -150,7 +126,6 @@ describe('CategoryFlow: gold coins with real physics', () => {
   it('throws them about when the phone is shaken, and they settle after', () => {
     mount()
     orient(0)
-    fireEvent.click(toggle())
     play(360)
     const rest = coins()
     for (let i = 0; i < 10; i++) {
@@ -169,21 +144,9 @@ describe('CategoryFlow: gold coins with real physics', () => {
     }
   })
 
-  it('pours a fresh handful each time it is opened', () => {
-    mount()
-    fireEvent.click(toggle())
-    play(300)
-    const first = coins().map((c) => Math.round(c.x))
-    fireEvent.click(toggle())
-    fireEvent.click(toggle())
-    play(300)
-    expect(coins().map((c) => Math.round(c.x))).not.toEqual(first)
-  })
-
   it('shows the coins at once, already in a pile, with reduced motion, and moves nothing', () => {
     allowMotion(false)
     mount()
-    fireEvent.click(toggle())
     expect(shown()).toHaveLength(26)
     const pile = coins()
     play(60)

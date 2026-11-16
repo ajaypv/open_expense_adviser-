@@ -114,8 +114,16 @@ export function SpendingOverview({
             </span>
             {isCurrent ? `Spent so far in ${monthName}` : `Spent in ${monthName}`}
           </span>
-          <span className="type-display mt-1 block whitespace-nowrap">
-            <AnimatedMoney minor={totalMinor} currency={currency} id="hero" />
+          <span className="mt-1 flex items-center justify-between gap-3">
+            <span className="type-display block whitespace-nowrap">
+              <AnimatedMoney minor={totalMinor} currency={currency} id="hero" />
+            </span>
+            {/* A sign that the figure opens a graph: the whole headline is the button, this only shows it is one. */}
+            {onOpenGraph && (
+              <span aria-hidden="true" data-graph-icon className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink">
+                <Icon name="bars" size={20} />
+              </span>
+            )}
           </span>
         </Headline>
       )}

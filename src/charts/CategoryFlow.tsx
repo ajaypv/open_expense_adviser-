@@ -1,4 +1,4 @@
-import { useCallback, useId, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
 import type { Category } from '../db/schema'
 import { formatMoney, formatMoneyCompact } from '../db/money'
 import type { CategoryTotal } from '../insights/aggregates'
@@ -91,10 +91,10 @@ const signOf = (currency: string) => {
  * them too and jolts the chest, while the chest and its glow drift a little, each at its own depth. With no sensor (a
  * computer) they sway gently by themselves; with reduced motion nothing moves.
  *
- * The chest opens. Tap it (or the button beside it) and the lid lifts back and gold coins pour in and lie in it, as coins do:
+ * The chest is open from the start, with no button to close it: the lid is lifted back and gold coins pour in and lie in it, as coins do:
  * each has its own weight and size, falls, bounces, rolls and turns as it rolls, and knocks the others about (see coinPhysics).
  * Tip the phone and they slide down the way it tips, push it and they slosh the other way, shake it and they fly about and settle
- * again; on a computer, drag a finger or the mouse through them. With reduced motion the chest simply opens on a settled pile.
+ * again; on a computer, drag a finger or the mouse through them. With reduced motion the coins are simply there, on a settled pile.
  *
  * Under each line, the category's icon, name, amount and share; it opens that category's expenses. More than five categories
  * show the biggest four and fold the rest into one grey "Everything else", which opens a list of everything in it.
@@ -117,11 +117,10 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
   const drawn = grand > 0
   const lineKeys = nonZero.map((t) => t.key ?? t.categoryId).join(',')
 
-  // The chest: whether it is open, the coins in it, and the pieces of the picture they are drawn with.
-  const [open, setOpen] = useState(false)
+  // The chest is always open, with no button to close it: the coins in it, and the pieces of the picture they are drawn with.
+  const open = true
   const [restOpen, setRestOpen] = useState(false)
-  const openRef = useRef(false)
-  const opens = useRef(0)
+  const openRef = useRef(true)
   const world = useRef<CoinWorld | null>(null)
   const coinEls = useRef<(SVGGElement | null)[]>([])
   const stir = useRef<{ x: number; y: number; t: number } | null>(null)
@@ -166,21 +165,17 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
     },
   })
 
-  /** Opens or closes the chest. Opening pours a fresh handful of coins; with reduced motion they are simply there, settled. */
-  function toggle() {
-    const next = !openRef.current
-    openRef.current = next
-    setOpen(next)
-    if (next) {
-      const w = pour(COINS, BOX, 7 + opens.current++)
-      world.current = w
-      if (!motionAllowed()) {
-        settle(w, pullFrom(tilt))
-        w.time = 99
-      }
+  // The coins are poured in as the chest is first drawn, and fall once the chart is on screen (that is when the clock for them runs);
+  // with reduced motion they are simply there, settled.
+  useEffect(() => {
+    const w = pour(COINS, BOX, 7)
+    world.current = w
+    if (!motionAllowed()) {
+      settle(w, pullFrom(tilt))
+      w.time = 99
     }
     paint()
-  }
+  }, [paint])
 
   /** A finger or the mouse dragged through the coins stirs them: each one it passes is carried along a little. */
   function onStir(e: PointerEvent<HTMLDivElement>) {
@@ -243,7 +238,6 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
   const id = (s: string) => `${uid}-${s}`
   const bandXs = [CHEST_X + 14, CHEST_RIGHT - 26]
   const innerTop = BOX.top - 36
-  const label = open ? 'Close the chest' : 'Open the chest'
 
   return (
     <div ref={setBox} data-seen={seen} data-open={open} className="when-seen mx-auto w-full max-w-md" data-flow>
@@ -368,26 +362,6 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
             ))}
           </g>
         </svg>
-
-        {/* Tapping the chest opens it too. The button beside it is the one that is named, for a keyboard and a screen reader. */}
-        <button
-          type="button"
-          tabIndex={-1}
-          aria-hidden="true"
-          onClick={toggle}
-          className="absolute cursor-pointer rounded-3xl"
-          style={{ left: `${(CHEST_X / W) * 100}%`, width: `${(CHEST_W / W) * 100}%`, top: `${((CHEST_Y - 8) / BOTTOM) * 100}%`, height: `${((CHEST_H + 8) / BOTTOM) * 100}%` }}
-        />
-        <button
-          type="button"
-          onClick={toggle}
-          aria-expanded={open}
-          aria-label={label}
-          className="absolute left-0 top-0 inline-flex min-h-9 items-center gap-1.5 rounded-full bg-surface-2 px-3 text-xs font-semibold shadow-[0_0_0_1px_var(--ring)] active:opacity-70"
-        >
-          <Icon name="spark" size={14} />
-          {open ? 'Close' : 'Open'}
-        </button>
       </div>
 
       <ul aria-label="Spending by category, as a flow" className="grid list-none p-0" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>

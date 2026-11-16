@@ -188,8 +188,11 @@ describe('SpendingOverview: the headline opens the graph', () => {
     const button = screen.getByRole('button', { name: 'Spent so far in November: ₹230. See the graph' })
     expect(button).toHaveAttribute('aria-haspopup', 'dialog')
     expect(within(button).getByText('Spent so far in November')).toBeInTheDocument()
-    // No word or tag on the card says it: the card is the same as it was, and the name of the button says what it opens.
-    expect(button.querySelector('[data-graph-hint]')).toBeNull()
+    // A graph icon beside the figure shows it can be opened; it is only a picture, so the name of the button stays the one that says it.
+    const icon = button.querySelector('[data-graph-icon]')!
+    expect(icon).not.toBeNull()
+    expect(icon).toHaveAttribute('aria-hidden', 'true')
+    expect(icon.querySelector('svg')).not.toBeNull()
     expect(button.textContent).not.toContain('Graph')
     await userEvent.setup().click(button)
     expect(open).toHaveBeenCalledTimes(1)
@@ -199,6 +202,7 @@ describe('SpendingOverview: the headline opens the graph', () => {
     overview()
     expect(screen.queryByRole('button', { name: /See the graph/ })).toBeNull()
     expect(screen.getByText('Spent so far in November')).toBeInTheDocument()
+    expect(document.querySelector('[data-graph-icon]')).toBeNull()
   })
 
   it('leaves the button that hides amounts as its own button, not inside the headline', () => {
