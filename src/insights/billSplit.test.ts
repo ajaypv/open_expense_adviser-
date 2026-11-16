@@ -46,6 +46,20 @@ describe('billKindOf', () => {
   })
 })
 
+describe('categories of their own', () => {
+  const own: Category[] = [...categories, { id: 10, name: 'EMI', color: 'var(--s9)' }, { id: 11, name: 'Recharge', color: 'var(--s10)' }, { id: 12, name: 'Credit Card', color: 'var(--s11)' }]
+  const ownById = new Map(own.map((c) => [c.id, c]))
+
+  it('keeps what is filed under EMI, Recharge or Credit Card as that category in its own colour, apart from Bills', () => {
+    const t = splitCategoryTotals([tx('Home loan EMI', 12_000, 10), tx('Jio recharge', 300, 11), tx('CRED card bill', 5_000, 12), tx('BESCOM', 1_500), tx('Water bill', 400)], ownById, [])
+    expect(t.every((x) => x.key === undefined)).toBe(true) // nothing is made a part of Bills: there is only one thing left in it
+    expect(t.find((x) => x.categoryId === 10)!.totalMinor).toBe(12_000 * 100)
+    expect(t.find((x) => x.categoryId === 11)!.totalMinor).toBe(300 * 100)
+    expect(t.find((x) => x.categoryId === 12)!.totalMinor).toBe(5_000 * 100)
+    expect(t.find((x) => x.categoryId === 2)!.totalMinor).toBe(1_900 * 100)
+  })
+})
+
 describe('splitBills', () => {
   it('is null when nothing went on bills', () => {
     expect(splitBills([tx('Swiggy', 400, 1)], byId, [])).toBeNull()

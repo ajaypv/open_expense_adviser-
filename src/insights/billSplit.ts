@@ -3,6 +3,7 @@ import { byCategory, type CategoryTotal } from './aggregates'
 import type { IconName } from '../ui/Icon'
 import { nameIcon } from '../ui/categoryIcon'
 import { tagOf } from './upcoming'
+import { BILL_SPLIT_OFF } from '../db/defaultCategories'
 
 /** The parts the money that goes on bills divides into, in the order they are listed when equal. */
 export type BillKind = 'emi' | 'recharge' | 'utilities' | 'insurance' | 'bills'
@@ -99,7 +100,9 @@ export function splitCategoryTotals(monthTxs: Transaction[], categoryById: Map<n
   const parts = new Map<BillKind, { minor: number; byCategory: Map<number, number> }>()
   for (const t of monthTxs) {
     const tag = t.source === 'recurring' ? tagByName.get(t.merchant.trim().toLowerCase()) : undefined
-    const kind = billKindOf(t, categoryById.get(t.categoryId)?.name, tag)
+    const categoryName = categoryById.get(t.categoryId)?.name
+    // What is filed under EMI, Recharge or Credit Card already stands on its own, in its own colour, and is not a part of Bills.
+    const kind = (BILL_SPLIT_OFF as readonly string[]).includes(categoryName ?? '') ? null : billKindOf(t, categoryName, tag)
     if (!kind) {
       rest.push(t)
       continue

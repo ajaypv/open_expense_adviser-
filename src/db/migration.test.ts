@@ -39,7 +39,7 @@ describe('database v1 -> v2 migration', () => {
     const cats = await db.categories.toArray()
     const names = cats.map((c) => c.name).sort()
     expect(names).toEqual(
-      ['Bills & Utilities', 'EMI', 'Entertainment & Travel', 'Food & Dining', 'Groceries', 'Health', 'Income', 'Other', 'Recharge', 'Rent & Housing', 'Shopping', 'Transport'].sort(),
+      ['Bills & Utilities', 'Credit Card', 'EMI', 'Entertainment & Travel', 'Food & Dining', 'Groceries', 'Health', 'Income', 'Other', 'Recharge', 'Rent & Housing', 'Shopping', 'Transport'].sort(),
     )
 
     const txs = await db.transactions.toArray()
@@ -73,6 +73,33 @@ describe('database v1 -> v2 migration', () => {
     void ids
   })
 
+  it('moves what was filed under Bills & Utilities to EMI, Recharge or Credit Card by its name, and leaves every other bill and category alone (v8)', async () => {
+    const ids = await seedV1()
+    const seed = new Dexie('expense-tracker')
+    seed.version(1).stores({ transactions: '++id, date, categoryId, merchant, createdAt', categories: '++id, &name', budgets: '++id, categoryId', settings: 'key', chat: '++id, createdAt' })
+    await seed.open()
+    const row = (merchant: string, categoryId: number) => ({ amountMinor: 100, currency: 'INR', categoryId, merchant, note: '', date: '2026-10-02', paymentMethod: '', source: 'manual', createdAt: 0 })
+    await seed.table('transactions').bulkAdd([
+      row('HDFC Bank EMI', ids['Bills & Utilities']),
+      row('Airtel postpaid', ids['Bills & Utilities']),
+      row('CRED (card bill)', ids['Bills & Utilities']),
+      row('BESCOM', ids['Bills & Utilities']),
+      row('Bajaj EMI', ids['Shopping']),
+    ])
+    seed.close()
+    const { db } = await import('./schema')
+    await db.open()
+    const name = new Map((await db.categories.toArray()).map((c) => [c.id, c.name]))
+    const filed = Object.fromEntries((await db.transactions.toArray()).filter((t) => t.merchant).map((t) => [t.merchant, name.get(t.categoryId)]))
+    expect(filed).toEqual({
+      'HDFC Bank EMI': 'EMI',
+      'Airtel postpaid': 'Recharge',
+      'CRED (card bill)': 'Credit Card',
+      BESCOM: 'Bills & Utilities',
+      'Bajaj EMI': 'Shopping',
+    })
+  })
+
   it('re-colours categories with theme-aware CSS variables', async () => {
     await seedV1()
     const { db } = await import('./schema')
@@ -82,10 +109,10 @@ describe('database v1 -> v2 migration', () => {
     expect(cats.find((c) => c.name === 'Other')!.color).toBe('var(--other)')
   })
 
-  it('creates the twelve default categories (including Income, EMI and Recharge) on a brand-new database', async () => {
+  it('creates the thirteen default categories (including Income, EMI, Recharge and Credit Card) on a brand-new database', async () => {
     const { db } = await import('./schema')
     await db.open()
-    expect(await db.categories.count()).toBe(12)
+    expect(await db.categories.count()).toBe(13)
   })
 })
 

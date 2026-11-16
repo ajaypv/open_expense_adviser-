@@ -189,6 +189,7 @@
   --s8: #e34948;
   --s9: #0e8f9c;
   --s10: #9a5bd1;
+  --s11: #7a8b2e;
   --other: #85837e;
 
   --warn: #fab219;
@@ -233,6 +234,7 @@
     --s8: #e66767;
     --s9: #2cb3c1;
     --s10: #b184e0;
+    --s11: #a3b84a;
     --other: #7a7973;
 
     --good-text: #14b814;
@@ -274,6 +276,7 @@
   --s8: #e66767;
   --s9: #2cb3c1;
   --s10: #b184e0;
+  --s11: #a3b84a;
   --other: #7a7973;
 
   --good-text: #14b814;
@@ -1565,7 +1568,7 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 
 /*
  * A colour theme restyles the page, the cards, the lines and the buttons; light or dark is chosen separately, so each
- * has both. What it never touches is the category colours (--s1 to --s10) or the colours that mean something (good,
+ * has both. What it never touches is the category colours (--s1 to --s11) or the colours that mean something (good,
  * warning, critical), so a category looks the same in every theme. The tokens are set on any element that carries
  * data-palette, not only the page, which is how Settings shows each theme in its own colours before it is chosen.
  * Every block is checked in ui/contrast.test.ts, and the classic one must equal the tokens at the top of this file.

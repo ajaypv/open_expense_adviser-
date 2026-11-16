@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { CardStyle } from './cardStyles'
-import { DEFAULT_CATEGORIES, INCOME_CATEGORY } from './defaultCategories'
+import { DEFAULT_CATEGORIES, INCOME_CATEGORY, separateCategoryFor } from './defaultCategories'
 
 /** Where a transaction was added. Coordinates are rounded to 4 decimals (about 11 m). */
 export interface Place {
@@ -228,6 +228,34 @@ db.version(7)
       if (c.name !== 'EMI' && c.name !== 'Recharge') continue
       if (!(await cats.where('name').equals(c.name).first())) await cats.add({ name: c.name, color: c.color })
     }
+  })
+
+// v8: Credit Card joins EMI and Recharge as a category of its own, and what was already filed under Bills & Utilities whose name says it is an
+// EMI, a recharge or a card bill moves to the category it belongs in. A payment the person put anywhere else is left where it is.
+db.version(8)
+  .stores({})
+  .upgrade(async (tx) => {
+    const cats = tx.table('categories')
+    for (const c of DEFAULT_CATEGORIES) {
+      if (c.name !== 'EMI' && c.name !== 'Recharge' && c.name !== 'Credit Card') continue
+      if (!(await cats.where('name').equals(c.name).first())) await cats.add({ name: c.name, color: c.color })
+    }
+    const bills = await cats.where('name').equals('Bills & Utilities').first()
+    if (!bills) return
+    const target = new Map<string, number>()
+    for (const name of ['EMI', 'Recharge', 'Credit Card']) {
+      const row = await cats.where('name').equals(name).first()
+      if (row) target.set(name, row.id)
+    }
+    await tx
+      .table('transactions')
+      .where('categoryId')
+      .equals(bills.id)
+      .modify((t: { merchant?: string; categoryId: number }) => {
+        const to = separateCategoryFor(t.merchant ?? '')
+        const id = to ? target.get(to) : undefined
+        if (id !== undefined) t.categoryId = id
+      })
   })
 
 db.on('populate', (tx) => {

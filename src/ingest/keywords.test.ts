@@ -48,5 +48,8 @@ describe('adding words', () => {
   it('files a Karnataka word under its category through the parser', () => {
     expect(parseExpense('KSRTC bus fare 137')?.categoryName).toBe('Transport')
     expect(parseExpense('bescom 1450')?.categoryName).toBe('Bills & Utilities')
+    expect(parseExpense('jio 299')?.categoryName).toBe('Recharge')
+    expect(parseExpense('home loan emi 12000')?.categoryName).toBe('EMI')
+    expect(parseExpense('cred 5000')?.categoryName).toBe('Credit Card')
   })
 })
