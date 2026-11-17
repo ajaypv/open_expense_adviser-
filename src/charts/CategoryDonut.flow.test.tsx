@@ -82,15 +82,25 @@ describe('CategoryDonut: the legend', () => {
     expect(within(legend()).getAllByRole('listitem')[1]).toHaveTextContent('Shopping')
   })
 
-  it('folds everything past the sixth into one grey row, which opens nothing', () => {
+  it('has a segment and a row for each of nine categories, with nothing folded', () => {
     const ids = Array.from({ length: 9 }, (_, i) => i + 1)
     const many = new Map<number, Category>(ids.map((id) => [id, category(id, `Cat ${id}`)]))
     const rows: CategoryTotal[] = ids.map((id) => ({ categoryId: id, totalMinor: (10 - id) * 1000 }))
     mount({ totals: rows, categoryById: many, onPick: () => {} })
+    expect(within(legend()).getAllByRole('listitem')).toHaveLength(9)
+    expect(within(legend()).getAllByRole('button')).toHaveLength(9)
+    expect(within(legend()).queryByText('Everything else')).toBeNull()
+    expect(segments()).toHaveLength(9)
+  })
+
+  it('can still be told to fold everything past a limit into one grey row, which opens nothing', () => {
+    const ids = Array.from({ length: 9 }, (_, i) => i + 1)
+    const many = new Map<number, Category>(ids.map((id) => [id, category(id, `Cat ${id}`)]))
+    const rows: CategoryTotal[] = ids.map((id) => ({ categoryId: id, totalMinor: (10 - id) * 1000 }))
+    mount({ totals: rows, categoryById: many, onPick: () => {}, limit: 6 })
     expect(within(legend()).getAllByRole('listitem')).toHaveLength(7)
     expect(within(legend()).getAllByRole('button')).toHaveLength(6)
     expect(within(legend()).getByText('Everything else')).toBeInTheDocument()
-    expect(segments()).toHaveLength(7)
     expect(segments()[6].getAttribute('stroke')).toBe('var(--other)')
   })
 })

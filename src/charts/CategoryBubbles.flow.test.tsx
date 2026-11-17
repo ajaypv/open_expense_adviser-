@@ -97,26 +97,22 @@ describe('CategoryBubbles: a bubble for each category', () => {
 })
 
 describe('CategoryBubbles: small and many', () => {
-  it('folds categories under 2% into the grey "Everything else" bubble instead of drawing a scatter of tiny ones', () => {
+  it('gives every category its own bubble, even those under 2%, with nothing folded into Everything else', () => {
     const ids = Array.from({ length: 8 }, (_, i) => i + 1)
     const names = new Map<number, Category>(ids.map((id) => [id, category(id, `Cat ${id}`)]))
-    // 40, 30, 20, 6, 2.5, 1, 0.25 and 0.25 out of 100: the last three are each under 2% and become one 1.5% bubble.
+    // 40, 30, 20, 6, 2.5, 1, 0.25 and 0.25 out of 100: the last three are each under 2% and still have a bubble.
     const rows: CategoryTotal[] = [40_000, 30_000, 20_000, 6_000, 2_500, 1_000, 250, 250].map((m, i) => ({ categoryId: i + 1, totalMinor: m }))
     mount({ totals: rows, categoryById: names, onPick: () => {} })
-    expect(within(list()).getAllByRole('button')).toHaveLength(5)
-    expect(screen.getByRole('button', { name: /^Cat 5, 2\.5%/ })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^Cat 6,/ })).toBeNull()
-    expect(within(list()).getByLabelText(/^Everything else, 1\.5%/).tagName).toBe('LI')
+    expect(within(list()).getAllByRole('button')).toHaveLength(8)
+    expect(screen.getByRole('button', { name: /^Cat 6, 1\.0%/ })).toBeInTheDocument()
+    expect(screen.queryByLabelText(/^Everything else/)).toBeNull()
   })
 
-  it('always keeps the three biggest as their own bubbles, however small, so a quiet month is not one grey circle', () => {
-    // One category holds nearly everything; the next five are each far under 3%.
+  it('keeps a bubble for a tiny category beside one that holds nearly everything', () => {
     const tiny: CategoryTotal[] = Array.from({ length: 6 }, (_, i) => ({ categoryId: i + 1, totalMinor: i === 0 ? 1_000_000 : 10 }))
     const more = new Map<number, Category>(tiny.map((t) => [t.categoryId, category(t.categoryId, `Tiny ${t.categoryId}`)]))
     mount({ totals: tiny, categoryById: more, onPick: () => {} })
-    const buttons = within(list()).getAllByRole('button')
-    expect(buttons.map((b) => b.getAttribute('aria-label')?.split(',')[0])).toEqual(['Tiny 1', 'Tiny 2', 'Tiny 3'])
-    expect(within(list()).getByLabelText(/^Everything else, /)).toBeInTheDocument()
+    expect(within(list()).getAllByRole('button')).toHaveLength(6)
   })
 
   it('keeps the name on every bubble that is left, since each is big enough to hold it', () => {
@@ -126,17 +122,25 @@ describe('CategoryBubbles: small and many', () => {
     }
   })
 
-  it('folds everything past the eighth into one grey "Everything else" bubble, which opens nothing', () => {
+  it('can still be told to fold everything past a limit into one grey "Everything else" bubble, which opens nothing', () => {
     const ids = Array.from({ length: 10 }, (_, i) => i + 1)
     const many = new Map<number, Category>(ids.map((id) => [id, category(id, `Cat ${id}`)]))
     const rows: CategoryTotal[] = ids.map((id) => ({ categoryId: id, totalMinor: (11 - id) * 1000 }))
-    mount({ totals: rows, categoryById: many, onPick: () => {} })
+    mount({ totals: rows, categoryById: many, onPick: () => {}, limit: 8 })
     expect(within(list()).getAllByRole('listitem')).toHaveLength(9)
     expect(within(list()).getAllByRole('button')).toHaveLength(8)
     const rest = within(list()).getByLabelText(/^Everything else, /)
     expect(rest.tagName).toBe('LI')
     // Cat 9 and Cat 10: 2,000 + 1,000 of 55,000.
     expect(rest).toHaveAttribute('aria-label', 'Everything else, 5.5%, ₹30')
+  })
+
+  it('has a bubble for each of ten categories when no limit is given', () => {
+    const ids = Array.from({ length: 10 }, (_, i) => i + 1)
+    const many = new Map<number, Category>(ids.map((id) => [id, category(id, `Cat ${id}`)]))
+    const rows: CategoryTotal[] = ids.map((id) => ({ categoryId: id, totalMinor: (11 - id) * 1000 }))
+    mount({ totals: rows, categoryById: many, onPick: () => {} })
+    expect(within(list()).getAllByRole('button')).toHaveLength(10)
   })
 
   it('draws nothing at all when nothing was spent', () => {

@@ -12,7 +12,7 @@ interface Props {
   totals: CategoryTotal[]
   categoryById: Map<number, Category>
   currency: string
-  /** Show at most this many categories and fold the rest (and any under 2%) into one grey "Everything else" bubble. */
+  /** Show at most this many categories and fold the rest into one grey "Everything else" bubble. With none given, every category has its own bubble. */
   limit?: number
   onPick?: (categoryId: number) => void
 }
@@ -21,10 +21,6 @@ interface Props {
 const NAME_MIN_R = 9
 /** A bubble this big (same units) has room for the amount under its share, so the figure can be read without a tap. */
 const AMOUNT_MIN_R = 17
-/** Categories under this share are folded into the grey "Everything else" bubble: a row of 0.1% bubbles is clutter. */
-const MIN_SHARE = 0.02
-/** ...but the biggest few always keep their own bubble, so a quiet month does not collapse into one grey circle. */
-const MIN_BUBBLES = 3
 
 const percent = formatShare
 
@@ -46,18 +42,17 @@ function BubbleShare({ share, play, delayMs }: { share: number; play: boolean; d
 /**
  * Spend by category as glassy bubbles: the area of each is its share, and that is the only thing the size says. Each has
  * the category's icon, name and share (and the amount, where there is room), and a tap opens the category. Colour is
- * the category's own, as everywhere else. Categories under a few percent are folded into one grey "Everything else"
- * bubble rather than drawn as a scatter of tiny ones. A bubble too small for its name keeps its icon and share, and
- * every one carries the full name, share and amount for a screen reader; the list view has every category, in order,
- * for anyone who wants the small ones too.
+ * the category's own, as everywhere else. Every category has its own bubble, however small, so none is hidden. A bubble
+ * too small for its name keeps its icon and share, and every one carries the full name, share and amount for a screen
+ * reader.
  */
-export function CategoryBubbles({ totals, categoryById, currency, limit = 8, onPick }: Props) {
+export function CategoryBubbles({ totals, categoryById, currency, limit = Infinity, onPick }: Props) {
   // They arrive when the person can see them, not when the page was drawn.
   const [watch, seen] = useSeen()
   const grand = totals.reduce((a, t) => a + t.totalMinor, 0)
   if (grand <= 0) return null
 
-  const shown = totals.filter((t, i) => i < Math.min(limit, MIN_BUBBLES) || (i < limit && t.totalMinor / grand >= MIN_SHARE))
+  const shown = totals.filter((_, i) => i < limit)
   const restMinor = grand - shown.reduce((a, t) => a + t.totalMinor, 0)
   const rows: Row[] = shown.map((t) => {
     const cat = categoryById.get(t.categoryId)

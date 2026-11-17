@@ -254,8 +254,6 @@ export const Home = memo(function Home({
                     <CategoryBars totals={categoryTotals} categoryById={categoryById} currency={currency} limit={5} pin="Food & Dining" onPick={onPickCategory} />
                   </div>
                 </section>
-
-                {onOpenInsights && <InsightCard totals={categoryTotals} totalMinor={total} categoryById={categoryById} monthName={name} onOpen={onOpenInsights} onOpenAi={onOpenAi} />}
               </>
             )}
 
@@ -297,12 +295,17 @@ export const Home = memo(function Home({
 
             <GoalsSummary goals={ledger.goals} currency={currency} today={today} onOpen={onOpenGoals} />
 
-            {/* The last section: the list of what was spent is Activity, and where the money flows is in Insights. One tap to each, not a copy here. */}
+            {/* The list of what was spent is Activity, and where the money flows is in Insights. One tap to each, not a copy here. */}
             {total > 0 && (
               <nav aria-label="More about this month" className="mt-8 grid grid-cols-2 gap-3">
                 <GoTo icon="list" label="Recent transactions" onClick={onSeeAll} />
                 {onOpenInsights && <GoTo icon="bars" label="Where the money flows" onClick={onOpenInsights} />}
               </nav>
+            )}
+
+            {/* Last of all: a line about what the month's spending says, with the way to Insights and the AI summary. */}
+            {total > 0 && onOpenInsights && (
+              <InsightCard totals={categoryTotals} totalMinor={total} categoryById={categoryById} monthName={name} onOpen={onOpenInsights} onOpenAi={onOpenAi} />
             )}
           </>
         }

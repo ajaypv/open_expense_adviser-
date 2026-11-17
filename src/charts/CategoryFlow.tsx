@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, type CSSProperties, type PointerEvent } from 'react'
 import type { Category } from '../db/schema'
 import { formatMoney, formatMoneyCompact } from '../db/money'
 import type { CategoryTotal } from '../insights/aggregates'
@@ -21,8 +21,7 @@ interface Props {
 
 interface Part {
   key: string
-  /** Null for the folded "Everything else", which opens a list of what is in it. */
-  categoryId: number | null
+  categoryId: number
   name: string
   color: string
   icon: IconName
@@ -46,6 +45,7 @@ const BOTTOM = TOP + FLOW
 const CAP = 5
 /** How far across the chest's base the lines leave it. */
 const SOURCE_W = 150
+/** Up to this many categories each have a column of their own under their line; with more, every line still lands and the names are listed below. */
 const MAX_COLUMNS = 5
 /** The coins that fill the chest, and the inside of it they lie in: between its sides, from under the open lid to a little below the rim. */
 const COINS = 26
@@ -96,8 +96,10 @@ const signOf = (currency: string) => {
  * Tip the phone and they slide down the way it tips, push it and they slosh the other way, shake it and they fly about and settle
  * again; on a computer, drag a finger or the mouse through them. With reduced motion the coins are simply there, on a settled pile.
  *
- * Under each line, the category's icon, name, amount and share; it opens that category's expenses. More than five categories
- * show the biggest four and fold the rest into one grey "Everything else", which opens a list of everything in it.
+ * Every category has its line, none folded away. Up to five have a column of their own under their line: the category's icon,
+ * name, amount and share, which opens that category's expenses. With more, the lines are thinner and uneven (a bigger spend is
+ * a clearly thicker line) and land side by side, and every category is listed under them in the same order with its icon,
+ * amount and share, opening its expenses too.
  */
 export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPick }: Props) {
   const [watch, seen] = useSeen()
@@ -119,7 +121,6 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
 
   // The chest is always open, with no button to close it: the coins in it, and the pieces of the picture they are drawn with.
   const open = true
-  const [restOpen, setRestOpen] = useState(false)
   const openRef = useRef(true)
   const world = useRef<CoinWorld | null>(null)
   const coinEls = useRef<(SVGGElement | null)[]>([])
@@ -212,12 +213,8 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
     const name = t.name ?? cat?.name ?? 'No category'
     return { key: t.key ?? String(t.categoryId), categoryId: t.categoryId, name, color: t.color ?? cat?.color ?? 'var(--other)', icon: t.icon ?? categoryIcon(name), minor: t.totalMinor, share: t.totalMinor / grand }
   }
-  const folded = nonZero.length > MAX_COLUMNS ? nonZero.slice(MAX_COLUMNS - 1).map(named) : []
-  const parts: Part[] = nonZero.length <= MAX_COLUMNS ? nonZero.map(named) : nonZero.slice(0, MAX_COLUMNS - 1).map(named)
-  if (folded.length > 0) {
-    const restMinor = folded.reduce((a, p) => a + p.minor, 0)
-    parts.push({ key: 'rest', categoryId: null, name: 'Everything else', color: 'var(--other)', icon: 'tag', minor: restMinor, share: restMinor / grand })
-  }
+  const parts: Part[] = nonZero.map(named)
+  const many = parts.length > MAX_COLUMNS
 
   const n = parts.length
   const colW = W / n
@@ -225,7 +222,7 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
     // Each leaves the chest at its own place along its base, in the order of the columns, and lands in the middle of its column.
     const sx = (W - SOURCE_W) / 2 + (SOURCE_W / n) * (i + 0.5)
     const ex = colW * (i + 0.5)
-    return { part: p, d: linePath(sx, ex, 0, 0), from: sx, ex, width: num(3.5 + p.share * 8) }
+    return { part: p, d: linePath(sx, ex, 0, 0), from: sx, ex, width: many ? num(2 + p.share * 18) : num(3.5 + p.share * 8) }
   })
   geometry.current = lines.map((l) => ({ from: l.from, to: l.ex }))
 
@@ -364,67 +361,18 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
         </svg>
       </div>
 
-      <ul aria-label="Spending by category, as a flow" className="grid list-none p-0" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
-        {parts.map((p, i) => {
-          const row = { '--d': `${300 + i * 90}ms` } as CSSProperties
-          const isRest = p.key === 'rest'
-          const body = (
-            <>
-              {isRest ? (
-                <span
-                  aria-hidden="true"
-                  data-more={folded.length}
-                  className="num mb-1.5 flex size-11 items-center justify-center rounded-full bg-surface-2 text-sm text-ink-2 shadow-[inset_0_0_0_1.5px_var(--edge)]"
-                >
-                  {`+${folded.length}`}
-                </span>
-              ) : (
-                <span
-                  aria-hidden="true"
-                  data-icon={p.icon}
-                  className="mb-1.5 flex size-11 items-center justify-center rounded-full"
-                  style={{ background: `color-mix(in oklab, ${p.color} 26%, var(--surface))`, boxShadow: `inset 0 0 0 1.5px color-mix(in oklab, ${p.color} 45%, transparent)` }}
-                >
-                  <Icon name={p.icon} size={22} />
-                </span>
-              )}
-              <span className="line-clamp-2 min-h-[2.4em] text-[0.8125rem] font-semibold leading-tight">{p.name}</span>
-              <span className="num mt-1 text-base">{formatMoneyCompact(p.minor, currency)}</span>
-              <span className="mt-1 rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium tabular-nums text-ink-2">{formatShare(p.share)}</span>
-            </>
-          )
-          const cls = 'flex min-h-11 w-full flex-col items-center px-0.5 pt-2 text-center'
-          return (
-            <li key={p.key} className="row-in" style={row}>
-              {isRest ? (
-                <button type="button" onClick={() => setRestOpen((o) => !o)} aria-expanded={restOpen} aria-label={`${p.name}, ${formatMoney(p.minor, currency)}, ${formatShare(p.share)}`} className={`${cls} active:opacity-70`}>
-                  {body}
-                </button>
-              ) : p.categoryId !== null && onPick ? (
-                <button type="button" onClick={() => onPick(p.categoryId!)} aria-label={`${p.name}, ${formatMoney(p.minor, currency)}, ${formatShare(p.share)}. Show these expenses`} className={`${cls} active:opacity-70`}>
-                  {body}
-                </button>
-              ) : (
-                <p aria-label={`${p.name}, ${formatMoney(p.minor, currency)}, ${formatShare(p.share)}`} className={cls}>
-                  {body}
-                </p>
-              )}
-            </li>
-          )
-        })}
-      </ul>
-
-      {/* Everything that was folded into "Everything else", each with its own icon, amount and share, opening its expenses like the rest. */}
-      {restOpen && folded.length > 0 && (
-        <ul aria-label="Everything else, by category" className="mt-3 divide-y divide-line rounded-2xl bg-surface-2 px-3">
-          {folded.map((p) => {
+      {many ? (
+        // Too many for a column each: every category in a list, in the order of the lines, each with the colour of its line.
+        <ul aria-label="Spending by category, as a flow" className="mt-3 divide-y divide-line rounded-2xl bg-surface-2 px-3">
+          {parts.map((p, i) => {
+            const label = `${p.name}, ${formatMoney(p.minor, currency)}, ${formatShare(p.share)}`
             const content = (
               <>
                 <span
                   aria-hidden="true"
                   data-icon={p.icon}
                   className="flex size-9 shrink-0 items-center justify-center rounded-full"
-                  style={{ background: `color-mix(in oklab, ${p.color} 26%, var(--surface))` }}
+                  style={{ background: `color-mix(in oklab, ${p.color} 26%, var(--surface))`, boxShadow: `inset 0 0 0 1.5px color-mix(in oklab, ${p.color} 45%, transparent)` }}
                 >
                   <Icon name={p.icon} size={18} />
                 </span>
@@ -434,14 +382,50 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
               </>
             )
             return (
-              <li key={p.key}>
-                {onPick && p.categoryId !== null ? (
-                  <button type="button" onClick={() => onPick(p.categoryId!)} aria-label={`${p.name}, ${formatMoney(p.minor, currency)}, ${formatShare(p.share)}. Show these expenses`} className="flex min-h-12 w-full items-center gap-3 py-2 active:opacity-70">
+              <li key={p.key} className="row-in" style={{ '--d': `${300 + i * 60}ms` } as CSSProperties}>
+                {onPick ? (
+                  <button type="button" onClick={() => onPick(p.categoryId)} aria-label={`${label}. Show these expenses`} className="flex min-h-12 w-full items-center gap-3 py-2 active:opacity-70">
                     {content}
                   </button>
                 ) : (
-                  <p aria-label={`${p.name}, ${formatMoney(p.minor, currency)}, ${formatShare(p.share)}`} className="flex min-h-12 w-full items-center gap-3 py-2">
+                  <p aria-label={label} className="flex min-h-12 w-full items-center gap-3 py-2">
                     {content}
+                  </p>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      ) : (
+        <ul aria-label="Spending by category, as a flow" className="grid list-none p-0" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
+          {parts.map((p, i) => {
+            const row = { '--d': `${300 + i * 90}ms` } as CSSProperties
+            const body = (
+              <>
+                <span
+                  aria-hidden="true"
+                  data-icon={p.icon}
+                  className="mb-1.5 flex size-11 items-center justify-center rounded-full"
+                  style={{ background: `color-mix(in oklab, ${p.color} 26%, var(--surface))`, boxShadow: `inset 0 0 0 1.5px color-mix(in oklab, ${p.color} 45%, transparent)` }}
+                >
+                  <Icon name={p.icon} size={22} />
+                </span>
+                <span className="line-clamp-2 min-h-[2.4em] text-[0.8125rem] font-semibold leading-tight">{p.name}</span>
+                <span className="num mt-1 text-base">{formatMoneyCompact(p.minor, currency)}</span>
+                <span className="mt-1 rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium tabular-nums text-ink-2">{formatShare(p.share)}</span>
+              </>
+            )
+            const cls = 'flex min-h-11 w-full flex-col items-center px-0.5 pt-2 text-center'
+            const label = `${p.name}, ${formatMoney(p.minor, currency)}, ${formatShare(p.share)}`
+            return (
+              <li key={p.key} className="row-in" style={row}>
+                {onPick ? (
+                  <button type="button" onClick={() => onPick(p.categoryId)} aria-label={`${label}. Show these expenses`} className={`${cls} active:opacity-70`}>
+                    {body}
+                  </button>
+                ) : (
+                  <p aria-label={label} className={cls}>
+                    {body}
                   </p>
                 )}
               </li>

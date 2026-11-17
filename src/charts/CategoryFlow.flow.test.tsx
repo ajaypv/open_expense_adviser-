@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '../test/dom'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Category } from '../db/schema'
 import type { CategoryTotal } from '../insights/aggregates'
@@ -98,15 +98,35 @@ describe('CategoryFlow: the total splitting into each category', () => {
     expect(screen.getByRole('img', { name: 'Spent in October, ₹1,000. Where the money went: Cat 1 50.0%, Cat 2 30.0%, Cat 3 20.0%' })).toBeInTheDocument()
   })
 
-  it('shows the biggest four and folds the rest into one grey Everything else', () => {
+  it('gives every category its own line, with nothing folded into Everything else, and lists them all under the lines', () => {
     const many: CategoryTotal[] = [1, 2, 3, 4, 5, 6, 7].map((id) => ({ categoryId: id, totalMinor: (8 - id) * 100_00 }))
     mount({ totals: many })
-    expect(list().querySelectorAll('li')).toHaveLength(5)
-    const rest = ribbons().at(-1)!
-    expect(rest.getAttribute('data-ribbon')).toBe('rest')
-    expect(rest.querySelector('.flow-cap')?.getAttribute('fill')).toBe('var(--other)')
-    // 3 + 2 + 1 of the 28 parts.
-    expect(screen.getByLabelText('Everything else, ₹600, 21.4%')).toBeInTheDocument()
+    expect(ribbons().map((g) => g.getAttribute('data-ribbon'))).toEqual(['1', '2', '3', '4', '5', '6', '7'])
+    expect(list().querySelectorAll('li')).toHaveLength(7)
+    expect(screen.queryByText('Everything else')).toBeNull()
+    expect(Array.from(list().querySelectorAll('li')).map((li) => li.textContent)).toEqual([
+      'Cat 1₹70025.0%', 'Cat 2₹60021.4%', 'Cat 3₹50017.9%', 'Cat 4₹40014.3%', 'Cat 5₹30010.7%', 'Cat 6₹2007.1%', 'Cat 7₹1003.6%',
+    ])
+    expect(list().querySelectorAll('[data-icon]')).toHaveLength(7)
+  })
+
+  it('makes the lines uneven when there are many: a clearly thicker line for a bigger spend, and a thin one still seen', () => {
+    const many: CategoryTotal[] = [1, 2, 3, 4, 5, 6, 7].map((id) => ({ categoryId: id, totalMinor: (8 - id) * 100_00 }))
+    mount({ totals: many })
+    const widths = ribbons().map((g) => Number(lineOf(g).getAttribute('data-width')))
+    for (let i = 1; i < widths.length; i++) expect(widths[i - 1]).toBeGreaterThan(widths[i])
+    expect(widths[0] - widths[6]).toBeGreaterThan(2.5)
+    expect(Math.min(...widths)).toBeGreaterThanOrEqual(2)
+  })
+
+  it('lands each of fourteen lines at its own place, side by side', () => {
+    const many: CategoryTotal[] = Array.from({ length: 14 }, (_, i) => ({ categoryId: i + 1, totalMinor: (20 - i) * 100_00 }))
+    const names = new Map<number, Category>(many.map((t) => [t.categoryId, category(t.categoryId, `Cat ${t.categoryId}`)]))
+    mount({ totals: many, categoryById: names })
+    const lands = ribbons().map((g) => ends(g).end)
+    expect(new Set(lands).size).toBe(14)
+    expect([...lands].sort((a, b) => a - b)).toEqual(lands)
+    expect(list().querySelectorAll('li')).toHaveLength(14)
   })
 
   it('shows five as they are, without folding any', () => {
@@ -120,14 +140,16 @@ describe('CategoryFlow: the total splitting into each category', () => {
     expect(Number(lineOf(ribbons()[1]).getAttribute('data-width'))).toBeGreaterThanOrEqual(3.5)
   })
 
-  it('opens a category from its label; the folded one opens a list of what is in it, not an expense list of its own', () => {
+  it('opens a category from its label, in the columns and in the list of many', () => {
     const onPick = vi.fn()
+    mount({ onPick })
+    fireEvent.click(screen.getByRole('button', { name: /^Cat 2, ₹300.*Show these expenses/ }))
+    expect(onPick).toHaveBeenCalledWith(2)
+    cleanup()
     const many: CategoryTotal[] = [1, 2, 3, 4, 5, 6, 7].map((id) => ({ categoryId: id, totalMinor: (8 - id) * 100_00 }))
     mount({ totals: many, onPick })
-    fireEvent.click(screen.getByRole('button', { name: /^Cat 2, ₹600.*Show these expenses/ }))
-    expect(onPick).toHaveBeenCalledWith(2)
-    fireEvent.click(screen.getByRole('button', { name: 'Everything else, ₹600, 21.4%' }))
-    expect(onPick).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole('button', { name: /^Cat 6, ₹200.*Show these expenses/ }))
+    expect(onPick).toHaveBeenLastCalledWith(6)
   })
 
   it('draws nothing when nothing was spent', () => {

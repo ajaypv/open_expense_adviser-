@@ -9,7 +9,7 @@ interface Props {
   totals: CategoryTotal[]
   categoryById: Map<number, Category>
   currency: string
-  /** Show this many categories and fold the rest into one grey "Everything else". */
+  /** Show at most this many categories and fold the rest into one grey "Everything else". With none given, every category is shown. */
   limit?: number
   onPick?: (categoryId: number) => void
 }
@@ -37,7 +37,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS
  * A sentence under it says what most of the spending went on. The legend rows carry the full name, share and
  * amount, and open the category when tapped.
  */
-export function CategoryDonut({ totals, categoryById, currency, limit = 6, onPick }: Props) {
+export function CategoryDonut({ totals, categoryById, currency, limit = Infinity, onPick }: Props) {
   // A tap on a segment is kept until it is tapped again; a mouse or focus only looks.
   const [picked, setPicked] = useState<string | null>(null)
   const [looking, setLooking] = useState<string | null>(null)

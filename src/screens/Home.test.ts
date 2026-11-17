@@ -268,24 +268,24 @@ describe('Home: what comes first', () => {
     )
   }
 
-  it('answers "where do I stand" first, then where it went, what is coming, cash, goals, and last the way to recent transactions; the days are in the graph the card opens', () => {
+  it('answers "where do I stand" first, then where it went, what is coming, cash, goals, the way to recent transactions, and last the Understand your spending card; the days are in the graph the card opens', () => {
     const html = renderFull()
     const order = [
       'aria-label="Summary"',
       'Where it went',
-      'Understand your spending',
       'aria-label="Plan ahead"',
       'aria-label="Money received and your balance"',
       'aria-label="Budget"',
       'aria-label="Goals summary"',
       'Recent transactions',
+      'Understand your spending',
     ]
     const positions = order.map((marker) => html.indexOf(marker))
     expect(positions.every((p) => p >= 0), JSON.stringify(order.filter((_, i) => positions[i] < 0))).toBe(true)
     expect(positions).toEqual([...positions].sort((a, b) => a - b))
   })
 
-  it('has a button, with the icon of its tab, to Recent transactions and to where the money flows, in that order, as the last section, after where it went', () => {
+  it('has a button, with the icon of its tab, to Recent transactions and to where the money flows, in that order, after where it went, with the Understand your spending card after them as the very last', () => {
     const html = renderFull()
     expect(html).toMatch(/<button[^>]*>(?:(?!<\/button>).)*data-icon="list"(?:(?!<\/button>).)*Recent transactions<\/span><\/button>/)
     expect(html).toMatch(/<button[^>]*>(?:(?!<\/button>).)*data-icon="bars"(?:(?!<\/button>).)*Where the money flows<\/span><\/button>/)
@@ -293,6 +293,7 @@ describe('Home: what comes first', () => {
     expect(at('Recent transactions')).toBeLessThan(at('Where the money flows'))
     expect(at('Where it went')).toBeLessThan(at('Recent transactions'))
     expect(at('aria-label="Goals summary"')).toBeLessThan(at('Recent transactions'))
+    expect(at('Where the money flows')).toBeLessThan(at('Understand your spending'))
   })
 
   it('has one calm headline number, then the tools around it, not a stack of equal cards', () => {
