@@ -209,9 +209,12 @@ export const AddSheet = memo(function AddSheet({
   }, [])
 
   const expenseCategories = categories.filter((c) => !isIncomeCategory(c.name))
-  // Received money files under Salary when its name says it is one, and under Income otherwise.
-  const incomeCategoryId =
-    (isSalaryName(merchant) ? categories.find((c) => c.name === SALARY_CATEGORY)?.id : undefined) ?? categories.find((c) => c.name === INCOME_CATEGORY)?.id ?? null
+  // Received money is either a salary or other money in. What was chosen (or what the entry was saved under) stands; with nothing
+  // chosen, a name that says it is a salary files under Salary, and anything else under Income.
+  const salaryCategory = categories.find((c) => c.name === SALARY_CATEGORY)
+  const otherInCategory = categories.find((c) => c.name === INCOME_CATEGORY)
+  const chosenIncome = categoryId !== null ? categories.find((c) => c.id === categoryId && isIncomeCategory(c.name)) : undefined
+  const incomeCategoryId = chosenIncome?.id ?? (isSalaryName(merchant) ? salaryCategory?.id : undefined) ?? otherInCategory?.id ?? salaryCategory?.id ?? null
   const fallbackExpenseId = expenseCategories.find((c) => c.name === 'Other')?.id ?? expenseCategories[0]?.id ?? null
   // Received money files under Income, a transfer under nothing in particular (it is in no total),
   // and an expense keeps its pick unless it came from Income.
@@ -540,6 +543,24 @@ export const AddSheet = memo(function AddSheet({
             </p>
           )}
         </div>
+
+        {received && salaryCategory && otherInCategory && (
+          <fieldset className="min-w-0">
+            <legend className="mb-3 text-sm text-ink-2">Counts as</legend>
+            <div className="flex gap-2">
+              {[
+                { c: salaryCategory, label: 'Salary' },
+                { c: otherInCategory, label: 'Other money in' },
+              ].map(({ c, label }) => (
+                <label key={c.id} className={`${chip} shrink-0 whitespace-nowrap`}>
+                  <input type="radio" name="income-category" className="sr-only" checked={selectedCategory === c.id} onChange={() => setCategoryId(c.id)} />
+                  <span aria-hidden="true" className="size-2.5 rounded-full" style={{ background: c.color }} />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )}
 
         {!received && !transfer && (
           <fieldset className="min-w-0">

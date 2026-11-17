@@ -15,6 +15,7 @@ const categories: Category[] = [
   { id: 2, name: 'Groceries', color: 'var(--s2)' },
   { id: 3, name: 'Other', color: 'var(--other)' },
   { id: 4, name: 'Income', color: 'var(--ink-2)' },
+  { id: 5, name: 'Salary', color: 'var(--good-text)' },
 ]
 const oneAccount: Account[] = [{ id: 1, name: 'Main', openingMinor: null }]
 const twoAccounts: Account[] = [...oneAccount, { id: 2, name: 'Cash', openingMinor: null }]
@@ -91,6 +92,51 @@ describe('Add form: saving', () => {
     await user.click(screen.getByRole('button', { name: 'Add' }))
     await waitFor(async () => expect(await saved()).toHaveLength(1))
     expect((await saved())[0]).toMatchObject({ kind: 'income', amountMinor: 8_000_000, categoryId: 4, merchant: 'Employer' })
+  })
+
+  it('offers Salary or Other money in for received money, with Other money in chosen for a name that is not a salary', async () => {
+    const { user } = setup()
+    expect(screen.queryByRole('radio', { name: 'Salary' })).toBeNull()
+    await user.click(screen.getByLabelText('Received'))
+    expect(screen.getByRole('group', { name: 'Counts as' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Other money in' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Salary' })).not.toBeChecked()
+  })
+
+  it('files received money under Salary when the Salary option is chosen, whatever its name', async () => {
+    const { user } = setup()
+    await user.click(screen.getByLabelText('Received'))
+    await user.type(screen.getByLabelText('Amount'), '148446')
+    await user.type(screen.getByLabelText('From'), 'Deloitte')
+    await user.click(screen.getByRole('radio', { name: 'Salary' }))
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+    await waitFor(async () => expect(await saved()).toHaveLength(1))
+    expect((await saved())[0]).toMatchObject({ kind: 'income', categoryId: 5, merchant: 'Deloitte' })
+  })
+
+  it('chooses Salary on its own when the name says salary, and lets that be changed to Other money in', async () => {
+    const { user } = setup()
+    await user.click(screen.getByLabelText('Received'))
+    await user.type(screen.getByLabelText('Amount'), '500')
+    await user.type(screen.getByLabelText('From'), 'Salary advance')
+    expect(screen.getByRole('radio', { name: 'Salary' })).toBeChecked()
+    await user.click(screen.getByRole('radio', { name: 'Other money in' }))
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+    await waitFor(async () => expect(await saved()).toHaveLength(1))
+    expect((await saved())[0]).toMatchObject({ kind: 'income', categoryId: 4 })
+  })
+
+  it('changes a received entry saved under Income to Salary', async () => {
+    const id = await db.transactions.add({
+      kind: 'income', amountMinor: 14_844_600, currency: 'INR', categoryId: 4, merchant: 'Deloitte (pay)', note: '', date: '2026-10-30',
+      paymentMethod: '', source: 'manual', createdAt: 1,
+    } as never)
+    const editing = (await db.transactions.get(id)) as LedgerTx
+    const { user } = setup({ editing })
+    expect(screen.getByRole('radio', { name: 'Other money in' })).toBeChecked()
+    await user.click(screen.getByRole('radio', { name: 'Salary' }))
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(async () => expect((await db.transactions.get(id))?.categoryId).toBe(5))
   })
 
   it('opens on Received when a shortcut asks for it', () => {
