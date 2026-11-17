@@ -84,13 +84,17 @@ describe('Insights additions', () => {
     expect(out).toContain('Money in and out')
     expect(out).toContain('₹2,000') // received
     expect(out).toContain('₹1,600') // sent this month: 100 + 900 + 600
-    expect(out).toContain('So far this month you kept <b class="num">₹400</b>.') // the month is not over, so no rate yet
+    expect(out).toContain('You saved so far') // the month is not over
+    expect(out).toContain('data-row="kept"')
+    expect(out).toContain('₹400')
   })
 
   it('says so plainly when more went out than came in', () => {
     const small = tx('2026-10-01', 1000, { kind: 'income', categoryId: 3, merchant: 'Employer' })
     const out = render({ txs: [...expenses, small], income: [small] })
-    expect(out).toContain('₹600 more</b> than came in so far')
+    expect(out).toContain('You spent more than came in so far')
+    expect(out).toContain('data-row="over"')
+    expect(out).toContain('₹600')
   })
 
   it('shows spending against each category limit', () => {

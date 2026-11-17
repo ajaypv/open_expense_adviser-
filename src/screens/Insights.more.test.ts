@@ -80,7 +80,9 @@ describe('the order of the page', () => {
     expect(at('Where it went')).toBeGreaterThan(0)
     expect(at('Where it went')).toBeLessThan(at('What changed'))
     expect(at('Where it went')).toBeLessThan(at('Budgets by category'))
-    expect(at('Where it went')).toBeLessThan(at('Money in and out'))
+    // Money in and out comes straight after Money flow, before Where it went.
+    expect(at('Money flow')).toBeLessThan(at('Money in and out'))
+    expect(at('Money in and out')).toBeLessThan(at('Where it went'))
   })
 
   it('lets a category be opened to see its expenses', () => {
@@ -108,13 +110,18 @@ describe('money in and out', () => {
 
   it('speaks of "so far" this month, and gives no rate while the month is unfinished', () => {
     const t = text(render([...october, salary('2026-10-01', 2000)], '2026-10'))
-    expect(t).toContain('So far this month you kept ₹1,320')
-    expect(t).not.toMatch(/\d+% of what came in/)
+    expect(t).toContain('You saved so far₹1,320')
+    expect(t).toContain('out of ₹2,000 received')
+    expect(t).toContain('Saved so far')
   })
 
   it('gives the rate for a finished month', () => {
     const t = text(render(rows, '2026-09'))
-    expect(t).toContain('You kept ₹4,000, 80% of what came in')
+    expect(t).toContain('You saved₹4,000')
+    expect(t).not.toContain('so far')
+    expect(t).toContain('out of ₹5,000 received')
+    expect(t).toContain('80% of it')
+    expect(t).toContain('20% of it')
   })
 })
 
@@ -181,11 +188,12 @@ describe('the pattern of the other pages', () => {
     expect(t).toContain('Daily average₹167Biggest expense')
   })
 
-  it('tells money in and out as two tiles with a round arrow each', () => {
+  it('tells money in and out as received, spent and saved, with a round arrow for what came in', () => {
     const html = render(rows, '2026-10')
     expect(html).toMatch(/data-icon="arrowDown"[^>]*class="[^"]*rounded-full/)
-    expect(html).toMatch(/data-icon="arrowUp"[^>]*class="[^"]*rounded-full/)
-    expect(html).toMatch(/<dd class="num mt-2 truncate text-xl text-good">₹5,000<\/dd>/)
+    expect(html).toMatch(/data-row="received"[^>]*>.*?<dd class="num shrink-0 text-lg text-ink">₹5,000<\/dd>/)
+    expect(html).toMatch(/data-row="spent"/)
+    expect(html).toMatch(/data-row="kept"/)
   })
 
   it('sets the figures of the headline sentences in bold', () => {
@@ -209,7 +217,7 @@ describe('HeroUI on this page', () => {
 
   it('sets the cards in HeroUI Cards', () => {
     const page = render(rows, '2026-10', { budgetMinor: 3_000_000, categoryBudgets: new Map([[1, 150_000]]) })
-    expect(page).toMatch(/class="card card--default mt-3 gap-0 p-3"[^>]*><dl class="grid grid-cols-2 gap-2">/)
+    expect(page).toMatch(/class="card card--default mt-3"[^>]*><div><p class="text-sm text-ink-2">You saved/)
     expect(page).toMatch(/<section aria-labelledby="pace-h" class="mt-8"><div class="card card--default"/)
     expect((page.match(/class="card card--default/g) ?? []).length).toBeGreaterThanOrEqual(3)
   })

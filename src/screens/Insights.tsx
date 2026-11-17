@@ -11,6 +11,7 @@ import { CategoryBars } from '../charts/CategoryBars'
 import { CategoryBubbles } from '../charts/CategoryBubbles'
 import { CategoryDonut } from '../charts/CategoryDonut'
 import { CategoryFlow } from '../charts/CategoryFlow'
+import { KeptBar } from '../charts/KeptBar'
 import { Meter } from '../charts/Meter'
 import { MonthColumns } from '../charts/MonthColumns'
 import { Movers } from '../charts/Movers'
@@ -253,48 +254,10 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
 
   const moneyInOut =
     savings.receivedMinor > 0 ? (
-      <Section id="savings-h" title="Money in and out">
-        <Card className="mt-3 gap-0 p-3">
-          <dl className="grid grid-cols-2 gap-2">
-            <div className="min-w-0 rounded-2xl bg-surface-2 p-3">
-              <dt className="flex items-center gap-2 text-sm font-medium text-ink-2">
-                <span aria-hidden="true" data-icon="arrowDown" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-good">
-                  <Icon name="arrowDown" size={15} weight={2.25} />
-                </span>
-                Received
-              </dt>
-              <dd className="num mt-2 truncate text-xl text-good">{money(savings.receivedMinor)}</dd>
-            </div>
-            <div className="min-w-0 rounded-2xl bg-surface-2 p-3">
-              <dt className="flex items-center gap-2 text-sm font-medium text-ink-2">
-                <span aria-hidden="true" data-icon="arrowUp" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-ink">
-                  <Icon name="arrowUp" size={15} weight={2.25} />
-                </span>
-                Spent
-              </dt>
-              <dd className="num mt-2 truncate text-xl">{money(savings.sentMinor)}</dd>
-            </div>
-          </dl>
+      <Section id="savings-h" title="Money in and out" intro={`What came in, what you spent and what you kept in ${name}.`}>
+        <Card className="mt-3">
+          <KeptBar receivedMinor={savings.receivedMinor} sentMinor={savings.sentMinor} currency={currency} inProgress={isCurrent} />
         </Card>
-        <p className="mt-2 text-lg">
-          {savings.savedMinor >= 0 ? (
-            isCurrent ? (
-              <>
-                So far this month you kept <b className="num">{money(savings.savedMinor)}</b>.
-              </>
-            ) : (
-              <>
-                You kept <b className="num">{money(savings.savedMinor)}</b>
-                {savings.ratePct !== null && `, ${savings.ratePct}% of what came in`}.
-              </>
-            )
-          ) : (
-            <>
-              You spent <b className="num text-critical">{money(-savings.savedMinor)} more</b> than came in
-              {isCurrent ? ' so far' : ''}.
-            </>
-          )}
-        </p>
       </Section>
     ) : null
 
@@ -501,6 +464,8 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
             </div>
           </Section>
 
+          {moneyInOut}
+
           {onOpenAi && <AiEntry onOpen={onOpenAi} />}
 
           <section aria-label="Highlights" className="mt-5">
@@ -637,8 +602,6 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
           )}
 
           {regularSection}
-
-          {moneyInOut}
 
           {merchants.length >= 2 && (
             <Section id="places-h" title="Places you spend most" intro="The shops, apps and people you paid most often.">
