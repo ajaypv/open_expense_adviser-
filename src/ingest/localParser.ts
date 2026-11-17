@@ -1,6 +1,6 @@
 import { localDateString, MAX_AMOUNT_MINOR, toMinor } from '../db/money'
 import type { Person } from '../db/schema'
-import { INCOME_CATEGORY, type DefaultCategoryName } from '../db/defaultCategories'
+import { INCOME_CATEGORY, SALARY_CATEGORY, isSalaryName, type DefaultCategoryName } from '../db/defaultCategories'
 import { CATEGORY_KEYWORDS, FILLER_WORDS, INCOME_FILLER_WORDS, PAYMENT_WORDS, type PaymentMethod } from './keywords'
 import { extractPerson } from './mention'
 
@@ -33,7 +33,7 @@ const FILLER = new Set(FILLER_WORDS)
  * phrases "got paid", "paid me" and "sent me" count, and "credit" is left for "credit card".
  */
 const INCOME_PATTERN =
-  /\b(received|receive|salary|income|credited|refund|refunded|cashback|bonus|earned|deposited|deposit|interest|reimbursement|got paid|paid me|sent me)\b/
+  /\b(received|receive|salary|payroll|stipend|income|credited|refund|refunded|cashback|bonus|earned|deposited|deposit|interest|reimbursement|got paid|paid me|sent me)\b/
 
 /** Clear phrases for money arriving, whatever else is in the line. */
 const INCOME_PHRASE = /\b(got paid|paid me|sent me|gave me)\b|\bgot\b.*\bfrom\b/
@@ -257,7 +257,8 @@ function parseOne(text: string, today: Date, people: Person[] = []): Piece | nul
   if (words.length > 1 && (/^x\d{1,2}$|^\d{1,2}x$/.test(words[0]) || (/^\d{1,2}$/.test(words[0]) && /[^s]s$/.test(words[1])))) words.shift()
 
   const merchant = mention ? mention.name : titleCase(words.join(' ').replace(/[^\w&'. -]/g, '').trim())
-  const guessed: DefaultCategoryName = kind === 'income' ? INCOME_CATEGORY : guessCategoryName(words.join(' '))
+  // Received money is a salary when its words say so ("salary 80000", "stipend"), and other money in otherwise.
+  const guessed: DefaultCategoryName = kind === 'income' ? (isSalaryName(text) ? SALARY_CATEGORY : INCOME_CATEGORY) : guessCategoryName(words.join(' '))
   // Money sent to a person, with no word that says what it was for, goes under People rather than Other.
   const categoryName: DefaultCategoryName = mention && kind === 'expense' && guessed === 'Other' ? 'People' : guessed
 

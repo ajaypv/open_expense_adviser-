@@ -105,10 +105,11 @@ describe('Insights screen', () => {
     const spent = [tx('2026-10-05', 450, 1, 'Cafe'), tx('2026-10-20', 230, 2, 'Uber')]
     const salary: Transaction = { ...tx('2026-10-01', 80000, 1, 'Employer'), kind: 'income' }
     const withSalary = render(spent, '2026-10', null, [salary])
-    // The only difference a salary makes is the "Money in and out" section; every spending block is identical.
+    // The only difference a salary makes is the "Money in and out" section (a note to add one, without it); every spending block is identical.
     expect(withSalary).toContain('Money in and out')
-    const withoutThatSection = withSalary.replace(/<section aria-labelledby="savings-h".*?<\/section>/, '')
-    expect(withoutThatSection).toBe(render(spent, '2026-10', null))
+    const cut = (h: string) => h.replace(/<section aria-labelledby="savings-h".*?<\/section>/, '')
+    expect(cut(withSalary)).toBe(cut(render(spent, '2026-10', null)))
+    expect(render(spent, '2026-10', null)).toContain('No salary logged for October yet.')
     expect(withSalary).not.toContain('Employer')
     // A month with only received money is an empty spending month.
     expect(render([], '2026-10', null, [salary])).toContain('Nothing to report for October yet.')

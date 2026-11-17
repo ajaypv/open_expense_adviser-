@@ -37,6 +37,26 @@ export function savingsFor(expenses: Transaction[], income: Transaction[], month
   }
 }
 
+/**
+ * What was left over from earlier months and is still there to spend: the salary of October that was not all spent by the end
+ * of October is part of what you have in November. It runs month by month from the first month any money came in, so the
+ * spending before you started logging income does not count against it, and a month that went over does not carry a debt
+ * (it carries nothing). Zero when no money came in before this month.
+ */
+export function carriedIntoMonth(expenses: Transaction[], income: Transaction[], month: MonthKey): number {
+  const received = new Map<MonthKey, number>()
+  for (const t of income) received.set(monthOf(t.date), (received.get(monthOf(t.date)) ?? 0) + t.amountMinor)
+  const spent = new Map<MonthKey, number>()
+  for (const t of expenses) spent.set(monthOf(t.date), (spent.get(monthOf(t.date)) ?? 0) + t.amountMinor)
+  const first = [...received.keys()].filter((m) => m < month).sort()[0]
+  if (first === undefined) return 0
+  let left = 0
+  for (let key = first; key < month; key = shiftMonth(key, 1)) {
+    left = Math.max(0, left + (received.get(key) ?? 0) - (spent.get(key) ?? 0))
+  }
+  return left
+}
+
 export interface Unusual {
   tx: Transaction
   /** What this category usually costs per transaction. */

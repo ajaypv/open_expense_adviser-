@@ -111,7 +111,7 @@ describe('money in and out', () => {
   it('speaks of "so far" this month, and gives no rate while the month is unfinished', () => {
     const t = text(render([...october, salary('2026-10-01', 2000)], '2026-10'))
     expect(t).toContain('You saved so far₹1,320')
-    expect(t).toContain('out of ₹2,000 received')
+    expect(t).toContain('out of ₹2,000 you had')
     expect(t).toContain('Saved so far')
   })
 
@@ -119,7 +119,7 @@ describe('money in and out', () => {
     const t = text(render(rows, '2026-09'))
     expect(t).toContain('You saved₹4,000')
     expect(t).not.toContain('so far')
-    expect(t).toContain('out of ₹5,000 received')
+    expect(t).toContain('out of ₹5,000 you had')
     expect(t).toContain('80% of it')
     expect(t).toContain('20% of it')
   })
@@ -191,7 +191,7 @@ describe('the pattern of the other pages', () => {
   it('tells money in and out as received, spent and saved, with a round arrow for what came in', () => {
     const html = render(rows, '2026-10')
     expect(html).toMatch(/data-icon="arrowDown"[^>]*class="[^"]*rounded-full/)
-    expect(html).toMatch(/data-row="received"[^>]*>.*?<dd class="num shrink-0 text-lg text-ink">₹5,000<\/dd>/)
+    expect(html).toMatch(/data-row="other"[^>]*>.*?<dd class="num shrink-0 text-lg text-ink">₹5,000<\/dd>/)
     expect(html).toMatch(/data-row="spent"/)
     expect(html).toMatch(/data-row="kept"/)
   })

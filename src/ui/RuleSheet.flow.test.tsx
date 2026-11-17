@@ -14,6 +14,7 @@ const categories: Category[] = [
   { id: 4, name: 'Other', color: 'var(--other)' },
   { id: 5, name: 'Income', color: 'var(--ink-2)' },
   { id: 6, name: 'EMI', color: 'var(--s9)' },
+  { id: 7, name: 'Salary', color: 'var(--good-text)' },
 ]
 const oneAccount: Account[] = [{ id: 1, name: 'Main', openingMinor: null }]
 const twoAccounts: Account[] = [...oneAccount, { id: 2, name: 'HDFC', openingMinor: null }]
@@ -66,14 +67,24 @@ describe('Add a regular payment', () => {
     await waitFor(async () => expect((await rows())[0]).toMatchObject({ frequency: 'weekly', nextDue: '2026-11-02' }))
   })
 
-  it('records money coming in, filed under Income, with a type that fits', async () => {
+  it('records a salary coming in, filed under Salary, with a type that fits', async () => {
     const { user } = setup()
     await user.click(screen.getByRole('radio', { name: 'Coming in' }))
     await user.type(screen.getByLabelText('Name'), 'Salary')
     await user.type(screen.getByLabelText('Amount'), '80000')
     fireEvent.change(screen.getByLabelText('Next payment date'), { target: { value: '2026-11-01' } })
     await user.click(screen.getByRole('button', { name: 'Add payment' }))
-    await waitFor(async () => expect((await rows())[0]).toMatchObject({ kind: 'income', tag: 'income', categoryId: 5 }))
+    await waitFor(async () => expect((await rows())[0]).toMatchObject({ kind: 'income', tag: 'income', categoryId: 7 }))
+  })
+
+  it('files other money coming in under Income', async () => {
+    const { user } = setup()
+    await user.click(screen.getByRole('radio', { name: 'Coming in' }))
+    await user.type(screen.getByLabelText('Name'), 'Rent from tenant')
+    await user.type(screen.getByLabelText('Amount'), '12000')
+    fireEvent.change(screen.getByLabelText('Next payment date'), { target: { value: '2026-11-01' } })
+    await user.click(screen.getByRole('button', { name: 'Add payment' }))
+    await waitFor(async () => expect((await rows())[0]).toMatchObject({ kind: 'income', categoryId: 5 }))
   })
 
   it('offers the types that fit the direction', async () => {

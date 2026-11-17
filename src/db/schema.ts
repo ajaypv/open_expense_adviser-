@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { CardStyle } from './cardStyles'
-import { DEFAULT_CATEGORIES, INCOME_CATEGORY, separateCategoryFor } from './defaultCategories'
+import { DEFAULT_CATEGORIES, INCOME_CATEGORY, SALARY_CATEGORY, isSalaryName, separateCategoryFor } from './defaultCategories'
 
 /** Where a transaction was added. Coordinates are rounded to 4 decimals (about 11 m). */
 export interface Place {
@@ -277,6 +277,28 @@ db.version(9)
       .equals(other.id)
       .modify((t: { personId?: number; categoryId: number }) => {
         if (t.personId !== undefined) t.categoryId = people.id
+      })
+  })
+
+// v10: Salary is a category for the salary that comes in, apart from other money in. It is added when missing, and money already received
+// under Income whose name says it is a salary moves to it. Anything else is left where it is.
+db.version(10)
+  .stores({})
+  .upgrade(async (tx) => {
+    const cats = tx.table('categories')
+    let salary = await cats.where('name').equals(SALARY_CATEGORY).first()
+    if (!salary) {
+      const color = DEFAULT_CATEGORIES.find((c) => c.name === SALARY_CATEGORY)!.color
+      salary = { id: (await cats.add({ name: SALARY_CATEGORY, color })) as number }
+    }
+    const income = await cats.where('name').equals(INCOME_CATEGORY).first()
+    if (!income) return
+    await tx
+      .table('transactions')
+      .where('categoryId')
+      .equals(income.id)
+      .modify((t: { kind?: string; merchant?: string; categoryId: number }) => {
+        if (t.kind === 'income' && isSalaryName(t.merchant)) t.categoryId = salary.id
       })
   })
 

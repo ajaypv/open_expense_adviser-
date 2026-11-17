@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { INCOME_CATEGORY } from '../db/defaultCategories'
+import { INCOME_CATEGORY, SALARY_CATEGORY, isIncomeCategory, isSalaryName } from '../db/defaultCategories'
 import { isRealDate, localDateString, parseLocalDate, toMinor } from '../db/money'
 import { addRecurring, deleteRecurring, updateRecurring } from '../db/repo'
 import type { Account, Category, Recurring, RecurringTag } from '../db/schema'
@@ -75,7 +75,7 @@ export function RuleSheet({ open, rule, categories, accounts, currency, today, o
   const income = kind === 'income'
   const tags = income ? IN_TAGS : OUT_TAGS
   const categoryNamed = (n: string) => categories.find((c) => c.name === n)?.id ?? categories[0]?.id ?? 0
-  const expenseCategories = categories.filter((c) => c.name !== INCOME_CATEGORY)
+  const expenseCategories = categories.filter((c) => !isIncomeCategory(c.name))
 
   function chooseKind(next: 'expense' | 'income') {
     setKind(next)
@@ -98,7 +98,7 @@ export function RuleSheet({ open, rule, categories, accounts, currency, today, o
         kind,
         amountMinor: toMinor(value),
         currency: rule?.currency || currency,
-        categoryId: income ? categoryNamed(INCOME_CATEGORY) : (categoryId ?? categoryNamed(DEFAULT_CATEGORY[tag])),
+        categoryId: income ? categoryNamed(isSalaryName(name) ? SALARY_CATEGORY : INCOME_CATEGORY) : (categoryId ?? categoryNamed(DEFAULT_CATEGORY[tag])),
         merchant: name.trim(),
         note: rule?.note ?? '',
         paymentMethod: rule?.paymentMethod ?? '',

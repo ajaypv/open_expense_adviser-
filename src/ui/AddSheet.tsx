@@ -3,7 +3,7 @@ import type { LedgerTx } from '../data/buildLedger'
 import { useDisplay } from '../data/display'
 import { attachLocation, clearLocation } from '../data/location'
 import { CURRENCIES, currencyOptions } from '../db/currencies'
-import { INCOME_CATEGORY } from '../db/defaultCategories'
+import { INCOME_CATEGORY, SALARY_CATEGORY, isIncomeCategory, isSalaryName } from '../db/defaultCategories'
 import { localDateString, parseLocalDate, toMinor, formatMoney } from '../db/money'
 import {
   addPerson,
@@ -208,8 +208,10 @@ export const AddSheet = memo(function AddSheet({
     dialog.current?.setAttribute('closedby', 'any')
   }, [])
 
-  const expenseCategories = categories.filter((c) => c.name !== INCOME_CATEGORY)
-  const incomeCategoryId = categories.find((c) => c.name === INCOME_CATEGORY)?.id ?? null
+  const expenseCategories = categories.filter((c) => !isIncomeCategory(c.name))
+  // Received money files under Salary when its name says it is one, and under Income otherwise.
+  const incomeCategoryId =
+    (isSalaryName(merchant) ? categories.find((c) => c.name === SALARY_CATEGORY)?.id : undefined) ?? categories.find((c) => c.name === INCOME_CATEGORY)?.id ?? null
   const fallbackExpenseId = expenseCategories.find((c) => c.name === 'Other')?.id ?? expenseCategories[0]?.id ?? null
   // Received money files under Income, a transfer under nothing in particular (it is in no total),
   // and an expense keeps its pick unless it came from Income.

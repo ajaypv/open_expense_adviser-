@@ -39,7 +39,7 @@ describe('database v1 -> v2 migration', () => {
     const cats = await db.categories.toArray()
     const names = cats.map((c) => c.name).sort()
     expect(names).toEqual(
-      ['Bills & Utilities', 'Credit Card', 'EMI', 'Entertainment & Travel', 'Food & Dining', 'Groceries', 'Health', 'Income', 'Other', 'People', 'Recharge', 'Rent & Housing', 'Shopping', 'Transport'].sort(),
+      ['Bills & Utilities', 'Credit Card', 'EMI', 'Entertainment & Travel', 'Food & Dining', 'Groceries', 'Health', 'Income', 'Other', 'People', 'Recharge', 'Rent & Housing', 'Salary', 'Shopping', 'Transport'].sort(),
     )
 
     const txs = await db.transactions.toArray()
@@ -128,10 +128,18 @@ describe('database v1 -> v2 migration', () => {
     expect(cats.find((c) => c.name === 'Other')!.color).toBe('var(--other)')
   })
 
-  it('creates the fourteen default categories (including Income, EMI, Recharge, Credit Card and People) on a brand-new database', async () => {
+  it('creates the fifteen default categories (including Income, Salary, EMI, Recharge, Credit Card and People) on a brand-new database', async () => {
     const { db } = await import('./schema')
     await db.open()
-    expect(await db.categories.count()).toBe(14)
+    expect(await db.categories.count()).toBe(15)
+  })
+
+  it('adds Salary once, beside Income, to a database that has none (v10)', async () => {
+    await seedV1()
+    const { db } = await import('./schema')
+    await db.open()
+    expect((await db.categories.where('name').equals('Salary').toArray()).length).toBe(1)
+    expect((await db.categories.where('name').equals('Income').toArray()).length).toBe(1)
   })
 })
 

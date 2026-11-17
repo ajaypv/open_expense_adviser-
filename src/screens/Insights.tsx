@@ -20,6 +20,7 @@ import { TrendBars } from '../charts/TrendBars'
 import { WeekdayBars } from '../charts/WeekdayBars'
 import { useDisplay } from '../data/display'
 import type { useLedger } from '../data/useLedger'
+import { SALARY_CATEGORY } from '../db/defaultCategories'
 import { formatMoney, formatMoneyCompact, localDateString } from '../db/money'
 import {
   byCategory,
@@ -42,7 +43,7 @@ import { regularPayments } from '../insights/regular'
 import { detectRecurring } from '../insights/recurring'
 import { describeWhen, forecast, TAG_LABELS, tagOf, upcomingPayments, type UpcomingPayment } from '../insights/upcoming'
 import { repeatingSpend, type RepeatingSpend } from '../insights/repeats'
-import { categoryBudgetStatus, categoryTrends, monthlyTotals, savingsFor, unusualExpenses } from '../insights/trends'
+import { carriedIntoMonth, categoryBudgetStatus, categoryTrends, monthlyTotals, savingsFor, unusualExpenses } from '../insights/trends'
 import { AiEntry } from '../ui/AiEntry'
 import { categoryIcon, spendIcon } from '../ui/categoryIcon'
 import { Figures } from '../ui/Figures'
@@ -140,7 +141,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
   // not again when only something like Hide amounts redraws the screen.
   const {
     monthTxs, total, prevTxs, hasPrevious, cats, elapsed, cmp, projected, merchants, weekdays, peakDay, changes, biggest,
-    savings, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats, spots, hasAnyPlace,
+    savings, salaryMinor, carriedMinor, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats, spots, hasAnyPlace,
     regular, looksRegular, balanceCheck, billSplit, catParts,
   } = useMemo(() => {
     const prevKey = shiftMonth(month, -1)
@@ -161,6 +162,9 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
 
     // Money in against money out, what each category's limit has left, the odd big purchase, and the longer view.
     const savings = savingsFor(txs, income, month)
+    // How much of what came in was a salary, and what was left over from earlier months to spend now.
+    const salaryMinor = sum(inMonth(income, month).filter((t) => categoryById.get(t.categoryId)?.name === SALARY_CATEGORY))
+    const carriedMinor = carriedIntoMonth(txs, income, month)
     const budgetRows = categoryBudgetStatus(monthTxs, categoryBudgets)
     const unusual = unusualExpenses(txs, month)
     const trends = categoryTrends(txs, month, 6, 4, isCurrent).filter((t) => t.months.some((m) => m > 0))
@@ -199,7 +203,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
 
     return {
       monthTxs, total, prevTxs, hasPrevious, cats, elapsed, cmp, projected, merchants, weekdays, peakDay, changes, biggest,
-      savings, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats, spots, hasAnyPlace,
+      savings, salaryMinor, carriedMinor, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats, spots, hasAnyPlace,
       regular, looksRegular, balanceCheck, billSplit, catParts,
     }
   }, [txs, income, month, today, isCurrent, categoryBudgets, categoryById, recurring, rates, currency, balanceSet, estimatedBalanceMinor])
@@ -252,11 +256,32 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
   const latestMonth = [...activeMonths].sort().at(-1)
   const repeatTotal = repeats.reduce((acc, r) => acc + r.totalMinor, 0)
 
+  // What you had to spend: the month's salary and other money in, and what was left from earlier months. With none of that logged
+  // yet, the card says how to add a salary rather than leaving the place empty.
+  const hadMinor = savings.receivedMinor + carriedMinor
   const moneyInOut =
-    savings.receivedMinor > 0 ? (
-      <Section id="savings-h" title="Money in and out" intro={`What came in, what you spent and what you kept in ${name}.`}>
+    hadMinor > 0 ? (
+      <Section id="savings-h" title="Money in and out" intro={`What you had, what you spent and what you kept in ${name}.${carriedMinor > 0 ? ` Money left from ${prevName} counts too.` : ''}`}>
         <Card className="mt-3">
-          <KeptBar receivedMinor={savings.receivedMinor} sentMinor={savings.sentMinor} currency={currency} inProgress={isCurrent} />
+          <KeptBar
+            salaryMinor={salaryMinor}
+            otherMinor={savings.receivedMinor - salaryMinor}
+            carriedMinor={carriedMinor}
+            carriedFrom={prevName}
+            sentMinor={savings.sentMinor}
+            currency={currency}
+            monthName={name}
+            inProgress={isCurrent}
+          />
+        </Card>
+      </Section>
+    ) : total > 0 ? (
+      <Section id="savings-h" title="Money in and out" intro={`What you had, what you spent and what you kept in ${name}.`}>
+        <Card className="mt-3">
+          <p data-empty-salary className="text-lg font-semibold leading-snug">{`No salary logged for ${name} yet.`}</p>
+          <p className="mt-1 text-ink-2">
+            Type <b className="font-semibold text-ink">salary 80000</b> in the box below, and this shows how much you saved.
+          </p>
         </Card>
       </Section>
     ) : null

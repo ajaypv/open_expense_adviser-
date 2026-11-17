@@ -92,7 +92,7 @@ describe('Insights additions', () => {
   it('says so plainly when more went out than came in', () => {
     const small = tx('2026-10-01', 1000, { kind: 'income', categoryId: 3, merchant: 'Employer' })
     const out = render({ txs: [...expenses, small], income: [small] })
-    expect(out).toContain('You spent more than came in so far')
+    expect(out).toContain('You spent more than you had so far')
     expect(out).toContain('data-row="over"')
     expect(out).toContain('₹600')
   })
@@ -123,9 +123,11 @@ describe('Insights additions', () => {
     const out = html(
       createElement(Insights, { ledger: makeLedger({ txs: only, expenses: only, categories: cats, categoryById }), month: '2026-10', onMonth: () => {}, today, onOpenSettings: () => {} }),
     )
-    for (const missing of ['Trends by category', 'The last 12 months', 'Bigger than usual', 'Budgets by category', 'Money in and out']) {
+    for (const missing of ['Trends by category', 'The last 12 months', 'Bigger than usual', 'Budgets by category']) {
       expect(out).not.toContain(missing)
     }
+    // With no salary yet, Money in and out says how to add one instead of showing an empty chart.
+    expect(out).toContain('No salary logged for October yet.')
     expect(out).not.toMatch(/NaN|undefined|Infinity/)
   })
 })

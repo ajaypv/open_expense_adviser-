@@ -1,4 +1,4 @@
-import { INCOME_CATEGORY } from '../db/defaultCategories'
+import { isIncomeCategory } from '../db/defaultCategories'
 import type { Account, Budget, Category, Person, Recurring, Transaction } from '../db/schema'
 import { balancesByAccount } from '../insights/accounts'
 import { isCard } from '../insights/cards'
@@ -73,8 +73,8 @@ export function buildLedger(raw: RawData) {
     income: txs.filter((t) => t.kind === 'income'),
     trash,
     categories,
-    /** Categories you can file an expense under (everything except "Income"). */
-    expenseCategories: categories.filter((c) => c.name !== INCOME_CATEGORY),
+    /** Categories you can file an expense under (everything except "Income" and "Salary"). */
+    expenseCategories: categories.filter((c) => !isIncomeCategory(c.name)),
     categoryById: new Map(categories.map((c) => [c.id, c])),
     /** The main currency: every total and chart is shown in it. */
     currency,
