@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '../test/dom'
-import { render } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import type { Category } from '../db/schema'
 import { CategoryBars } from './CategoryBars'
 
@@ -42,5 +42,32 @@ describe('CategoryBars: a pinned category', () => {
     const noFood = totals.filter((t) => t.categoryId !== 6)
     const { container } = render(<CategoryBars totals={noFood} categoryById={categoryById} currency="INR" limit={5} pin="Food & Dining" />)
     expect(labels(container)).toHaveLength(6)
+  })
+})
+
+describe('CategoryBars: Everything else opens', () => {
+  it('is a button that opens a list of what is in it, each with its icon, amount and share, and closes it again', () => {
+    render(<CategoryBars totals={totals} categoryById={categoryById} currency="INR" limit={5} />)
+    const rest = screen.getByRole('button', { name: /^Everything else, ₹900. Show what is in it/ })
+    expect(rest).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('list', { name: 'Everything else, by category' })).toBeNull()
+    fireEvent.click(rest)
+    expect(rest).toHaveAttribute('aria-expanded', 'true')
+    expect(rest).toHaveAccessibleName(/Hide what is in it/)
+    const list = screen.getByRole('list', { name: 'Everything else, by category' })
+    expect(list.textContent).toContain('Food & Dining')
+    expect(list.textContent).toContain('Other')
+    expect(list.querySelectorAll('[data-icon]')).toHaveLength(2)
+    fireEvent.click(rest)
+    expect(screen.queryByRole('list', { name: 'Everything else, by category' })).toBeNull()
+  })
+
+  it('opens the expenses of a category in it, and opening the list opened none', () => {
+    const onPick = vi.fn()
+    render(<CategoryBars totals={totals} categoryById={categoryById} currency="INR" limit={5} onPick={onPick} />)
+    fireEvent.click(screen.getByRole('button', { name: /^Everything else/ }))
+    expect(onPick).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: /^Other, ₹400.*Show these expenses/ }))
+    expect(onPick).toHaveBeenCalledWith(7)
   })
 })

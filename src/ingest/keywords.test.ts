@@ -52,4 +52,15 @@ describe('adding words', () => {
     expect(parseExpense('home loan emi 12000')?.categoryName).toBe('EMI')
     expect(parseExpense('cred 5000')?.categoryName).toBe('Credit Card')
   })
+
+  it('files money sent to family and friends under People, by the names used at home', () => {
+    for (const text of ['500 to appa', 'amma 2000', 'sent sis 1500', 'ama 300', 'sister 800', 'anna 1000 gpay', 'friends 400', 'paid mom 5000']) {
+      expect(parseExpense(text)?.categoryName, text).toBe('People')
+    }
+  })
+
+  it('lets a word that says what it was for win over the person, so lunch with friends is still a meal', () => {
+    expect(parseExpense('lunch with friends 800')?.categoryName).toBe('Food & Dining')
+    expect(parseExpense('appa medicine 450')?.categoryName).toBe('Health')
+  })
 })

@@ -13,6 +13,10 @@ export interface BarRow {
   /** A round icon of what the row is, in its colour, in place of the dot. */
   icon?: IconName
   onPick?: () => void
+  /** What a tap on the row does, for a screen reader: "Show these expenses" unless it says otherwise. */
+  action?: string
+  /** Set for a row that opens and closes something (a list under it): whether it is open. */
+  expanded?: boolean
 }
 
 /**
@@ -68,7 +72,8 @@ export function BarList({ rows, currency }: { rows: BarRow[]; currency: string }
                 type="button"
                 onClick={r.onPick}
                 className="block min-h-14 w-full py-2.5 text-left transition-transform active:scale-[0.985] motion-reduce:transition-none"
-                aria-label={`${r.label}, ${formatMoney(r.valueMinor, currency)}. Show these expenses`}
+                aria-label={`${r.label}, ${formatMoney(r.valueMinor, currency)}. ${r.action ?? 'Show these expenses'}`}
+                aria-expanded={r.expanded}
               >
                 {body}
               </button>

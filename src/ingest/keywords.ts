@@ -25,6 +25,8 @@ export const CATEGORY_ORDER: DefaultCategoryName[] = [
   'Health',
   'Entertainment & Travel',
   'Shopping',
+  // Last, so "lunch with friends" is still a meal: People is for money sent to someone with nothing else to say what it was for.
+  'People',
 ]
 
 export type WordPack = Partial<Record<DefaultCategoryName, string[]>>
@@ -45,6 +47,7 @@ export const GENERAL: WordPack = {
   Health: ['pharmacy', 'doctor', 'medicine', 'medicines', 'hospital', 'clinic', 'gym', 'dentist', 'lab'],
   'Entertainment & Travel': ['netflix', 'spotify', 'prime', 'movie', 'movies', 'cinema', 'concert', 'flight', 'hotel', 'trip', 'airbnb', 'game', 'games'],
   Shopping: ['amazon', 'clothes', 'shoes', 'shopping', 'mall', 'electronics'],
+  People: ['family', 'friend', 'friends', 'mom', 'dad', 'mother', 'father', 'brother', 'sister', 'sis', 'bro', 'wife', 'husband', 'son', 'daughter', 'uncle', 'aunt', 'cousin', 'grandma', 'grandpa'],
 }
 
 /** Apps, shops and words used across India. */
@@ -58,6 +61,8 @@ export const INDIA: WordPack = {
   Health: ['apollo', 'medplus', 'netmeds', 'pharmeasy'],
   'Entertainment & Travel': ['hotstar', 'pvr', 'inox', 'bookmyshow'],
   Shopping: ['flipkart', 'myntra'],
+  // The family names used at home: parents, grandparents, elder and younger siblings, aunts and uncles.
+  People: ['appa', 'amma', 'ama', 'anna', 'akka', 'thambi', 'thangi', 'ajji', 'thatha', 'paati', 'mama', 'chithi', 'athai', 'bhai', 'didi', 'papa', 'mummy', 'daddy'],
 }
 
 /** Karnataka and Bengaluru: buses, metro, tiffin and the local utilities and shops. */
