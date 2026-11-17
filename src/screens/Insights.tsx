@@ -12,6 +12,7 @@ import { CategoryBubbles } from '../charts/CategoryBubbles'
 import { CategoryDonut } from '../charts/CategoryDonut'
 import { CategoryFlow } from '../charts/CategoryFlow'
 import { KeptBar } from '../charts/KeptBar'
+import { SpentFrom } from '../charts/SpentFrom'
 import { Meter } from '../charts/Meter'
 import { MonthColumns } from '../charts/MonthColumns'
 import { Movers } from '../charts/Movers'
@@ -43,7 +44,7 @@ import { regularPayments } from '../insights/regular'
 import { detectRecurring } from '../insights/recurring'
 import { describeWhen, forecast, TAG_LABELS, tagOf, upcomingPayments, type UpcomingPayment } from '../insights/upcoming'
 import { repeatingSpend, type RepeatingSpend } from '../insights/repeats'
-import { carriedIntoMonth, categoryBudgetStatus, categoryTrends, monthlyTotals, savingsFor, unusualExpenses } from '../insights/trends'
+import { carriedIntoMonth, categoryBudgetStatus, categoryTrends, monthBreakdown, monthlyTotals, savingsFor, unusualExpenses } from '../insights/trends'
 import { AiEntry } from '../ui/AiEntry'
 import { categoryIcon, spendIcon } from '../ui/categoryIcon'
 import { Figures } from '../ui/Figures'
@@ -141,7 +142,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
   // not again when only something like Hide amounts redraws the screen.
   const {
     monthTxs, total, prevTxs, hasPrevious, cats, elapsed, cmp, projected, merchants, weekdays, peakDay, changes, biggest,
-    savings, salaryMinor, carriedMinor, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats, spots, hasAnyPlace,
+    savings, salaryMinor, carriedMinor, breakdown, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats, spots, hasAnyPlace,
     regular, looksRegular, balanceCheck, billSplit, catParts,
   } = useMemo(() => {
     const prevKey = shiftMonth(month, -1)
@@ -165,6 +166,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
     // How much of what came in was a salary, and what was left over from earlier months to spend now.
     const salaryMinor = sum(inMonth(income, month).filter((t) => categoryById.get(t.categoryId)?.name === SALARY_CATEGORY))
     const carriedMinor = carriedIntoMonth(txs, income, month)
+    const breakdown = monthBreakdown(txs, income, month)
     const budgetRows = categoryBudgetStatus(monthTxs, categoryBudgets)
     const unusual = unusualExpenses(txs, month)
     const trends = categoryTrends(txs, month, 6, 4, isCurrent).filter((t) => t.months.some((m) => m > 0))
@@ -203,7 +205,7 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
 
     return {
       monthTxs, total, prevTxs, hasPrevious, cats, elapsed, cmp, projected, merchants, weekdays, peakDay, changes, biggest,
-      savings, salaryMinor, carriedMinor, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats, spots, hasAnyPlace,
+      savings, salaryMinor, carriedMinor, breakdown, budgetRows, unusual, trends, yearTotals, monthsWithData, olderMonths, repeats, spots, hasAnyPlace,
       regular, looksRegular, balanceCheck, billSplit, catParts,
     }
   }, [txs, income, month, today, isCurrent, categoryBudgets, categoryById, recurring, rates, currency, balanceSet, estimatedBalanceMinor])
@@ -274,6 +276,11 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
             inProgress={isCurrent}
           />
         </Card>
+        {total > 0 && (
+          <Card className="mt-3">
+            <SpentFrom breakdown={breakdown} categoryById={categoryById} currency={currency} monthName={name} prevName={prevName} labelOf={firstWord} inProgress={isCurrent} />
+          </Card>
+        )}
       </Section>
     ) : total > 0 ? (
       <Section id="savings-h" title="Money in and out" intro={`What you had, what you spent and what you kept in ${name}.`}>

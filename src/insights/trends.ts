@@ -57,6 +57,99 @@ export function carriedIntoMonth(expenses: Transaction[], income: Transaction[],
   return left
 }
 
+/** One month of the carry-forward: what it started with, what came in, what went out and what went on to the next month. */
+export interface MonthStep {
+  month: MonthKey
+  carriedInMinor: number
+  receivedMinor: number
+  spentMinor: number
+  carriedOutMinor: number
+}
+
+export interface MonthBreakdown {
+  /** Left from earlier months at the start of the month. */
+  carriedInMinor: number
+  receivedMinor: number
+  spentMinor: number
+  /** The part of the spending paid from the money left over from earlier months (spent first, in date order). */
+  fromCarriedMinor: number
+  /** The part paid from what came in this month. */
+  fromIncomeMinor: number
+  /** The part that was more than all of that. */
+  notCoveredMinor: number
+  /** What goes on to the next month. */
+  carriedOutMinor: number
+  /** The day the money from earlier months ran out, or null when it did not (or there was none). */
+  carriedRanOutOn: string | null
+  /** What the money from earlier months paid for, the biggest first. */
+  fromCarriedByCategory: { categoryId: number; totalMinor: number }[]
+  /** Month by month from the first month any money came in, up to and including this one. */
+  steps: MonthStep[]
+}
+
+/**
+ * Where a month's spending came from. Money left from earlier months is spent first, in date order, then what came in this
+ * month; anything beyond both is "not covered". Also the whole chain of months, with what each carried on to the next.
+ */
+export function monthBreakdown(expenses: Transaction[], income: Transaction[], month: MonthKey): MonthBreakdown {
+  const received = new Map<MonthKey, number>()
+  for (const t of income) received.set(monthOf(t.date), (received.get(monthOf(t.date)) ?? 0) + t.amountMinor)
+  const spent = new Map<MonthKey, number>()
+  for (const t of expenses) spent.set(monthOf(t.date), (spent.get(monthOf(t.date)) ?? 0) + t.amountMinor)
+
+  const steps: MonthStep[] = []
+  const first = [...received.keys()].filter((m) => m <= month).sort()[0]
+  let left = 0
+  if (first !== undefined) {
+    for (let key = first; key <= month; key = shiftMonth(key, 1)) {
+      const r = received.get(key) ?? 0
+      const s = spent.get(key) ?? 0
+      const out = Math.max(0, left + r - s)
+      steps.push({ month: key, carriedInMinor: left, receivedMinor: r, spentMinor: s, carriedOutMinor: out })
+      left = out
+    }
+  }
+  const now = steps.at(-1)
+  const carriedInMinor = now?.carriedInMinor ?? 0
+  const receivedMinor = received.get(month) ?? 0
+
+  let pool = carriedInMinor
+  let incomeLeft = receivedMinor
+  let fromCarriedMinor = 0
+  let fromIncomeMinor = 0
+  let notCoveredMinor = 0
+  let carriedRanOutOn: string | null = null
+  const byCategory = new Map<number, number>()
+  const rows = inMonth(expenses, month).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.id ?? 0) - (b.id ?? 0)))
+  for (const t of rows) {
+    const fromPool = Math.min(pool, t.amountMinor)
+    if (fromPool > 0) {
+      pool -= fromPool
+      fromCarriedMinor += fromPool
+      byCategory.set(t.categoryId, (byCategory.get(t.categoryId) ?? 0) + fromPool)
+      if (pool === 0 && carriedRanOutOn === null) carriedRanOutOn = t.date
+    }
+    const rest = t.amountMinor - fromPool
+    const fromNew = Math.min(incomeLeft, rest)
+    incomeLeft -= fromNew
+    fromIncomeMinor += fromNew
+    notCoveredMinor += rest - fromNew
+  }
+
+  return {
+    carriedInMinor,
+    receivedMinor,
+    spentMinor: fromCarriedMinor + fromIncomeMinor + notCoveredMinor,
+    fromCarriedMinor,
+    fromIncomeMinor,
+    notCoveredMinor,
+    carriedOutMinor: now?.carriedOutMinor ?? 0,
+    carriedRanOutOn,
+    fromCarriedByCategory: [...byCategory].map(([categoryId, totalMinor]) => ({ categoryId, totalMinor })).sort((a, b) => b.totalMinor - a.totalMinor),
+    steps,
+  }
+}
+
 export interface Unusual {
   tx: Transaction
   /** What this category usually costs per transaction. */
