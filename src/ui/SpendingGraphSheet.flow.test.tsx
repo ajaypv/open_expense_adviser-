@@ -178,7 +178,7 @@ describe('SpendingOverview: the headline opens the graph', () => {
     render(
       <SpendingOverview
         monthName="November" isCurrent totalMinor={23_000} deltaPct={null} partial={false} prevName="October" dailyAverageMinor={1_600}
-        expenseCount={1} budgetMinor={null} currency="INR" periods={[]} privacy={false} onTogglePrivacy={() => {}} onPickPeriod={() => {}} onOpenGraph={onOpenGraph}
+        budgetMinor={null} currency="INR" periods={[]} privacy={false} onTogglePrivacy={() => {}} onPickPeriod={() => {}} onOpenGraph={onOpenGraph}
       />,
     )
 

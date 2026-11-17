@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { formatMoney } from '../db/money'
 import { Icon } from '../ui/Icon'
 import { useIntro } from '../ui/motion'
@@ -9,10 +10,12 @@ interface Props {
   currency: string
   /** Leave out the row of "spent of limit" and the percentage, for a place that already shows the amount: the bar and the words stay. */
   hideFigures?: boolean
+  /** A short note at the right of the status line, such as the budget itself. */
+  aside?: ReactNode
 }
 
 /** Budget progress. The state is always stated in words and an icon, never by color alone. */
-export function Meter({ spentMinor, limitMinor, currency, hideFigures = false }: Props) {
+export function Meter({ spentMinor, limitMinor, currency, hideFigures = false, aside }: Props) {
   const intro = useIntro()
   const ratio = spentMinor / limitMinor
   const { over, close, fill } = budgetTone(ratio)
@@ -45,14 +48,17 @@ export function Meter({ spentMinor, limitMinor, currency, hideFigures = false }:
           style={{ width: `${Math.min(ratio, 1) * 100}%`, background: fill }}
         />
       </div>
-      <p className={`mt-2 flex items-center gap-1.5 ${over ? 'font-semibold text-critical' : close ? 'font-medium text-ink' : 'text-ink-2'}`}>
-        {(over || close) && (
-          <span style={{ color: over ? 'var(--critical)' : 'var(--warn-ui)' }}>
-            <Icon name="warn" size={18} />
-          </span>
-        )}
-        {status}
-      </p>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
+        <p className={`flex items-center gap-1.5 ${over ? 'font-semibold text-critical' : close ? 'font-medium text-ink' : 'text-ink-2'}`}>
+          {(over || close) && (
+            <span style={{ color: over ? 'var(--critical)' : 'var(--warn-ui)' }}>
+              <Icon name="warn" size={18} />
+            </span>
+          )}
+          {status}
+        </p>
+        {aside && <p className="flex items-center gap-1 text-[0.9375rem] tabular-nums text-ink-2">{aside}</p>}
+      </div>
     </div>
   )
 }

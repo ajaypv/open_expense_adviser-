@@ -159,19 +159,19 @@ describe('PlanAhead: the sentence, the balance line and the long list', () => {
 
   it('says what goes out and what comes in over the next 30 days', () => {
     const s = money([emi, rent, salary], null)
-    expect(s).toHaveTextContent('In the next 30 days, ₹18,500 goes out and ₹80,000 comes in.')
+    expect(s).toHaveTextContent(/Next 30 days\s*₹18,500\s*goes out\s*₹80,000\s*comes in/)
   })
 
   it('leaves out "comes in" when nothing does', () => {
-    expect(money([emi, rent], null)).toHaveTextContent('In the next 30 days, ₹18,500 goes out.')
+    expect(money([emi, rent], null)).toHaveTextContent(/Next 30 days\s*₹18,500\s*goes out/)
     expect(section()).not.toHaveTextContent('comes in')
   })
 
   it('says in a line whether the balance covers it, in words as well as an icon', () => {
-    expect(money([emi, rent], 9_000_000)).toHaveTextContent('Your balance covers the next 30 days.')
-    expect(money([emi, rent], 1_000_000)).toHaveTextContent('Your balance will not cover all of these.')
-    expect(money([emi, rent], null)).toHaveTextContent('Set your balance to check these are covered.')
-    expect(section()).not.toHaveTextContent('will not cover')
+    expect(money([emi, rent], 9_000_000)).toHaveTextContent('Balance covers it')
+    expect(money([emi, rent], 1_000_000)).toHaveTextContent('Balance falls short')
+    expect(money([emi, rent], null)).toHaveTextContent('Set your balance to check')
+    expect(section()).not.toHaveTextContent('falls short')
   })
 
   it('shows only the first six, and a last card says how many more, opening the page', async () => {
@@ -238,7 +238,7 @@ describe('PlanAhead: the sentence picks out its two figures in pills', () => {
     const days = Array.from(section().querySelectorAll('p b')).find((b) => b.textContent === '30')!
     expect(days).toBeDefined()
     expect(days.className).toContain('font-bold')
-    expect(days.parentElement!.textContent).toMatch(/^In the next 30 days, /)
+    expect(days.parentElement!.textContent).toBe('Next 30 days')
   })
 
   it('sets what goes out and what comes in each in its own pill, in its own colour', () => {

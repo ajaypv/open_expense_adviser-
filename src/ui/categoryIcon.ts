@@ -9,6 +9,7 @@ const EXACT: Record<string, IconName> = {
   emi: 'emi',
   recharge: 'recharge',
   'credit card': 'card',
+  people: 'person',
   health: 'heart',
   'entertainment & travel': 'ticket',
   shopping: 'bag',

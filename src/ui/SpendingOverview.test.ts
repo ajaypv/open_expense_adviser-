@@ -11,7 +11,6 @@ const base = {
   partial: false,
   prevName: 'September',
   dailyAverageMinor: 2_400,
-  expenseCount: 2,
   budgetMinor: null as number | null,
   currency: 'INR',
   periods: [
@@ -42,7 +41,7 @@ describe('SpendingOverview: the one number', () => {
   })
 
   it('says so when nothing was spent, instead of showing a zero', () => {
-    const html = render({ totalMinor: 0, expenseCount: 0 })
+    const html = render({ totalMinor: 0 })
     expect(text(html)).toContain('Nothing spent in October yet.')
     expect(text(html)).not.toContain('about')
   })
@@ -56,41 +55,52 @@ describe('SpendingOverview: the one number', () => {
   })
 })
 
-describe('SpendingOverview: the line under it', () => {
-  it('says in one plain sentence how many expenses there are and what a day comes to, not as two labelled figures', () => {
+describe('SpendingOverview: the row under it', () => {
+  it('has no sentences: what a day comes to, in four words, and no count of expenses', () => {
     const t = text(render())
-    expect(t).toContain('2 expenses · about ₹24 a day')
+    expect(t).toContain('₹24 a day')
+    expect(t).not.toContain('about')
+    expect(t).not.toContain('expenses')
     expect(t).not.toContain('Daily average')
-    expect(t).not.toContain('Expenses logged')
     expect(render()).not.toContain('<dl')
   })
 
-  it('says expense, not expenses, for one', () => {
-    expect(text(render({ expenseCount: 1 }))).toContain('1 expense · about')
-    expect(text(render({ expenseCount: 1 }))).not.toContain('1 expenses')
+  it('leaves out what a day comes to when it rounds to nothing, rather than say ₹0 a day', () => {
+    expect(text(render({ dailyAverageMinor: 0 }))).not.toContain('a day')
   })
 
-  it('leaves out what a day comes to when it rounds to nothing, rather than say about ₹0 a day', () => {
-    const t = text(render({ dailyAverageMinor: 0 }))
-    expect(t).toContain('2 expenses')
-    expect(t).not.toContain('a day')
+  it('compares with the month before in one pill, with the short name of the month, and says the whole of it to a screen reader', () => {
+    const html = render({ deltaPct: 12, partial: true })
+    const pill = /<p data-delta[^>]*>([\s\S]*?)<\/p>/.exec(html)![1]
+    expect(text(pill)).toContain('12% vs Sep')
+    expect(pill).toMatch(/<span class="sr-only">12% more than the same days in September<\/span>/)
+    expect(pill).toMatch(/<span aria-hidden="true">12% vs Sep<\/span>/)
+    expect(text(render({ deltaPct: -8 }))).toContain('8% vs Sep')
   })
 
-  it('sits under the amount and above the comparison and the recent days', () => {
+  it('says "Same as" with no arrow when it is the same', () => {
+    const html = render({ deltaPct: 0 })
+    expect(html).not.toContain('data-delta')
+    expect(text(html)).toContain('Same as Sep')
+  })
+
+  it('has no pill with nothing to compare with', () => {
+    expect(render({ deltaPct: null })).not.toContain('data-delta')
+  })
+
+  it('sits under the amount and above the recent days, the pill to the left and the day figure to the right', () => {
     const html = render({ deltaPct: 12 })
-    expect(html.indexOf('₹680')).toBeLessThan(html.indexOf('expenses · about'))
-    expect(html.indexOf('expenses · about')).toBeLessThan(html.indexOf('12% more'))
-    expect(html.indexOf('12% more')).toBeLessThan(html.indexOf('aria-label="Recent spending"'))
+    expect(html.indexOf('₹680')).toBeLessThan(html.indexOf('data-delta'))
+    expect(html.indexOf('data-delta')).toBeLessThan(html.indexOf('a day'))
+    expect(html.indexOf('a day')).toBeLessThan(html.indexOf('aria-label="Recent spending"'))
+    expect(render({ deltaPct: 12 })).not.toMatch(/text-center/)
   })
 
-  it('says what the budget is in that line, when there is one, so the bar above it needs no figures of its own', () => {
-    expect(text(render({ budgetMinor: 3_000_000 }))).toContain('Budget ₹30,000 · 2 expenses · about ₹24 a day')
+  it('says what the budget is at the right of the bar’s line, with a small flag in place of the word (a screen reader still hears it), and not at all when there is none', () => {
+    const html = render({ budgetMinor: 3_000_000 })
+    expect(text(html)).toContain('Budget ₹30,000')
+    expect(html).toContain('<span class="sr-only">Budget</span><span aria-hidden="true" data-budget-flag="true">')
     expect(text(render())).not.toContain('Budget')
-  })
-
-  it('is left-aligned under the amount, with or without a budget, and not centred under anything', () => {
-    expect(render({ budgetMinor: 3_000_000 })).not.toMatch(/text-center/)
-    expect(render()).not.toMatch(/text-center/)
   })
 })
 
@@ -122,9 +132,9 @@ describe('SpendingOverview: today, yesterday and the week, kept small', () => {
     const html = render({ budgetMinor: 3_000_000 })
     // The amount, then the bar and the words, then the line, then the days.
     expect(html.indexOf('₹680')).toBeLessThan(html.indexOf('role="meter"'))
-    expect(html.indexOf('role="meter"')).toBeLessThan(html.indexOf('>₹30,000</b>'))
-    expect(html.indexOf('>₹30,000</b>')).toBeLessThan(html.indexOf('aria-label="Recent spending"'))
-    expect(text(html)).toContain('Budget ₹30,000 ·')
+    expect(html.indexOf('role="meter"')).toBeLessThan(html.indexOf('data-budget-flag'))
+    expect(html.indexOf('data-budget-flag')).toBeLessThan(html.indexOf('aria-label="Recent spending"'))
+    expect(text(html)).toContain('Budget ₹30,000')
     expect(text(html)).toContain('₹29,320 left')
     expect(html).not.toContain('<svg viewBox')
     expect(html).not.toContain('<line ')
@@ -149,18 +159,18 @@ describe('SpendingOverview: today, yesterday and the week, kept small', () => {
   })
 
   it('says nothing was spent, in words, with the budget’s bar under it, when there is a budget but no spending', () => {
-    const html = render({ budgetMinor: 3_000_000, totalMinor: 0, expenseCount: 0 })
+    const html = render({ budgetMinor: 3_000_000, totalMinor: 0 })
     expect(html).toContain('role="meter"')
     expect(text(html)).toContain('Nothing spent in October yet.')
     expect(text(html)).toContain('₹30,000 left')
     expect(text(html)).not.toContain('about')
   })
 
-  it('shows the comparison with the month before under the line, to the left like the rest', () => {
+  it('shows the comparison with the month before under the bar, to the left like the rest, and the day figure after it', () => {
     const html = render({ budgetMinor: 3_000_000, deltaPct: 12 })
     expect(text(html)).toContain('12% more than September')
-    expect(/<p class="mt-3 flex[^"]*"/.exec(html)![0]).not.toContain('justify-center')
-    expect(html.indexOf('about ₹24 a day')).toBeLessThan(html.indexOf('12% more'))
+    expect(html.indexOf('role="meter"')).toBeLessThan(html.indexOf('data-delta'))
+    expect(html.indexOf('data-delta')).toBeLessThan(html.indexOf('₹24'))
   })
 
   it('shows Today, Yesterday and Last 7 days as three even tiles, each its own soft card, not a row split by lines', () => {
@@ -177,11 +187,9 @@ describe('SpendingOverview: today, yesterday and the week, kept small', () => {
     expect(html.indexOf('data-icon="arrowUp"')).toBeLessThan(html.indexOf('Spent so far in'))
   })
 
-  it('sets the figures in the detail line in bold, and the words around them as they were', () => {
+  it('sets what a day comes to in bold, and the words after it as they were', () => {
     const html = render()
-    expect(html).toMatch(/<b class="num text-ink">\d+<\/b> (expense|expenses)/)
-    expect(text(html)).toContain('expenses · about')
-    expect(html).toMatch(/about <b class="num text-ink">₹[\d,]+<\/b> a day/)
+    expect(html).toMatch(/<b class="num text-ink">₹[\d,]+<\/b> a day/)
   })
 
   it('has no day tiles for a month that is over', () => {

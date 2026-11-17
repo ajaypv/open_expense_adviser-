@@ -88,46 +88,47 @@ export function PlanAhead({ ledger, today, onOpen, onSetUp }: Props) {
         <p className="mt-0.5 px-1 text-[0.9375rem] text-ink-2">{`Nothing due in the next ${HORIZON_DAYS} days.`}</p>
       ) : (
         <>
-          <p className="mt-1 px-1 text-[1.0625rem] leading-[1.6] text-ink-2 text-pretty">
-            {'In the next '}
-            <b className="font-bold text-ink">{HORIZON_DAYS}</b>
-            {' days, '}
+          {/* One line: the span, then what leaves and what arrives as two pills. The arrows say which; a screen reader is told in words. */}
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1.5 px-1 text-base text-ink-2">
+            <span>
+              {'Next '}
+              <b className="font-bold text-ink">{HORIZON_DAYS}</b>
+              {' days'}
+            </span>
             <b className="mark-out text-ink">
               <span aria-hidden="true" className="mr-0.5 inline-block align-[-0.12em]">
                 <Icon name="arrowUp" size={14} weight={2.25} />
               </span>
               {money(totals.outMinor)}
             </b>
-            {' goes out'}
+            <span className="sr-only">goes out</span>
             {totals.inMinor > 0 && (
               <>
-                {' and '}
                 <b className="mark-in text-good">
                   <span aria-hidden="true" className="mr-0.5 inline-block align-[-0.12em]">
                     <Icon name="arrowDown" size={14} weight={2.25} />
                   </span>
                   {money(totals.inMinor)}
                 </b>
-                {' comes in'}
+                <span className="sr-only">comes in</span>
               </>
             )}
-            .
           </p>
-          <p className={`mb-3 mt-1 flex items-center gap-1.5 px-1 text-base font-medium ${short ? 'text-critical' : balanceSet ? '' : 'text-ink-2'}`}>
+          <p className={`mb-3 mt-1.5 flex items-center gap-1.5 px-1 text-base font-medium ${short ? 'text-critical' : balanceSet ? '' : 'text-ink-2'}`}>
             {short ? (
               <>
                 <Icon name="warn" size={16} />
-                Your balance will not cover all of these.
+                Balance falls short
               </>
             ) : balanceSet ? (
               <>
                 <span className="text-good">
                   <Icon name="check" size={16} />
                 </span>
-                {`Your balance covers the next ${HORIZON_DAYS} days.`}
+                Balance covers it
               </>
             ) : (
-              'Set your balance to check these are covered.'
+              'Set your balance to check'
             )}
           </p>
           <ScrollStrip label="Payments coming up, scroll sideways">

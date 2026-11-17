@@ -24,7 +24,7 @@ describe('Meter', () => {
   it('says it louder the closer it gets: grey while fine, firm near the limit, red and bold when over', () => {
     const status = (spent: number) => {
       const view = render(<Meter spentMinor={spent} limitMinor={1_000_000} currency="INR" />)
-      const text = view.container.firstElementChild!.lastElementChild! // the status line, last in the meter
+      const text = view.container.firstElementChild!.lastElementChild!.firstElementChild! // the status line, first in the last row of the meter
       view.unmount()
       return text.className
     }
@@ -38,6 +38,15 @@ describe('Meter', () => {
     render(<Meter spentMinor={500_000} limitMinor={2_000_000} currency="INR" />)
     expect(fill()).toHaveClass('bar-reveal')
     expect(fill().style.width).toBe('25%')
+  })
+})
+
+describe('Meter with a note at the right of its line', () => {
+  it('puts the note beside the words that say where the budget stands, and has none without it', () => {
+    const { container, rerender } = render(<Meter spentMinor={500_000} limitMinor={2_000_000} currency="INR" hideFigures aside="Budget ₹20,000" />)
+    expect(screen.getByText('Budget ₹20,000').previousElementSibling).toHaveTextContent('₹15,000 left')
+    rerender(<Meter spentMinor={500_000} limitMinor={2_000_000} currency="INR" hideFigures />)
+    expect(container.textContent).not.toContain('Budget')
   })
 })
 

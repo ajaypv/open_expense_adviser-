@@ -257,7 +257,9 @@ function parseOne(text: string, today: Date, people: Person[] = []): Piece | nul
   if (words.length > 1 && (/^x\d{1,2}$|^\d{1,2}x$/.test(words[0]) || (/^\d{1,2}$/.test(words[0]) && /[^s]s$/.test(words[1])))) words.shift()
 
   const merchant = mention ? mention.name : titleCase(words.join(' ').replace(/[^\w&'. -]/g, '').trim())
-  const categoryName: DefaultCategoryName = kind === 'income' ? INCOME_CATEGORY : guessCategoryName(words.join(' '))
+  const guessed: DefaultCategoryName = kind === 'income' ? INCOME_CATEGORY : guessCategoryName(words.join(' '))
+  // Money sent to a person, with no word that says what it was for, goes under People rather than Other.
+  const categoryName: DefaultCategoryName = mention && kind === 'expense' && guessed === 'Other' ? 'People' : guessed
 
   const parsed: ParsedExpense = { kind, amountMinor: amount.minor, merchant, categoryName, date, paymentMethod }
   if (amount.currency) parsed.currency = amount.currency

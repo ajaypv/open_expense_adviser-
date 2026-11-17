@@ -13,7 +13,6 @@ const base = {
   partial: false,
   prevName: 'October',
   dailyAverageMinor: 279_400,
-  expenseCount: 7,
   budgetMinor: null as number | null,
   currency: 'INR',
   periods: [] as never[],
@@ -45,7 +44,7 @@ describe('SpendingOverview: sideways swipes belong to the page, not the card', (
   it('does not take a swipe for a change of month, with or without a way to change it', () => {
     render(<SpendingOverview {...base} />)
     expect(() => swipe(card(), 100)).not.toThrow()
-    expect(() => swipe(screen.getByText(/expenses · about/), -100)).not.toThrow()
+    expect(() => swipe(screen.getByText(/a day/), -100)).not.toThrow()
   })
 })
 

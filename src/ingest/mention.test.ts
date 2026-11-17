@@ -65,7 +65,7 @@ describe('mentionAt', () => {
 describe('parsing a line about a person', () => {
   it('reads "@Shweta Rao 500" as money sent to her, under her name', () => {
     expect(parseExpense('@Shweta Rao 500', today, people)).toMatchObject({
-      kind: 'expense', amountMinor: 50_000, merchant: 'Shweta Rao', person: { name: 'Shweta Rao', id: 1 }, categoryName: 'Other',
+      kind: 'expense', amountMinor: 50_000, merchant: 'Shweta Rao', person: { name: 'Shweta Rao', id: 1 }, categoryName: 'People',
     })
   })
 

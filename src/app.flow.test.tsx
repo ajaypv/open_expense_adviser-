@@ -615,14 +615,14 @@ describe('The redesigned Home', () => {
     expect(goals).toHaveTextContent('₹20,000 to go')
   })
 
-  it('has buttons to Recent transactions and to where the money flows, not copies of them, before where it went', async () => {
+  it('has buttons to Recent transactions and to where the money flows, not copies of them, as the last section, after where it went', async () => {
     await tx({ merchant: 'Cafe' })
     await open()
     const recent = await screen.findByRole('button', { name: 'Recent transactions' })
     const flows = screen.getByRole('button', { name: 'Where the money flows' })
     const where = screen.getByRole('heading', { name: 'Where it went' })
     expect(recent.compareDocumentPosition(flows) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(flows.compareDocumentPosition(where) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(where.compareDocumentPosition(recent) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     // The list and the ribbon are not drawn on Home any more.
     expect(screen.queryByRole('heading', { name: 'Recent transactions' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Where the money flows' })).toBeNull()

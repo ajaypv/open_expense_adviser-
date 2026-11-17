@@ -258,6 +258,28 @@ db.version(8)
       })
   })
 
+// v9: People is a category for money sent to people. It is added when missing, and what was sent to a saved person and filed under Other
+// moves to it. Anything the person put in another category is left there.
+db.version(9)
+  .stores({})
+  .upgrade(async (tx) => {
+    const cats = tx.table('categories')
+    let people = await cats.where('name').equals('People').first()
+    if (!people) {
+      const color = DEFAULT_CATEGORIES.find((c) => c.name === 'People')!.color
+      people = { id: (await cats.add({ name: 'People', color })) as number }
+    }
+    const other = await cats.where('name').equals('Other').first()
+    if (!other) return
+    await tx
+      .table('transactions')
+      .where('categoryId')
+      .equals(other.id)
+      .modify((t: { personId?: number; categoryId: number }) => {
+        if (t.personId !== undefined) t.categoryId = people.id
+      })
+  })
+
 db.on('populate', (tx) => {
   void tx.table('categories').bulkAdd(DEFAULT_CATEGORIES.map((c) => ({ ...c })))
   void tx.table('accounts').add({ name: 'Main', openingMinor: null })

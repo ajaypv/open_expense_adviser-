@@ -39,7 +39,7 @@ describe('database v1 -> v2 migration', () => {
     const cats = await db.categories.toArray()
     const names = cats.map((c) => c.name).sort()
     expect(names).toEqual(
-      ['Bills & Utilities', 'Credit Card', 'EMI', 'Entertainment & Travel', 'Food & Dining', 'Groceries', 'Health', 'Income', 'Other', 'Recharge', 'Rent & Housing', 'Shopping', 'Transport'].sort(),
+      ['Bills & Utilities', 'Credit Card', 'EMI', 'Entertainment & Travel', 'Food & Dining', 'Groceries', 'Health', 'Income', 'Other', 'People', 'Recharge', 'Rent & Housing', 'Shopping', 'Transport'].sort(),
     )
 
     const txs = await db.transactions.toArray()
@@ -100,6 +100,25 @@ describe('database v1 -> v2 migration', () => {
     })
   })
 
+  it('adds People, and moves what was sent to a saved person under Other to it, leaving other categories alone (v9)', async () => {
+    const ids = await seedV1()
+    const seed = new Dexie('expense-tracker')
+    seed.version(1).stores({ transactions: '++id, date, categoryId, merchant, createdAt', categories: '++id, &name', budgets: '++id, categoryId', settings: 'key', chat: '++id, createdAt' })
+    await seed.open()
+    const row = (merchant: string, categoryId: number, extra: Record<string, unknown> = {}) => ({ amountMinor: 100, currency: 'INR', categoryId, merchant, note: '', date: '2026-10-02', paymentMethod: '', source: 'manual', createdAt: 0, ...extra })
+    await seed.table('transactions').bulkAdd([
+      row('Shweta Rao', ids['Other'], { personId: 1 }),
+      row('Lunch with Shweta', ids['Food & Dining'], { personId: 1 }),
+      row('Corner shop', ids['Other']),
+    ])
+    seed.close()
+    const { db } = await import('./schema')
+    await db.open()
+    const name = new Map((await db.categories.toArray()).map((c) => [c.id, c.name]))
+    const filed = Object.fromEntries((await db.transactions.toArray()).filter((t) => t.merchant).map((t) => [t.merchant, name.get(t.categoryId)]))
+    expect(filed).toEqual({ 'Shweta Rao': 'People', 'Lunch with Shweta': 'Food & Dining', 'Corner shop': 'Other' })
+  })
+
   it('re-colours categories with theme-aware CSS variables', async () => {
     await seedV1()
     const { db } = await import('./schema')
@@ -109,10 +128,10 @@ describe('database v1 -> v2 migration', () => {
     expect(cats.find((c) => c.name === 'Other')!.color).toBe('var(--other)')
   })
 
-  it('creates the thirteen default categories (including Income, EMI, Recharge and Credit Card) on a brand-new database', async () => {
+  it('creates the fourteen default categories (including Income, EMI, Recharge, Credit Card and People) on a brand-new database', async () => {
     const { db } = await import('./schema')
     await db.open()
-    expect(await db.categories.count()).toBe(13)
+    expect(await db.categories.count()).toBe(14)
   })
 })
 

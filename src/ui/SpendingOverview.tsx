@@ -23,7 +23,6 @@ interface Props {
   partial: boolean
   prevName: string
   dailyAverageMinor: number
-  expenseCount: number
   budgetMinor: number | null
   currency: string
   periods: PeriodTile[]
@@ -58,8 +57,9 @@ function Headline({ onOpen, name, amount, children }: { onOpen?: () => void; nam
 
 /**
  * Where you stand, answered in one place: what was spent this month as the single headline number, how that
- * compares with last month, the daily average, how many expenses were logged, the budget and how much of it is
- * left, and (for the month in progress) the last few days kept small so they don't compete with the headline.
+ * compares with last month and the daily average (one short row, not sentences), the budget and how much of it is
+ * left (one bar, with the budget at the right of its line), and (for the month in progress) the last few days kept
+ * small so they don't compete with the headline.
  */
 export function SpendingOverview({
   monthName,
@@ -69,7 +69,6 @@ export function SpendingOverview({
   partial,
   prevName,
   dailyAverageMinor,
-  expenseCount,
   budgetMinor,
   currency,
   periods,
@@ -80,6 +79,8 @@ export function SpendingOverview({
   onOpenGraph,
 }: Props) {
   const against = `${partial ? 'the same days in ' : ''}${prevName}`
+  // On the card the month before is its short name; a screen reader is given the whole sentence.
+  const prevShort = prevName.slice(0, 3)
 
   // Which way the month just moved, so the figures can slide in from that side. Worked out as the month changes.
   const [shown, setShown] = useState<{ key: string | undefined; dir: 'next' | 'prev' | null }>({ key: monthKey, dir: null })
@@ -131,49 +132,45 @@ export function SpendingOverview({
       {/* With a budget: one plain bar of how much of it is used, and in words where that leaves you. */}
       {budgetMinor !== null && (
         <div className="mt-4">
-          <Meter spentMinor={totalMinor} limitMinor={budgetMinor} currency={currency} hideFigures />
+          <Meter spentMinor={totalMinor} limitMinor={budgetMinor} currency={currency} hideFigures aside={
+              <>
+                <span className="sr-only">Budget</span>
+                <span aria-hidden="true" data-budget-flag>
+                  <Icon name="flag" size={16} />
+                </span>
+                {formatMoney(budgetMinor, currency)}
+              </>
+            }
+          />
         </div>
       )}
 
-      {totalMinor > 0 && (
-        <p className="mt-3 text-[1.0625rem] leading-[1.6] text-ink-2">
-          {budgetMinor !== null && (
-            <>
-              {'Budget '}
-              <b className="num text-ink">{formatMoney(budgetMinor, currency)}</b>
-              {' · '}
-            </>
-          )}
-          <b className="num text-ink">{expenseCount}</b>
-          {` ${expenseCount === 1 ? 'expense' : 'expenses'}`}
-          {dailyAverageMinor > 0 && (
-            <>
-              {' · about '}
-              <b className="num text-ink">{formatMoney(dailyAverageMinor, currency)}</b>
-              {' a day'}
-            </>
-          )}
-        </p>
-      )}
-
-      {totalMinor > 0 && deltaPct !== null && (
-        <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-ink-2">
-          {deltaPct === 0 ? (
-            <>{`The same as ${against}.`}</>
-          ) : (
-            <>
-              <span
-                className={`inline-flex items-center gap-1 rounded-full bg-surface-2 py-1 pl-2 pr-2.5 font-medium ${
-                  deltaPct > 0 ? 'text-critical' : 'text-good'
-                }`}
+      {/* One quiet row: how it compares with the month before, and what a day comes to. No sentences. */}
+      {totalMinor > 0 && (deltaPct !== null || dailyAverageMinor > 0) && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          {deltaPct !== null &&
+            (deltaPct === 0 ? (
+              <p className="text-base font-medium text-ink-2">
+                <span className="sr-only">{`The same as ${against}`}</span>
+                <span aria-hidden="true">{`Same as ${prevShort}`}</span>
+              </p>
+            ) : (
+              <p
+                data-delta
+                className={`inline-flex items-center gap-1 rounded-full bg-surface-2 py-1 pl-2 pr-3 text-base font-medium ${deltaPct > 0 ? 'text-critical' : 'text-good'}`}
               >
                 <Icon name={deltaPct > 0 ? 'arrowUp' : 'arrowDown'} size={16} />
-                {`${Math.abs(deltaPct)}% ${deltaPct > 0 ? 'more' : 'less'}`}
-              </span>
-              {`than ${against}`}
-            </>
+                <span className="sr-only">{`${Math.abs(deltaPct)}% ${deltaPct > 0 ? 'more' : 'less'} than ${against}`}</span>
+                <span aria-hidden="true">{`${Math.abs(deltaPct)}% vs ${prevShort}`}</span>
+              </p>
+            ))}
+          {dailyAverageMinor > 0 && (
+            <p className="text-base text-ink-2">
+              <b className="num text-ink">{formatMoney(dailyAverageMinor, currency)}</b>
+              {' a day'}
+            </p>
           )}
-        </p>
+        </div>
       )}
 
       {periods.length > 0 && (

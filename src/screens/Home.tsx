@@ -148,10 +148,9 @@ export const Home = memo(function Home({
       recentlySpent: recentSpending(expenses, today),
       monthTxs,
       categoryTotals: byCategory(monthTxs),
-      expenseCount: monthTxs.length,
     }
   }, [txs, expenses, income, month, today])
-  const { total, received, comparison, monthTxs, categoryTotals, recentlySpent, expenseCount } = view
+  const { total, received, comparison, monthTxs, categoryTotals, recentlySpent } = view
   // Months with something in them get a dot in the month picker.
   const activeMonths = useMemo(() => new Set(txs.map((t) => t.date.slice(0, 7))), [txs])
 
@@ -210,7 +209,6 @@ export const Home = memo(function Home({
               partial={comparison.partial}
               prevName={prevName}
               dailyAverageMinor={Math.round(total / elapsedDays / 100) * 100}
-              expenseCount={expenseCount}
               budgetMinor={budgetMinor}
               currency={currency}
               periods={
@@ -244,6 +242,22 @@ export const Home = memo(function Home({
               onPickDay={pickDay}
               onPickCategory={onPickCategory}
             />
+
+            {/* Where the money went comes straight after the figures, since it is the next thing to ask. */}
+            {total > 0 && (
+              <>
+                <section aria-labelledby="cats-h" className="mt-8">
+                  <h2 id="cats-h" className="type-title mb-1 px-1">
+                    Where it went
+                  </h2>
+                  <div className="px-1">
+                    <CategoryBars totals={categoryTotals} categoryById={categoryById} currency={currency} limit={5} pin="Food & Dining" onPick={onPickCategory} />
+                  </div>
+                </section>
+
+                {onOpenInsights && <InsightCard totals={categoryTotals} totalMinor={total} categoryById={categoryById} monthName={name} onOpen={onOpenInsights} onOpenAi={onOpenAi} />}
+              </>
+            )}
 
             {isCurrent && <PlanAhead ledger={ledger} today={today} onOpen={onOpenPlan} onSetUp={onOpenUpcoming} />}
 
@@ -281,28 +295,15 @@ export const Home = memo(function Home({
             {/* Below the suggestions, so the first things after the numbers are the ones you can act on. */}
             {budgetMinor === null && <BudgetPrompt onSetBudget={onOpenSettings} />}
 
-            {total > 0 && (
-              <>
-                {/* The list of what was spent is Activity, and where the money flows is in Insights: one tap to each, not a copy here. */}
-                <nav aria-label="More about this month" className="mt-8 grid grid-cols-2 gap-3">
-                  <GoTo icon="list" label="Recent transactions" onClick={onSeeAll} />
-                  {onOpenInsights && <GoTo icon="bars" label="Where the money flows" onClick={onOpenInsights} />}
-                </nav>
-
-                <section aria-labelledby="cats-h" className="mt-8">
-                  <h2 id="cats-h" className="type-title mb-1 px-1">
-                    Where it went
-                  </h2>
-                  <div className="px-1">
-                    <CategoryBars totals={categoryTotals} categoryById={categoryById} currency={currency} limit={5} onPick={onPickCategory} />
-                  </div>
-                </section>
-
-                {onOpenInsights && <InsightCard totals={categoryTotals} totalMinor={total} categoryById={categoryById} monthName={name} onOpen={onOpenInsights} onOpenAi={onOpenAi} />}
-              </>
-            )}
-
             <GoalsSummary goals={ledger.goals} currency={currency} today={today} onOpen={onOpenGoals} />
+
+            {/* The last section: the list of what was spent is Activity, and where the money flows is in Insights. One tap to each, not a copy here. */}
+            {total > 0 && (
+              <nav aria-label="More about this month" className="mt-8 grid grid-cols-2 gap-3">
+                <GoTo icon="list" label="Recent transactions" onClick={onSeeAll} />
+                {onOpenInsights && <GoTo icon="bars" label="Where the money flows" onClick={onOpenInsights} />}
+              </nav>
+            )}
           </>
         }
         timeline={<Timeline expenses={expenses} received={income} categoryById={categoryById} currency={currency} today={today} onPickDay={pickDay} />}

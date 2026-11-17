@@ -9,16 +9,27 @@ interface Props {
   currency: string
   /** Show this many categories and fold the rest into "Everything else". */
   limit?: number
+  /** A category that is always listed by name, even when it is not among the biggest, so it is never hidden in "Everything else". */
+  pin?: string
   onPick?: (categoryId: number) => void
 }
 
 /** Spend by category with each bar in the category's own color (color follows the entity). */
-export function CategoryBars({ totals, categoryById, currency, limit, onPick }: Props) {
+export function CategoryBars({ totals, categoryById, currency, limit, pin, onPick }: Props) {
   const grand = totals.reduce((a, t) => a + t.totalMinor, 0)
   if (grand === 0) return null
 
-  const shown = limit ? totals.slice(0, limit) : totals
-  const restTotal = (limit ? totals.slice(limit) : []).reduce((a, t) => a + t.totalMinor, 0)
+  const nameOf = (t: CategoryTotal) => t.name ?? categoryById.get(t.categoryId)?.name
+  let shown = limit ? totals.slice(0, limit) : totals
+  let rest = limit ? totals.slice(limit) : []
+  // The pinned category, when it is further down, is listed in its own place by size and taken out of "Everything else".
+  const pinned = pin ? rest.find((t) => nameOf(t) === pin) : undefined
+  if (pinned) {
+    rest = rest.filter((t) => t !== pinned)
+    const at = shown.findIndex((t) => t.totalMinor < pinned.totalMinor)
+    shown = at < 0 ? [...shown, pinned] : [...shown.slice(0, at), pinned, ...shown.slice(at)]
+  }
+  const restTotal = rest.reduce((a, t) => a + t.totalMinor, 0)
   const share = (minor: number) => `${Math.round((minor / grand) * 100)}%`
 
   const rows: BarRow[] = shown.map((t) => {
