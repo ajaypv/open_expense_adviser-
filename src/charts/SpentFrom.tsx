@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { formatMoney, parseLocalDate } from '../db/money'
+import { daysInMonth } from '../insights/aggregates'
 import type { MonthBreakdown } from '../insights/trends'
 import { Icon } from '../ui/Icon'
 import { useIntro } from '../ui/motion'
@@ -13,81 +14,103 @@ interface Props {
   monthName: string
   /** The month before, by name ("October"). */
   prevName: string
+  /** The month before, as a key ("2026-10"), for its last day. */
+  prevMonth: string
   /** A month key ("2026-10") by name, for the month-by-month lines. */
   labelOf: (month: string) => string
   /** The month is not over. */
   inProgress?: boolean
+  /** The whole month in one picture (money in, spent, saved), shown first in the full view. */
+  more?: ReactNode
 }
 
+const USED = 'var(--accent)'
+const LEFT = 'var(--good-text)'
 const EARLIER = 'var(--ink-2)'
-const NEW = 'var(--accent)'
 const OVER = 'var(--critical)'
 
 /** Months shown in the month-by-month lines of the full view. */
 const SHOWN_MONTHS = 6
 
 /**
- * Which money paid for this month's spending. What was left from earlier months is spent first, so the card says how much
- * of the month went on last month's money and how much on what came in this month. "Full view" opens the rest: what the
- * earlier money paid for, when it ran out or what is still left, and the carry-forward month by month.
+ * What was left from last month, and how this month has used it. By default only that: the amount left on the last day of the
+ * month before, how much of it this month's spending has used, and how much is still left. "Full view" opens the rest: the
+ * whole month (money in, spent, saved), which money paid for the spending, what last month's money paid for, and the
+ * carry-forward month by month.
  */
-export function SpentFrom({ breakdown: b, categoryById, currency, monthName, prevName, labelOf, inProgress = false }: Props) {
+export function SpentFrom({ breakdown: b, categoryById, currency, monthName, prevName, prevMonth, labelOf, inProgress = false, more }: Props) {
   const intro = useIntro()
   const [open, setOpen] = useState(false)
   const money = (m: number) => formatMoney(m, currency)
-  const pct = (m: number) => (b.spentMinor > 0 ? Math.round((m / b.spentMinor) * 100) : 0)
   const so = inProgress ? ' so far' : ''
   const day = (date: string) => new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'long' }).format(parseLocalDate(date))
-  const nothingBefore = b.carriedInMinor === 0
-
-  const parts = [
-    { key: 'earlier', label: `From ${prevName}'s money`, note: nothingBefore ? `Nothing was left from ${prevName}` : `${pct(b.fromCarriedMinor)}% of what you spent`, minor: b.fromCarriedMinor, color: EARLIER },
-    { key: 'income', label: `From ${monthName}'s money`, note: `${pct(b.fromIncomeMinor)}% of what you spent`, minor: b.fromIncomeMinor, color: NEW },
-    ...(b.notCoveredMinor > 0 ? [{ key: 'over', label: 'More than you had', note: `${pct(b.notCoveredMinor)}% of what you spent`, minor: b.notCoveredMinor, color: OVER }] : []),
-  ]
 
   const used = b.fromCarriedMinor
   const left = b.carriedInMinor - used
+  const usedPct = b.carriedInMinor > 0 ? Math.round((used / b.carriedInMinor) * 100) : 0
+  const spentPct = (m: number) => (b.spentMinor > 0 ? Math.round((m / b.spentMinor) * 100) : 0)
+  const segments = [
+    { key: 'used', minor: used, color: USED },
+    { key: 'left', minor: left, color: LEFT },
+  ]
+
+  const parts = [
+    { key: 'earlier', label: `From ${prevName}'s money`, minor: b.fromCarriedMinor, color: EARLIER },
+    { key: 'income', label: `From ${monthName}'s money`, minor: b.fromIncomeMinor, color: USED },
+    ...(b.notCoveredMinor > 0 ? [{ key: 'over', label: 'More than you had', minor: b.notCoveredMinor, color: OVER }] : []),
+  ]
   const steps = b.steps.slice(-SHOWN_MONTHS)
   const earlierPaid = b.fromCarriedByCategory.slice(0, 6)
 
   return (
     <div data-spent-from>
-      <p className="text-sm text-ink-2">{`Where ${monthName}'s spending came from`}</p>
-      <p className="mt-1 text-lg font-semibold leading-snug">
-        {nothingBefore
-          ? `All ${money(b.spentMinor)} came from ${monthName}'s money${so}.`
-          : `${money(b.fromCarriedMinor)} of the ${money(b.spentMinor)} came from ${prevName}'s money${so}.`}
-      </p>
+      <p className="text-sm text-ink-2">{`Left from ${prevName}, on ${daysInMonth(prevMonth)} ${prevName}`}</p>
+      <p className="num mt-0.5 text-[clamp(1.75rem,8.4vw,2.25rem)] font-extrabold leading-none tracking-tight">{money(b.carriedInMinor)}</p>
 
-      <div role="img" aria-label={parts.map((p) => `${money(p.minor)} ${p.label.toLowerCase()}`).join(', ')} className="mt-3 flex h-3 gap-0.5 overflow-hidden rounded-full bg-surface-2">
-        {parts.map((p) =>
-          p.minor > 0 ? (
+      <div
+        role="img"
+        aria-label={`${money(b.carriedInMinor)} left from ${prevName}: ${money(used)} used in ${monthName}, ${money(left)} still left`}
+        className="mt-4 flex h-4 gap-0.5 overflow-hidden rounded-full bg-surface-2"
+      >
+        {segments.map((s) =>
+          s.minor > 0 ? (
             <span
-              key={p.key}
-              data-segment={p.key}
+              key={s.key}
+              data-segment={s.key}
               className={`${intro ? 'bar-reveal ' : ''}h-full min-w-1 first:rounded-l-full last:rounded-r-full`}
-              style={{ width: `${(p.minor / b.spentMinor) * 100}%`, background: p.color }}
+              style={{ width: `${(s.minor / b.carriedInMinor) * 100}%`, background: s.color }}
             />
           ) : null,
         )}
       </div>
 
       <dl className="mt-3 divide-y divide-line">
-        {parts.map((p) => (
-          <div key={p.key} data-part={p.key} className="flex min-h-12 items-center gap-3 py-2">
-            <dt className="flex min-w-0 flex-1 items-center gap-2.5">
-              <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center">
-                <span className="size-3.5 rounded-full" style={{ background: p.color }} />
+        <div data-line="used" className="flex min-h-12 items-center gap-3 py-2">
+          <dt className="flex min-w-0 flex-1 items-center gap-2.5">
+            <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center">
+              <span className="size-3.5 rounded-full" style={{ background: USED }} />
+            </span>
+            <span className="min-w-0">
+              <span className="block font-semibold leading-tight">{`Used in ${monthName}${so}`}</span>
+              <span className="block text-sm leading-tight text-ink-2">{`${usedPct}% of it`}</span>
+            </span>
+          </dt>
+          <dd className="num shrink-0 text-lg">{money(used)}</dd>
+        </div>
+        <div data-line="still" className="flex min-h-12 items-center gap-3 py-2">
+          <dt className="flex min-w-0 flex-1 items-center gap-2.5">
+            <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center">
+              <span className="size-3.5 rounded-full" style={{ background: LEFT }} />
+            </span>
+            <span className="min-w-0">
+              <span className="block font-semibold leading-tight text-good">{left > 0 ? `Still left${so}` : 'Used up'}</span>
+              <span className="block text-sm leading-tight text-ink-2">
+                {left > 0 ? `${100 - usedPct}% of it` : b.carriedRanOutOn ? `On ${day(b.carriedRanOutOn)}` : 'Nothing left of it'}
               </span>
-              <span className="min-w-0">
-                <span className="block font-semibold leading-tight">{p.label}</span>
-                <span className="block text-sm leading-tight text-ink-2">{p.note}</span>
-              </span>
-            </dt>
-            <dd className="num shrink-0 text-lg">{money(p.minor)}</dd>
-          </div>
-        ))}
+            </span>
+          </dt>
+          <dd className="num shrink-0 text-lg text-good">{money(left)}</dd>
+        </div>
       </dl>
 
       <button
@@ -103,50 +126,58 @@ export function SpentFrom({ breakdown: b, categoryById, currency, monthName, pre
       </button>
 
       {open && (
-        <div data-full-view className="mt-1">
-          <h3 className="font-semibold">{`${prevName}'s money`}</h3>
-          {nothingBefore ? (
-            <p className="mt-1 text-ink-2">{`Nothing was left over from ${prevName} or the months before, so everything came from ${monthName}'s money.`}</p>
-          ) : (
+        <div data-full-view className="mt-3">
+          {more && (
+            <div data-whole-month>
+              <h3 className="mb-3 font-semibold">{`All of ${monthName}`}</h3>
+              {more}
+            </div>
+          )}
+
+          <h3 className="mt-6 font-semibold">{`Where ${monthName}'s spending came from`}</h3>
+          <dl className="mt-1 divide-y divide-line">
+            {parts.map((p) => (
+              <div key={p.key} data-part={p.key} className="flex min-h-12 items-center gap-3 py-2">
+                <dt className="flex min-w-0 flex-1 items-center gap-2.5">
+                  <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center">
+                    <span className="size-3.5 rounded-full" style={{ background: p.color }} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-semibold leading-tight">{p.label}</span>
+                    <span className="block text-sm leading-tight text-ink-2">{`${spentPct(p.minor)}% of what you spent`}</span>
+                  </span>
+                </dt>
+                <dd className="num shrink-0 text-lg">{money(p.minor)}</dd>
+              </div>
+            ))}
+          </dl>
+          {b.carriedInMinor > 0 && (
+            <p className="mt-1 text-ink-2">
+              {b.carriedRanOutOn
+                ? `${prevName}'s money was used up on ${day(b.carriedRanOutOn)}. After that, spending came from ${monthName}'s money.`
+                : `${prevName}'s money has not run out${so}: ${money(left)} of it is still there to spend.`}
+            </p>
+          )}
+
+          {earlierPaid.length > 0 && (
             <>
-              <dl className="mt-1 divide-y divide-line">
-                {[
-                  { key: 'left', label: `Left from ${prevName}`, minor: b.carriedInMinor },
-                  { key: 'used', label: `Spent in ${monthName}${so}`, minor: used },
-                  { key: 'still', label: left > 0 ? `Still there${so}` : 'Used up', minor: left },
-                ].map((r) => (
-                  <div key={r.key} data-line={r.key} className="flex min-h-11 items-center justify-between gap-3 py-2">
-                    <dt className="text-ink-2">{r.label}</dt>
-                    <dd className="num text-lg">{money(r.minor)}</dd>
-                  </div>
-                ))}
-              </dl>
-              <p className="mt-1 text-ink-2">
-                {b.carriedRanOutOn
-                  ? `${prevName}'s money was used up on ${day(b.carriedRanOutOn)}. After that, spending came from ${monthName}'s money.`
-                  : `${prevName}'s money has not run out${so}: ${money(left)} of it is still there to spend.`}
-              </p>
-              {earlierPaid.length > 0 && (
-                <>
-                  <h3 className="mt-4 font-semibold">{`What ${prevName}'s money paid for`}</h3>
-                  <ul data-paid-for className="mt-1 divide-y divide-line">
-                    {earlierPaid.map((c) => {
-                      const cat = categoryById.get(c.categoryId)
-                      return (
-                        <li key={c.categoryId} className="flex min-h-11 items-center gap-2.5 py-2">
-                          <span aria-hidden="true" className="size-3 shrink-0 rounded-full" style={{ background: cat?.color ?? EARLIER }} />
-                          <span className="min-w-0 flex-1 truncate">{cat?.name ?? 'Other'}</span>
-                          <span className="num text-lg">{money(c.totalMinor)}</span>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </>
-              )}
+              <h3 className="mt-6 font-semibold">{`What ${prevName}'s money paid for`}</h3>
+              <ul data-paid-for className="mt-1 divide-y divide-line">
+                {earlierPaid.map((c) => {
+                  const cat = categoryById.get(c.categoryId)
+                  return (
+                    <li key={c.categoryId} className="flex min-h-11 items-center gap-2.5 py-2">
+                      <span aria-hidden="true" className="size-3 shrink-0 rounded-full" style={{ background: cat?.color ?? EARLIER }} />
+                      <span className="min-w-0 flex-1 truncate">{cat?.name ?? 'Other'}</span>
+                      <span className="num text-lg">{money(c.totalMinor)}</span>
+                    </li>
+                  )
+                })}
+              </ul>
             </>
           )}
 
-          <h3 className="mt-4 font-semibold">Carried forward, month by month</h3>
+          <h3 className="mt-6 font-semibold">Carried forward, month by month</h3>
           {steps.length === 0 ? (
             <p className="mt-1 text-ink-2">Once money comes in, this shows what each month carries on to the next.</p>
           ) : (

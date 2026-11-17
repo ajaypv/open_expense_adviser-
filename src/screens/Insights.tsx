@@ -261,26 +261,43 @@ export const Insights = memo(function Insights({ ledger, month, onMonth, today, 
   // What you had to spend: the month's salary and other money in, and what was left from earlier months. With none of that logged
   // yet, the card says how to add a salary rather than leaving the place empty.
   const hadMinor = savings.receivedMinor + carriedMinor
+  const keptBar = (
+    <KeptBar
+      salaryMinor={salaryMinor}
+      otherMinor={savings.receivedMinor - salaryMinor}
+      carriedMinor={carriedMinor}
+      carriedFrom={prevName}
+      sentMinor={savings.sentMinor}
+      currency={currency}
+      monthName={name}
+      inProgress={isCurrent}
+    />
+  )
   const moneyInOut =
     hadMinor > 0 ? (
-      <Section id="savings-h" title="Money in and out" intro={`What you had, what you spent and what you kept in ${name}.${carriedMinor > 0 ? ` Money left from ${prevName} counts too.` : ''}`}>
+      <Section
+        id="savings-h"
+        title="Money in and out"
+        intro={carriedMinor > 0 ? `What was left from ${prevName}, and how ${name} has used it.` : `What you had, what you spent and what you kept in ${name}.`}
+      >
         <Card className="mt-3">
-          <KeptBar
-            salaryMinor={salaryMinor}
-            otherMinor={savings.receivedMinor - salaryMinor}
-            carriedMinor={carriedMinor}
-            carriedFrom={prevName}
-            sentMinor={savings.sentMinor}
-            currency={currency}
-            monthName={name}
-            inProgress={isCurrent}
-          />
+          {/* With money left from last month, the card opens on that alone; the whole month is in its full view. */}
+          {carriedMinor > 0 ? (
+            <SpentFrom
+              breakdown={breakdown}
+              categoryById={categoryById}
+              currency={currency}
+              monthName={name}
+              prevName={prevName}
+              prevMonth={prevKey}
+              labelOf={firstWord}
+              inProgress={isCurrent}
+              more={keptBar}
+            />
+          ) : (
+            keptBar
+          )}
         </Card>
-        {total > 0 && (
-          <Card className="mt-3">
-            <SpentFrom breakdown={breakdown} categoryById={categoryById} currency={currency} monthName={name} prevName={prevName} labelOf={firstWord} inProgress={isCurrent} />
-          </Card>
-        )}
       </Section>
     ) : total > 0 ? (
       <Section id="savings-h" title="Money in and out" intro={`What you had, what you spent and what you kept in ${name}.`}>

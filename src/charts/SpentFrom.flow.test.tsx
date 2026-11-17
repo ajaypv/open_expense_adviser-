@@ -32,37 +32,46 @@ const labels: Record<string, string> = { '2026-10': 'October', '2026-11': 'Novem
 
 const mount = (over: Partial<MonthBreakdown> = {}, inProgress = false) =>
   render(
-    <SpentFrom breakdown={{ ...breakdown, ...over }} categoryById={cats} currency="INR" monthName="November" prevName="October" labelOf={(m) => labels[m]} inProgress={inProgress} />,
+    <SpentFrom
+      breakdown={{ ...breakdown, ...over }}
+      categoryById={cats}
+      currency="INR"
+      monthName="November"
+      prevName="October"
+      prevMonth="2026-10"
+      labelOf={(m) => labels[m]}
+      inProgress={inProgress}
+      more={<p>WHOLE MONTH</p>}
+    />,
   )
+const line = (c: HTMLElement, key: string) => c.querySelector(`[data-line="${key}"]`) as HTMLElement
 const part = (c: HTMLElement, key: string) => c.querySelector(`[data-part="${key}"]`) as HTMLElement
 
 describe('SpentFrom', () => {
-  it('opens on how much of the month was paid from last month\'s money and how much from this month\'s', () => {
-    const { container } = mount()
-    expect(screen.getByText('₹40,000 of the ₹45,000 came from October\'s money.')).toBeInTheDocument()
-    expect(part(container, 'earlier').textContent).toMatch(/From October's money.*89% of what you spent.*₹40,000/)
-    expect(part(container, 'income').textContent).toMatch(/From November's money.*11% of what you spent.*₹5,000/)
-    expect(container.querySelector('[data-part="over"]')).toBeNull()
+  it('opens on only what was left from last month on its last day, how much this month used and how much is left', () => {
+    const { container } = mount({ fromCarriedMinor: 30_000_00, fromIncomeMinor: 0, spentMinor: 30_000_00, carriedRanOutOn: null })
+    expect(screen.getByText('Left from October, on 31 October')).toBeInTheDocument()
+    expect(screen.getByText('₹40,000')).toBeInTheDocument()
+    expect(line(container, 'used').textContent).toMatch(/Used in November.*75% of it.*₹30,000/)
+    expect(line(container, 'still').textContent).toMatch(/Still left.*25% of it.*₹10,000/)
+    expect(Array.from(container.querySelectorAll('[data-segment]')).map((s) => (s as HTMLElement).style.width)).toEqual(['75%', '25%'])
+    // Nothing else until the full view is opened.
     expect(container.querySelector('[data-full-view]')).toBeNull()
+    expect(screen.queryByText('WHOLE MONTH')).toBeNull()
+    expect(container.querySelector('[data-part]')).toBeNull()
   })
 
   it('says "so far" while the month is open', () => {
-    mount({}, true)
-    expect(screen.getByText('₹40,000 of the ₹45,000 came from October\'s money so far.')).toBeInTheDocument()
+    const { container } = mount({}, true)
+    expect(line(container, 'used').textContent).toContain('Used in November so far')
   })
 
-  it('says everything came from this month when nothing was left over', () => {
-    const { container } = mount({ carriedInMinor: 0, fromCarriedMinor: 0, fromIncomeMinor: 45_000_00, carriedRanOutOn: null, fromCarriedByCategory: [] })
-    expect(screen.getByText('All ₹45,000 came from November\'s money.')).toBeInTheDocument()
-    expect(part(container, 'earlier').textContent).toContain('Nothing was left from October')
+  it('says the money was used up, and when', () => {
+    const { container } = mount()
+    expect(line(container, 'still').textContent).toMatch(/Used up.*On (10 November|November 10).*₹0/)
   })
 
-  it('shows what was more than everything you had', () => {
-    const { container } = mount({ fromIncomeMinor: 3_000_00, notCoveredMinor: 2_000_00 })
-    expect(part(container, 'over').textContent).toMatch(/More than you had.*₹2,000/)
-  })
-
-  it('opens the full view on a tap and closes it again', async () => {
+  it('opens the full view on a tap, with the whole month first, and closes it again', async () => {
     const user = userEvent.setup()
     const { container } = mount()
     const button = screen.getByRole('button', { name: 'Full view' })
@@ -70,32 +79,38 @@ describe('SpentFrom', () => {
     await user.click(button)
     expect(screen.getByRole('button', { name: 'Hide full view' })).toHaveAttribute('aria-expanded', 'true')
     const full = container.querySelector('[data-full-view]') as HTMLElement
-    expect(full.querySelector('[data-line="left"]')?.textContent).toMatch(/Left from October.*₹40,000/)
-    expect(full.querySelector('[data-line="used"]')?.textContent).toMatch(/Spent in November.*₹40,000/)
-    expect(full.querySelector('[data-line="still"]')?.textContent).toMatch(/Used up.*₹0/)
-    expect(full.textContent).toMatch(/October's money was used up on 10 November|October's money was used up on November 10/)
+    expect(full.querySelector('[data-whole-month]')?.textContent).toContain('All of November')
+    expect(screen.getByText('WHOLE MONTH')).toBeInTheDocument()
+    expect(part(container, 'earlier').textContent).toMatch(/From October's money.*89% of what you spent.*₹40,000/)
+    expect(part(container, 'income').textContent).toMatch(/From November's money.*11% of what you spent.*₹5,000/)
+    expect(container.querySelector('[data-part="over"]')).toBeNull()
+    expect(full.textContent).toMatch(/October's money was used up on (10 November|November 10)/)
     const paid = Array.from(full.querySelectorAll('[data-paid-for] li')).map((li) => li.textContent)
     expect(paid).toEqual(['Rent & Housing₹25,000', 'Food & Dining₹15,000'])
     await user.click(screen.getByRole('button', { name: 'Hide full view' }))
     expect(container.querySelector('[data-full-view]')).toBeNull()
   })
 
-  it('lists the carry-forward month by month', async () => {
+  it('shows what was more than everything you had in the full view', async () => {
+    const user = userEvent.setup()
+    const { container } = mount({ fromIncomeMinor: 3_000_00, notCoveredMinor: 2_000_00 })
+    await user.click(screen.getByRole('button', { name: 'Full view' }))
+    expect(part(container, 'over').textContent).toMatch(/More than you had.*₹2,000/)
+  })
+
+  it('lists the carry-forward month by month in the full view', async () => {
     const user = userEvent.setup()
     const { container } = mount()
     await user.click(screen.getByRole('button', { name: 'Full view' }))
-    const oct = container.querySelector('[data-step="2026-10"]') as HTMLElement
-    const nov = container.querySelector('[data-step="2026-11"]') as HTMLElement
-    expect(oct.textContent).toBe('October₹80,000₹40,000₹40,000')
+    expect((container.querySelector('[data-step="2026-10"]') as HTMLElement).textContent).toBe('October₹80,000₹40,000₹40,000')
     // What came in counts what was left from the month before.
-    expect(nov.textContent).toBe('November₹90,000₹45,000₹45,000')
+    expect((container.querySelector('[data-step="2026-11"]') as HTMLElement).textContent).toBe('November₹90,000₹45,000₹45,000')
   })
 
   it('says how much of last month\'s money is still there when it has not run out', async () => {
     const user = userEvent.setup()
-    const { container } = mount({ spentMinor: 5_000_00, fromCarriedMinor: 5_000_00, fromIncomeMinor: 0, carriedRanOutOn: null })
+    mount({ spentMinor: 5_000_00, fromCarriedMinor: 5_000_00, fromIncomeMinor: 0, carriedRanOutOn: null })
     await user.click(screen.getByRole('button', { name: 'Full view' }))
-    expect(container.querySelector('[data-line="still"]')?.textContent).toMatch(/Still there.*₹35,000/)
     expect(screen.getByText('October\'s money has not run out: ₹35,000 of it is still there to spend.')).toBeInTheDocument()
   })
 })
