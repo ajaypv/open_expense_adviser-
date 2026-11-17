@@ -1,4 +1,5 @@
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { MonthMoney } from '../charts/MonthMoney'
 import type { LedgerTx } from '../data/buildLedger'
 import { useDisplay } from '../data/display'
 import type { useLedger } from '../data/useLedger'
@@ -25,7 +26,9 @@ import {
   type DatePreset,
   type KindFilter,
 } from '../insights/filters'
+import { monthLabel, shiftMonth } from '../insights/aggregates'
 import { newestFirst } from '../insights/order'
+import { monthBreakdown } from '../insights/trends'
 import { useBackClose } from '../ui/backStack'
 import { categoryIcon } from '../ui/categoryIcon'
 import { Icon } from '../ui/Icon'
@@ -116,6 +119,10 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
   const [minText, setMinText] = useState('')
   const [maxText, setMaxText] = useState('')
   const [selecting, setSelecting] = useState(false)
+  // The month view: one month's money in, money out and what was carried forward, with its own month to step through.
+  const [monthOpen, setMonthOpen] = useState(false)
+  const currentMonth = localDateString(today).slice(0, 7)
+  const [viewMonth, setViewMonth] = useState(currentMonth)
   // Back closes the filters, and then leaves select mode, before it leaves the screen.
   useBackClose(filtersOpen, () => setFiltersOpen(false))
   useBackClose(selecting, endSelecting)
@@ -180,6 +187,11 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
 
   // A day's total counts the whole day, not just the rows on screen so far.
   const totals = useMemo(() => dayTotals(filtered), [filtered])
+  const firstMonth = useMemo(() => txs.reduce((a, t) => (t.date < a ? t.date : a), `${currentMonth}-01`).slice(0, 7), [txs, currentMonth])
+  const monthView = useMemo(
+    () => (monthOpen ? monthBreakdown(ledger.expenses, ledger.income, viewMonth) : null),
+    [monthOpen, ledger.expenses, ledger.income, viewMonth],
+  )
 
   // A selection only means what can be seen: rows a filter or a search has hidden drop out of it.
   const visibleIds = useMemo(() => new Set(filtered.map((t) => t.id)), [filtered])
@@ -510,6 +522,37 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
             </li>
           ))}
         </ul>
+      )}
+
+      {txs.length > 0 && (
+        <div className="mt-4">
+          <button
+            type="button"
+            aria-expanded={monthOpen}
+            onClick={() => setMonthOpen((o) => !o)}
+            className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-surface px-4 text-left font-semibold shadow-[0_0_0_1px_var(--ring)]"
+          >
+            <Icon name="bars" size={18} />
+            <span className="min-w-0 flex-1">Month view: money in, out and carried forward</span>
+            <span aria-hidden="true" className={`shrink-0 text-ink-2 transition-transform ${monthOpen ? 'rotate-180' : ''}`}>
+              <Icon name="chevDown" size={18} />
+            </span>
+          </button>
+          {monthOpen && monthView && (
+            <div className="mt-3 rounded-3xl bg-surface p-5 shadow-[0_0_0_1px_var(--ring)]">
+              <MonthMoney
+                breakdown={monthView}
+                month={viewMonth}
+                prevName={monthLabel(shiftMonth(viewMonth, -1)).split(' ')[0]}
+                currency={currency}
+                inProgress={viewMonth === currentMonth}
+                onShift={(d) => setViewMonth((m) => shiftMonth(m, d))}
+                canPrev={viewMonth > firstMonth}
+                canNext={viewMonth < currentMonth}
+              />
+            </div>
+          )}
+        </div>
       )}
 
       {filtered.length > 0 && (

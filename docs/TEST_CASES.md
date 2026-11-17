@@ -343,6 +343,7 @@ I checked that the tests can fail by planting ten bugs one at a time. All ten we
 | ACT-13 | No swipe while selecting | In select mode, swipe | Nothing is revealed | Auto: `activity.flow` |
 | ACT-14 | Row look | View rows | Avatar, merchant, category, time, amount; transfers read "Main to Cash" with no plus sign | Auto: `components.test`. Also on device |
 | ACT-15 | Other currency row | View a USD entry | Shows $10 with "≈ ₹835" beneath, or "No USD rate set" | Auto: `components.test` |
+| ACT-16 | Month view | Open Activity, tap "Month view: money in, out and carried forward" | A card opens (closed by default; only offered once something is logged) for this month: what is left so far as a big figure, a bar of spent against left, then Carried from last month (when there is any), Received and Spent, and a line saying how much of the spending came from last month's money; the arrows step to other months (next is off on this month, previous is off at the first month), a finished month says "Left at the end of the month" and how much carries on; more spent than there was shows "Over by" in red; a month with nothing says so | Auto: `activity.month.flow`, `MonthMoney.flow`; look by eye |
 
 ## 10. Insights
 
