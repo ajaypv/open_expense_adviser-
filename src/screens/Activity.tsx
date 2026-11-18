@@ -19,6 +19,7 @@ import {
   dayTotals,
   describeRange,
   matchesSearch,
+  monthRange,
   NO_FILTERS,
   presetOf,
   presetRange,
@@ -119,8 +120,9 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
   const [minText, setMinText] = useState('')
   const [maxText, setMaxText] = useState('')
   const [selecting, setSelecting] = useState(false)
-  // The month view: one month's money in, money out and what was carried forward, with its own month to step through.
-  const [monthOpen, setMonthOpen] = useState(false)
+  // Two ways to look: the list of transactions as it always was, or one month at a time with its money in, money out and what was
+  // carried forward above the same list, narrowed to that month.
+  const [view, setView] = useState<'list' | 'month'>('list')
   const currentMonth = localDateString(today).slice(0, 7)
   const [viewMonth, setViewMonth] = useState(currentMonth)
   // Back closes the filters, and then leaves select mode, before it leaves the screen.
@@ -177,20 +179,22 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
         : null,
     [searching, txs, categoryById, accountById],
   )
+  // In the month view the month's dates stand in for any dates chosen, which come back when the list view does.
+  const inForce = useMemo(() => (view === 'month' ? { ...filters, ...monthRange(viewMonth) } : filters), [filters, view, viewMonth])
   const filtered = useMemo(
     () =>
-      applyFilters(sorted, filters).filter(
+      applyFilters(sorted, inForce).filter(
         (t) => (categoryFilter === null || t.categoryId === categoryFilter) && (!searchText || matchesSearch(searchText.get(t.id) ?? '', deferredQuery)),
       ),
-    [sorted, searchText, deferredQuery, categoryFilter, filters],
+    [sorted, searchText, deferredQuery, categoryFilter, inForce],
   )
 
   // A day's total counts the whole day, not just the rows on screen so far.
   const totals = useMemo(() => dayTotals(filtered), [filtered])
   const firstMonth = useMemo(() => txs.reduce((a, t) => (t.date < a ? t.date : a), `${currentMonth}-01`).slice(0, 7), [txs, currentMonth])
   const monthView = useMemo(
-    () => (monthOpen ? monthBreakdown(ledger.expenses, ledger.income, viewMonth) : null),
-    [monthOpen, ledger.expenses, ledger.income, viewMonth],
+    () => (view === 'month' ? monthBreakdown(ledger.expenses, ledger.income, viewMonth) : null),
+    [view, ledger.expenses, ledger.income, viewMonth],
   )
 
   // A selection only means what can be seen: rows a filter or a search has hidden drop out of it.
@@ -207,14 +211,14 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
     return [...map]
   }, [filtered, limit])
 
-  const activeFilters = countActive(filters)
+  const activeFilters = countActive(view === 'month' ? { ...filters, from: '', to: '' } : filters)
   const amountConflict = filters.minMinor !== null && filters.maxMinor !== null && filters.minMinor > filters.maxMinor
   const whenNow = presetOf(filters, today)
 
   // What is narrowing the list, each with its own way to take it off.
   const inUse: { key: string; label: string; clear: () => void }[] = []
   if (filters.kind !== 'all') inUse.push({ key: 'kind', label: KINDS.find((k) => k.id === filters.kind)!.label, clear: () => patch({ kind: 'all' }) })
-  if (filters.from || filters.to) inUse.push({ key: 'date', label: describeRange(filters.from, filters.to, today), clear: () => patch({ from: '', to: '' }) })
+  if (view === 'list' && (filters.from || filters.to)) inUse.push({ key: 'date', label: describeRange(filters.from, filters.to, today), clear: () => patch({ from: '', to: '' }) })
   if (filters.minMinor !== null || filters.maxMinor !== null) {
     const { minMinor: lo, maxMinor: hi } = filters
     inUse.push({
@@ -350,6 +354,34 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
         )}
       </div>
 
+      {txs.length > 0 && (
+        <div role="radiogroup" aria-label="View" className="mt-3 grid grid-cols-2 gap-1 rounded-full bg-surface-2 p-1">
+          {(
+            [
+              { id: 'list', label: 'Transactions' },
+              { id: 'month', label: 'Month' },
+            ] as const
+          ).map((v) => (
+            <label
+              key={v.id}
+              className="flex min-h-11 cursor-pointer items-center justify-center rounded-full px-1 font-medium has-[:checked]:bg-btn has-[:checked]:text-btn-ink has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2"
+            >
+              <input
+                type="radio"
+                name="activity-view"
+                className="sr-only"
+                checked={view === v.id}
+                onChange={() => {
+                  setView(v.id)
+                  setLimit(PAGE)
+                }}
+              />
+              {v.label}
+            </label>
+          ))}
+        </div>
+      )}
+
       {/* py-0.5 stops the scroller clipping each button's 1px border; the right edge fades to hint that the row scrolls. */}
       <div className="relative -mx-5 mt-3 flex snap-x snap-proximity scroll-px-5 items-center gap-2 overflow-x-auto px-5 py-0.5 [mask-image:linear-gradient(to_right,black_calc(100%-1.25rem),transparent)]">
         <button
@@ -379,13 +411,15 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
         </button>
 
         {/* The quick dates sit right beside them, set off by a thin line. */}
-        <div role="group" aria-label="Filter by date" className="flex shrink-0 items-center gap-2 border-l border-line pl-2">
-          {WHEN.map((w) => (
-            <button key={w.id} type="button" aria-pressed={whenNow === w.id} onClick={() => patch(presetRange(w.id, today))} className={chip}>
-              {w.label}
-            </button>
-          ))}
-        </div>
+        {view === 'list' && (
+          <div role="group" aria-label="Filter by date" className="flex shrink-0 items-center gap-2 border-l border-line pl-2">
+            {WHEN.map((w) => (
+              <button key={w.id} type="button" aria-pressed={whenNow === w.id} onClick={() => patch(presetRange(w.id, today))} className={chip}>
+                {w.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {filtersOpen && (
@@ -403,18 +437,22 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="f-from" className="text-sm text-ink-2">
-                From date
-              </label>
-              <input id="f-from" type="date" max={filters.to || undefined} value={filters.from} onChange={(e) => patch({ from: e.target.value })} className={field} />
-            </div>
-            <div>
-              <label htmlFor="f-to" className="text-sm text-ink-2">
-                To date
-              </label>
-              <input id="f-to" type="date" min={filters.from || undefined} value={filters.to} onChange={(e) => patch({ to: e.target.value })} className={field} />
-            </div>
+            {view === 'list' && (
+              <>
+                <div>
+                  <label htmlFor="f-from" className="text-sm text-ink-2">
+                    From date
+                  </label>
+                  <input id="f-from" type="date" max={filters.to || undefined} value={filters.from} onChange={(e) => patch({ from: e.target.value })} className={field} />
+                </div>
+                <div>
+                  <label htmlFor="f-to" className="text-sm text-ink-2">
+                    To date
+                  </label>
+                  <input id="f-to" type="date" min={filters.from || undefined} value={filters.to} onChange={(e) => patch({ to: e.target.value })} className={field} />
+                </div>
+              </>
+            )}
             <div>
               <label htmlFor="f-min" className="text-sm text-ink-2">
                 Smallest ({currency})
@@ -524,34 +562,21 @@ export const Activity = memo(function Activity({ ledger, today, categoryFilter, 
         </ul>
       )}
 
-      {txs.length > 0 && (
-        <div className="mt-4">
-          <button
-            type="button"
-            aria-expanded={monthOpen}
-            onClick={() => setMonthOpen((o) => !o)}
-            className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-surface px-4 text-left font-semibold shadow-[0_0_0_1px_var(--ring)]"
-          >
-            <Icon name="bars" size={18} />
-            <span className="min-w-0 flex-1">Month view: money in, out and carried forward</span>
-            <span aria-hidden="true" className={`shrink-0 text-ink-2 transition-transform ${monthOpen ? 'rotate-180' : ''}`}>
-              <Icon name="chevDown" size={18} />
-            </span>
-          </button>
-          {monthOpen && monthView && (
-            <div className="mt-3 rounded-3xl bg-surface p-5 shadow-[0_0_0_1px_var(--ring)]">
-              <MonthMoney
-                breakdown={monthView}
-                month={viewMonth}
-                prevName={monthLabel(shiftMonth(viewMonth, -1)).split(' ')[0]}
-                currency={currency}
-                inProgress={viewMonth === currentMonth}
-                onShift={(d) => setViewMonth((m) => shiftMonth(m, d))}
-                canPrev={viewMonth > firstMonth}
-                canNext={viewMonth < currentMonth}
-              />
-            </div>
-          )}
+      {view === 'month' && monthView && txs.length > 0 && (
+        <div className="mt-4 rounded-3xl bg-surface p-5 shadow-[0_0_0_1px_var(--ring)]">
+          <MonthMoney
+            breakdown={monthView}
+            month={viewMonth}
+            prevName={monthLabel(shiftMonth(viewMonth, -1)).split(' ')[0]}
+            currency={currency}
+            inProgress={viewMonth === currentMonth}
+            onShift={(d) => {
+              setViewMonth((m) => shiftMonth(m, d))
+              setLimit(PAGE)
+            }}
+            canPrev={viewMonth > firstMonth}
+            canNext={viewMonth < currentMonth}
+          />
         </div>
       )}
 
