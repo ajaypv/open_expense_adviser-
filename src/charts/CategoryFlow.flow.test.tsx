@@ -58,9 +58,8 @@ describe('CategoryFlow: the total splitting into each category', () => {
       expect(g.querySelectorAll('[data-line]')).toHaveLength(1)
       expect(g.querySelector('[data-strand]')).toBeNull()
       expect(g.querySelector('.flow-pulse')).not.toBeNull()
+      expect(g.querySelectorAll('[stroke-dasharray]')).toHaveLength(0)
     }
-    // The only dashes are in the stylesheet, where one long dash is the light that travels down the line.
-    expect(document.querySelectorAll('[stroke-dasharray]')).toHaveLength(0)
   })
 
   it('lets the ones on the left bend left, the middle one go straight down and the ones on the right bend right', () => {

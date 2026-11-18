@@ -9,6 +9,7 @@ Type what you spent or received in the bar at the bottom, as you would say it: `
 - Chat-bar logging with an offline parser, plus a full add form
 - Money sent and received, with an estimated balance that stays hidden until you reveal it
 - Home, Activity, Insights and Settings screens, in light and dark themes
+- Home's Timeline has softly layered water and a shaded duck on quiet days, with a floating wake and landing ripples when tapped. Insights has detailed gold coins in a dimensional wood-and-brass treasure chest with a raised, hinged lid, wood grain and soft shadows; tilt your phone or drag through the coins to move them. These illustrations stay still with reduced motion enabled.
 - Spending by category as bubbles sized by share, a donut with a legend, or a ranked list; the last 12 months as hatched pill bars with the change from the month before
 - Spending pace (scroll through months and compare up to three), daily, category and weekday charts
 - A globe of where each month's spending happened, drawn on the phone with no network
@@ -18,6 +19,12 @@ Type what you spent or received in the bar at the bottom, as you would say it: `
 - A trail of what changed your balance (by source, with the latest entries), and a label on entries added from regular payments or imported
 - Budget tracking and CSV / JSON export
 - Works offline once installed
+
+### Motion in the illustrations
+
+Phone tilt and movement drive the Timeline water and duck, and the coins in Insights. Sensor directions follow the screen in portrait and landscape. Tilt is smoothed, tiny movement noise is ignored, and old acceleration fades out rather than continuing to push the artwork. Coins respond to both sideways and vertical movement and use fixed simulation steps for consistent behavior at different screen refresh rates.
+
+On iPhone, the first tap requests motion permission. Without permission or sensors, the illustrations use gentle automatic movement; with reduced motion enabled, they stay still. Browsers that only provide acceleration including gravity use a filtered movement estimate.
 
 ## How the chat bar understands what you type
 

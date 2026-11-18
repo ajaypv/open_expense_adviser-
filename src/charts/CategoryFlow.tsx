@@ -147,7 +147,7 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
     setup: (el) => {
       const paths = Array.from(el.querySelectorAll<SVGGElement>('[data-ribbon]')).map((g) => Array.from(g.querySelectorAll<SVGPathElement>('path')))
       let last = 0
-      return ({ x, y, shake, seconds }) => {
+      return ({ x, y, shake, seconds, sensors }) => {
         const lines = geometry.current
         for (let i = 0; i < paths.length && i < lines.length; i++) {
           // The lines swing most in the middle and not at all where they leave the chest or land.
@@ -159,7 +159,7 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
           const dt = last ? seconds - last : 1 / 60
           last = seconds
           // The phone's own pull on the coins: which way is down for them, as it is held, and how hard it is being shaken.
-          step(w, dt, { ...pullFrom(tilt), shake })
+          step(w, dt, { ...pullFrom(sensors), shake })
           paint()
         } else last = 0
       }
@@ -234,33 +234,78 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
   const lidPath = `M${CHEST_X} ${BODY_TOP + 4}V${CHEST_Y + 26}C${CHEST_X} ${CHEST_Y + 6} ${CHEST_X + 26} ${CHEST_Y} ${cx} ${CHEST_Y}C${CHEST_RIGHT - 26} ${CHEST_Y} ${CHEST_RIGHT} ${CHEST_Y + 6} ${CHEST_RIGHT} ${CHEST_Y + 26}V${BODY_TOP + 4}Z`
   const id = (s: string) => `${uid}-${s}`
   const bandXs = [CHEST_X + 14, CHEST_RIGHT - 26]
-  const innerTop = BOX.top - 36
+  const innerTop = 8
+  const hingeY = BODY_TOP - 33
+  const openLid = `M${CHEST_X + 9} ${hingeY}L${CHEST_X + 7} ${innerTop + 22}Q${CHEST_X + 5} ${innerTop} ${cx} ${innerTop}Q${CHEST_RIGHT - 5} ${innerTop} ${CHEST_RIGHT - 7} ${innerTop + 22}L${CHEST_RIGHT - 9} ${hingeY}Z`
+  const lidPanel = `M${CHEST_X + 28} ${hingeY - 8}L${CHEST_X + 26} ${innerTop + 24}Q${CHEST_X + 25} ${innerTop + 12} ${cx} ${innerTop + 12}Q${CHEST_RIGHT - 25} ${innerTop + 12} ${CHEST_RIGHT - 26} ${innerTop + 24}L${CHEST_RIGHT - 28} ${hingeY - 8}Z`
 
   return (
     <div ref={setBox} data-seen={seen} data-open={open} className="when-seen mx-auto w-full max-w-md" data-flow>
       <div className="relative" onPointerMove={onStir} onPointerLeave={() => (stir.current = null)}>
         <svg ref={svg} role="img" aria-label={`${sourceLabel}, ${total}. Where the money went: ${summary}`} viewBox={`0 0 ${W} ${BOTTOM}`} className="block h-auto w-full" preserveAspectRatio="xMidYMid meet">
           <defs>
-            <linearGradient id={id('wood')} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#a8712f" />
-              <stop offset="1" stopColor="#6b431c" />
+            <linearGradient id={id('wood')} x1="0" y1="0" x2="0.15" y2="1">
+              <stop offset="0" stopColor="#9c643d" />
+              <stop offset="0.18" stopColor="#885232" />
+              <stop offset="0.75" stopColor="#653c28" />
+              <stop offset="1" stopColor="#422a20" />
             </linearGradient>
             <linearGradient id={id('lid')} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#c28a43" />
-              <stop offset="1" stopColor="#855426" />
+              <stop offset="0" stopColor="#d69a56" />
+              <stop offset="0.45" stopColor="#a56835" />
+              <stop offset="1" stopColor="#693923" />
             </linearGradient>
             <linearGradient id={id('inner')} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#4a2d12" />
-              <stop offset="1" stopColor="#2a1708" />
+              <stop offset="0" stopColor="#201813" />
+              <stop offset="0.45" stopColor="#3c281c" />
+              <stop offset="1" stopColor="#7e5529" />
             </linearGradient>
-            <linearGradient id={id('gold')} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#fbe08a" />
-              <stop offset="1" stopColor="#c9971c" />
+            <linearGradient id={id('gold')} x1="0" y1="0" x2="1" y2="0.2">
+              <stop offset="0" stopColor="#755020" />
+              <stop offset="0.16" stopColor="#c49b50" />
+              <stop offset="0.3" stopColor="#f4dfa0" />
+              <stop offset="0.43" stopColor="#d9b66a" />
+              <stop offset="0.78" stopColor="#a47a36" />
+              <stop offset="1" stopColor="#6e4e24" />
             </linearGradient>
-            <radialGradient id={id('coin')} cx="0.35" cy="0.3" r="0.85">
-              <stop offset="0" stopColor="#fff3b0" />
-              <stop offset="0.55" stopColor="#f1c232" />
-              <stop offset="1" stopColor="#b8820f" />
+            <linearGradient id={id('side')} x1="0" y1="0" x2="1" y2="0.5">
+              <stop stopColor="#65412c" />
+              <stop offset="1" stopColor="#30231c" />
+            </linearGradient>
+            <linearGradient id={id('lid-panel')} x1="0" y1="0" x2="0.3" y2="1">
+              <stop stopColor="#38261d" />
+              <stop offset="0.22" stopColor="#63412b" />
+              <stop offset="0.8" stopColor="#805333" />
+              <stop offset="1" stopColor="#4a3021" />
+            </linearGradient>
+            <linearGradient id={id('rim')} x1="0" y1="0" x2="0" y2="1">
+              <stop stopColor="#f5e1ae" />
+              <stop offset="0.18" stopColor="#d7b875" />
+              <stop offset="0.55" stopColor="#b28a47" />
+              <stop offset="1" stopColor="#5b3e1f" />
+            </linearGradient>
+            <radialGradient id={id('shadow')}>
+              <stop stopColor="#1f150e" stopOpacity="0.4" />
+              <stop offset="1" stopColor="#1f150e" stopOpacity="0" />
+            </radialGradient>
+            <pattern id={id('grain')} width="72" height="22" patternUnits="userSpaceOnUse">
+              <path d="M-8 4Q12 0 32 4T80 3M-5 9Q8 5 22 9T53 10T80 8M-6 17Q17 12 40 17T79 16M26 21Q47 17 68 21" fill="none" stroke="#edc08b" strokeWidth="0.7" />
+              <path d="M-5 6Q15 2 34 6T80 5M0 19Q23 14 43 19T79 18" fill="none" stroke="#27190f" strokeWidth="0.8" />
+              <ellipse cx="49" cy="9" rx="7" ry="1.6" fill="none" stroke="#2b1b13" strokeWidth="0.7" />
+              <path d="M46 9H51" stroke="#2b1b13" strokeWidth="0.6" />
+            </pattern>
+            <clipPath id={id('lid-clip')}><path d={openLid} /></clipPath>
+            <linearGradient id={id('coin')} x1="0" y1="0" x2="0.85" y2="1">
+              <stop offset="0" stopColor="#fff4bd" />
+              <stop offset="0.3" stopColor="#f7d365" />
+              <stop offset="0.48" stopColor="#ffe999" />
+              <stop offset="0.7" stopColor="#e8ae32" />
+              <stop offset="1" stopColor="#a86913" />
+            </linearGradient>
+            <radialGradient id={id('coin-face')} cx="0.35" cy="0.25" r="0.8">
+              <stop stopColor="#ffeaa0" />
+              <stop offset="0.6" stopColor="#efbd43" />
+              <stop offset="1" stopColor="#cc8c21" />
             </radialGradient>
             <radialGradient id={id('glow')}>
               <stop offset="0" stopColor="#ffd34d" stopOpacity="0.55" />
@@ -293,16 +338,47 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
             <ellipse className="flow-glow" cx={cx} cy={CHEST_Y + 46} rx={150} ry={62} fill={`url(#${id('glow')})`} />
           </g>
           <g data-chest data-open={open} className="flow-chest">
+            <ellipse cx={cx + 9} cy={CHEST_Y + CHEST_H + 4} rx={128} ry={12} fill={`url(#${id('shadow')})`} />
+            <path d={`M${CHEST_RIGHT - 3} ${BODY_TOP + 1}L${CHEST_RIGHT + 20} ${BODY_TOP - 16}V${CHEST_Y + CHEST_H - 19}Q${CHEST_RIGHT + 20} ${CHEST_Y + CHEST_H - 15} ${CHEST_RIGHT + 16} ${CHEST_Y + CHEST_H - 12}L${CHEST_RIGHT - 7} ${CHEST_Y + CHEST_H}Z`} fill={`url(#${id('side')})`} stroke="#35251b" strokeWidth="1.2" />
+            {[22, 40, 57].map((y) => (
+              <path key={y} d={`M${CHEST_RIGHT} ${BODY_TOP + y}L${CHEST_RIGHT + 18} ${BODY_TOP + y - 14}`} stroke="#1f1712" strokeOpacity="0.65" strokeWidth="1.2" />
+            ))}
+            <path d={`M${CHEST_RIGHT + 13} ${BODY_TOP - 8}V${CHEST_Y + CHEST_H - 12}`} stroke="#a17c42" strokeWidth="5" />
+            <path d={`M${CHEST_RIGHT + 11} ${BODY_TOP - 7}V${CHEST_Y + CHEST_H - 11}`} stroke="#e6c888" strokeOpacity="0.45" strokeWidth="0.8" />
+            <ellipse cx={CHEST_RIGHT + 8} cy={BODY_TOP + 20} rx="3.4" ry="8" fill="none" stroke="#211811" strokeWidth="4" />
+            <ellipse cx={CHEST_RIGHT + 8} cy={BODY_TOP + 19} rx="3.4" ry="8" fill="none" stroke="#b79559" strokeWidth="2" />
             {/* The inside of the chest, and the lid stood up behind it: both there only once it is open. */}
             <g className="flow-inside">
-              <rect x={CHEST_X + 6} y={BOX.top - 2} width={CHEST_W - 12} height={BODY_TOP + 10 - (BOX.top - 2)} rx={5} fill={`url(#${id('inner')})`} stroke="#3f2610" strokeWidth={1.2} />
-              <ellipse cx={cx} cy={BODY_TOP - 8} rx={90} ry={34} fill={`url(#${id('glow')})`} />
+              <path d={`M${CHEST_X + 12} ${hingeY - 1}H${CHEST_RIGHT - 8}L${CHEST_RIGHT + 20} ${BODY_TOP - 16}L${CHEST_RIGHT} ${BODY_TOP + 7}H${CHEST_X}Z`} fill={`url(#${id('inner')})`} stroke="#563a24" strokeWidth="2" />
+              <path d={`M${CHEST_X + 12} ${hingeY + 2}L${CHEST_X + 2} ${BODY_TOP}M${CHEST_RIGHT - 8} ${hingeY + 2}L${CHEST_RIGHT + 19} ${BODY_TOP - 16}L${CHEST_RIGHT - 2} ${BODY_TOP}`} fill="none" stroke={`url(#${id('rim')})`} strokeWidth="5" strokeLinejoin="round" />
+              <ellipse cx={cx} cy={BODY_TOP - 4} rx={86} ry={21} fill={`url(#${id('glow')})`} opacity="0.55" />
             </g>
-            <g className="flow-lid-in" style={{ transformOrigin: `${cx}px ${BOX.top - 2}px` }}>
-              <rect x={CHEST_X + 10} y={innerTop} width={CHEST_W - 20} height={BOX.top - 2 - innerTop} rx={7} fill={`url(#${id('lid')})`} stroke="#3f2610" strokeWidth={1.5} />
-              <rect x={CHEST_X + 22} y={innerTop + 5} width={CHEST_W - 44} height={BOX.top - 2 - innerTop - 9} rx={4} fill={`url(#${id('inner')})`} opacity={0.55} />
-              {bandXs.map((x) => (
-                <rect key={x} x={x - 4} y={innerTop} width={12} height={BOX.top - 2 - innerTop} rx={2} fill={`url(#${id('gold')})`} stroke="#8a6410" strokeWidth={1} />
+            <g className="flow-lid-in" style={{ transformOrigin: `${cx}px ${hingeY}px` }}>
+              <path d={openLid} transform="translate(5 3)" fill="#493022" stroke="#38261c" strokeWidth="3" />
+              <path d={openLid} fill={`url(#${id('lid')})`} stroke={`url(#${id('rim')})`} strokeWidth="4" />
+              <path d={lidPanel} fill={`url(#${id('lid-panel')})`} stroke="#3b271b" strokeWidth="2" />
+              <path d={lidPanel} fill={`url(#${id('grain')})`} opacity="0.25" />
+              <path d={`M${CHEST_X + 28} ${innerTop + 31}Q${cx} ${innerTop + 27} ${CHEST_RIGHT - 28} ${innerTop + 31}M${CHEST_X + 29} ${innerTop + 44}H${CHEST_RIGHT - 29}`} fill="none" stroke="#291b14" strokeOpacity="0.45" strokeWidth="1" />
+              <path d={`M${CHEST_X + 30} ${hingeY - 7}H${CHEST_RIGHT - 30}`} stroke="#d5a46a" strokeOpacity="0.55" strokeWidth="1" />
+              <g clipPath={`url(#${id('lid-clip')})`}>
+                {bandXs.map((x) => (
+                  <g key={x}>
+                    <path d={`M${x - 1} ${innerTop}Q${x - 4} ${innerTop + 26} ${x + 2} ${hingeY}H${x + 12}Q${x + 6} ${innerTop + 26} ${x + 10} ${innerTop}Z`} fill={`url(#${id('gold')})`} stroke="#7a592d" strokeWidth="0.8" />
+                    {[17, 47].map((y) => (
+                      <g key={y}>
+                        <circle cx={x + 5} cy={innerTop + y} r="1.8" fill="#674922" />
+                        <circle cx={x + 4.7} cy={innerTop + y - 0.4} r="1.1" fill="#e4c68a" />
+                      </g>
+                    ))}
+                  </g>
+                ))}
+              </g>
+              <path d={`M${CHEST_X + 13} ${hingeY - 1}H${CHEST_RIGHT - 13}`} stroke="#281c14" strokeWidth="3" />
+              {[CHEST_X + 38, CHEST_RIGHT - 55].map((x) => (
+                <g key={x}>
+                  <rect x={x} y={hingeY - 3} width="17" height="5" rx="2" fill={`url(#${id('rim')})`} stroke="#5f4423" strokeWidth="0.7" />
+                  <path d={`M${x + 5} ${hingeY - 3}V${hingeY + 2}M${x + 11} ${hingeY - 3}V${hingeY + 2}`} stroke="#694c2a" strokeWidth="0.7" />
+                </g>
               ))}
             </g>
 
@@ -310,25 +386,55 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
             <g data-coins className="flow-coins">
               {RADII.map((r, i) => (
                 <g key={i} data-coin ref={(el) => void (coinEls.current[i] = el)} opacity={0}>
-                  <circle r={r} fill={`url(#${id('coin')})`} stroke="#8a6410" strokeWidth={0.9} />
-                  <circle r={r * 0.68} fill="none" stroke="#a87a12" strokeOpacity={0.7} strokeWidth={0.8} />
-                  <text y={r * 0.36} textAnchor="middle" fontSize={r * 1.05} fontWeight={800} fill="#9a6a0c" aria-hidden="true">
+                  <circle cy={1.3} r={r} fill="#9b6018" stroke="#784711" strokeWidth="0.7" />
+                  <circle r={r} fill={`url(#${id('coin')})`} stroke="#c28a27" strokeWidth="0.7" />
+                  <circle r={r * 0.84} fill="none" stroke="#9e671b" strokeOpacity="0.65" strokeWidth="0.9" pathLength="80" strokeDasharray="1 3" />
+                  <circle r={r * 0.69} fill={`url(#${id('coin-face')})`} stroke="#fff0ab" strokeWidth="0.7" />
+                  <circle r={r * 0.61} fill="none" stroke="#b77c20" strokeOpacity="0.65" strokeWidth="0.5" />
+                  <text y={r * 0.35} textAnchor="middle" fontSize={r * 1.03} fontWeight={800} fill="#996019" stroke="#ffeaa1" strokeWidth="0.45" paintOrder="stroke" aria-hidden="true">
                     {sign}
                   </text>
-                  <path d={`M${-r * 0.62} ${-r * 0.34}A${r * 0.7} ${r * 0.7} 0 0 1 ${-r * 0.1} ${-r * 0.7}`} fill="none" stroke="#fff" strokeOpacity={0.75} strokeWidth={1.1} strokeLinecap="round" />
+                  <path d={`M${-r * 0.84} ${-r * 0.25}A${r * 0.88} ${r * 0.88} 0 0 1 ${r * 0.35} ${-r * 0.8}`} fill="none" stroke="#fff8d5" strokeOpacity="0.9" strokeWidth="1.1" strokeLinecap="round" />
+                  <path d={`M${r * 0.8} ${r * 0.3}A${r * 0.86} ${r * 0.86} 0 0 1 ${-r * 0.2} ${r * 0.84}`} fill="none" stroke="#9e6317" strokeWidth="0.8" strokeLinecap="round" />
                 </g>
               ))}
             </g>
 
             {/* The front of the chest. */}
             <rect x={CHEST_X} y={BODY_TOP} width={CHEST_W} height={CHEST_H - LID_H} rx={8} fill={`url(#${id('wood')})`} stroke="#3f2610" strokeWidth={1.5} />
+            <rect x={CHEST_X + 2} y={BODY_TOP + 4} width={CHEST_W - 4} height={CHEST_H - LID_H - 7} rx="6" fill={`url(#${id('grain')})`} opacity="0.22" />
             {/* The planks. */}
             <path d={`M${CHEST_X + 2} ${BODY_TOP + 22}H${CHEST_RIGHT - 2}M${CHEST_X + 2} ${BODY_TOP + 38}H${CHEST_RIGHT - 2}`} stroke="#3f2610" strokeOpacity={0.35} strokeWidth={1} />
-            {bandXs.map((x) => (
-              <rect key={x} x={x} y={BODY_TOP - 2} width={12} height={CHEST_H - LID_H + 2} rx={2} fill={`url(#${id('gold')})`} stroke="#8a6410" strokeWidth={1} />
+            {[23, 39].map((y) => (
+              <path key={y} d={`M${CHEST_X + 3} ${BODY_TOP + y}H${CHEST_RIGHT - 3}`} stroke="#d5a071" strokeOpacity="0.2" strokeWidth="0.7" />
             ))}
-            <rect x={CHEST_X} y={BODY_TOP - 2} width={CHEST_W} height={7} fill={`url(#${id('gold')})`} stroke="#8a6410" strokeWidth={1} />
+            <rect x={CHEST_X + 35} y={BODY_TOP + 16} width={CHEST_W - 70} height={39} rx="4" fill="#231b16" fillOpacity="0.48" stroke="#c39a62" strokeOpacity="0.45" strokeWidth="0.8" />
+            {[CHEST_X + 40, CHEST_RIGHT - 40].map((x) => (
+              <circle key={x} cx={x} cy={BODY_TOP + 35} r="1.1" fill="#c5a46d" />
+            ))}
+            {bandXs.map((x) => (
+              <g key={x}>
+                <rect x={x} y={BODY_TOP - 2} width={12} height={CHEST_H - LID_H + 2} rx={2} fill={`url(#${id('gold')})`} stroke="#8a6410" strokeWidth={1} />
+                <path d={`M${x + 2} ${BODY_TOP + 8}V${CHEST_Y + CHEST_H - 5}`} stroke="#fff0b7" strokeOpacity="0.6" strokeWidth="0.8" />
+                {[11, 48].map((y) => (
+                  <g key={y}>
+                    <circle cx={x + 6} cy={BODY_TOP + y} r="2" fill="#8b591c" />
+                    <circle cx={x + 5.6} cy={BODY_TOP + y - 0.5} r="1.2" fill="#ffdf8a" />
+                  </g>
+                ))}
+              </g>
+            ))}
+            <path d={`M${CHEST_X + 4} ${BODY_TOP + 8}H${CHEST_RIGHT - 4}`} stroke="#281b12" strokeOpacity="0.65" strokeWidth="3" />
+            <rect x={CHEST_X - 1} y={BODY_TOP - 3} width={CHEST_W + 2} height={9} rx="2" fill={`url(#${id('rim')})`} stroke="#77572c" strokeWidth="0.8" />
+            <path d={`M${CHEST_X + 2} ${BODY_TOP - 2}H${CHEST_RIGHT - 2}`} stroke="#fff0c8" strokeOpacity="0.8" strokeWidth="1" />
+            <path d={`M${CHEST_X + 6} ${CHEST_Y + CHEST_H - 4}H${CHEST_RIGHT - 6}`} stroke="#281c14" strokeWidth="4" strokeLinecap="round" />
+            <path d={`M${CHEST_X + 7} ${CHEST_Y + CHEST_H - 5}H${CHEST_RIGHT - 7}`} stroke="#c59a56" strokeOpacity="0.6" strokeWidth="1" strokeLinecap="round" />
+            {[CHEST_X + 1, CHEST_RIGHT - 17].map((x) => (
+              <path key={x} d={`M${x} ${CHEST_Y + CHEST_H - 14}V${CHEST_Y + CHEST_H - 6}Q${x} ${CHEST_Y + CHEST_H} ${x + 6} ${CHEST_Y + CHEST_H}H${x + 16}V${CHEST_Y + CHEST_H - 4}H${x + 6}V${CHEST_Y + CHEST_H - 14}Z`} fill={`url(#${id('gold')})`} stroke="#634821" strokeWidth="0.6" />
+            ))}
+            <rect x={cx - 11} y={BODY_TOP - 7} width={24} height={23} rx="5" fill="#291d12" opacity="0.45" transform="translate(1 1)" />
             <rect x={cx - 11} y={BODY_TOP - 8} width={22} height={22} rx={5} fill={`url(#${id('gold')})`} stroke="#8a6410" strokeWidth={1.2} />
+            <rect x={cx - 8} y={BODY_TOP - 5} width={16} height={16} rx="3" fill="none" stroke="#fff0b0" strokeOpacity="0.65" strokeWidth="0.8" />
             <circle cx={cx} cy={BODY_TOP + 1} r={3} fill="#4a2f10" />
             <rect x={cx - 1.2} y={BODY_TOP + 2} width={2.4} height={6} rx={1} fill="#4a2f10" />
             <text x={cx} y={BODY_TOP + 47} textAnchor="middle" fontSize={amountSize} fontWeight={800} fill="#fff4d6" style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -351,9 +457,9 @@ export function CategoryFlow({ totals, categoryById, currency, sourceLabel, onPi
               {sourceLabel}
             </text>
             {[
-              { x: 118, y: CHEST_Y - 5, r: 6, d: 0 },
-              { x: 240, y: CHEST_Y - 3, r: 5, d: 700 },
-              { x: 180, y: CHEST_Y - 10, r: 4, d: 1300 },
+              { x: 118, y: hingeY + 8, r: 3, d: 0 },
+              { x: 240, y: hingeY + 3, r: 2.5, d: 700 },
+              { x: 180, y: hingeY - 3, r: 2, d: 1300 },
             ].map((s) => (
               <path key={s.x} className="flow-twinkle" d={sparkle(s.x, s.y, s.r)} fill="#ffd34d" style={{ '--d': `${s.d}ms` } as CSSProperties} />
             ))}

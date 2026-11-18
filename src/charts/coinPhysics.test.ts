@@ -12,6 +12,7 @@ const inside = (world: CoinWorld, slack = 0.5) =>
 const lone = (over: Partial<CoinWorld['coins'][0]> = {}): CoinWorld => ({
   box,
   time: 1,
+  accumulator: 0,
   rand: seeded(1),
   coins: [{ x: 90, y: box.floor - 8, vx: 0, vy: 0, r: 8, a: 0, w: 0, at: 0, inside: true, ...over }],
 })
@@ -137,18 +138,36 @@ describe('coins: real physics', () => {
     step(w, 1 / 60, down)
     expect([last.x, last.y]).toEqual([x, y])
   })
+
+  it('keeps the same pour and shake trajectory at 30, 60 and 120 frames a second', () => {
+    const sample = (hz: number) => {
+      const w = pour(26, box)
+      for (let i = 0; i < hz * 3; i++) step(w, 1 / hz, { ...down, shake: i < hz * 2 ? 0.7 : 0 })
+      return w
+    }
+    const baseline = sample(60)
+    for (const hz of [30, 120]) {
+      const w = sample(hz)
+      expect(w.time).toBeCloseTo(baseline.time, 5)
+      w.coins.forEach((c, i) => {
+        expect(c.x).toBeCloseTo(baseline.coins[i].x, 3)
+        expect(c.y).toBeCloseTo(baseline.coins[i].y, 3)
+        expect(c.a).toBeCloseTo(baseline.coins[i].a, 3)
+      })
+    }
+  })
 })
 
 describe('coins: which way they are pulled', () => {
-  const held = (over: Partial<{ live: boolean; roll: number; pitch: number; push: number }> = {}) => pullFrom({ live: true, roll: 0, pitch: 0, push: 0, ...over })
+  const held = (over: Partial<{ live: boolean; roll: number; pitch: number; push: number; heave: number }> = {}) => pullFrom({ live: true, roll: 0, pitch: 0, push: 0, ...over })
 
   it('falls straight down with no sensor', () => {
     expect(pullFrom({ live: false, roll: 1, pitch: 1, push: 9 })).toEqual({ gx: 0, gy: GRAVITY })
   })
 
   it('pulls right when the phone is rolled with its right side down, and left the other way', () => {
-    expect(held({ roll: 0.5 }).gx).toBeGreaterThan(300)
-    expect(held({ roll: -0.5 }).gx).toBeLessThan(-300)
+    expect(held({ roll: 0.5 }).gx).toBeGreaterThan(200)
+    expect(held({ roll: -0.5 }).gx).toBeLessThan(-200)
     expect(held().gx).toBeCloseTo(0, 5)
   })
 
@@ -163,5 +182,17 @@ describe('coins: which way they are pulled', () => {
 
   it('has a push to the right throw the coins the other way', () => {
     expect(held({ push: 6 }).gx).toBeLessThan(-100)
+  })
+
+  it('projects gravity onto the screen using the orientation sensor rotation order', () => {
+    const pull = held({ roll: 0.5 })
+    const beta = 55 * Math.PI / 180
+    expect(pull.gx).toBeCloseTo(GRAVITY * Math.cos(beta) * Math.sin(0.5), 5)
+    expect(pull.gy).toBeCloseTo(GRAVITY * Math.sin(beta), 5)
+  })
+
+  it('makes an upward or downward phone movement push the coins in the opposite direction', () => {
+    expect(held({ heave: 8 }).gy).toBeLessThan(held().gy - 300)
+    expect(held({ heave: -8 }).gy).toBeGreaterThan(held().gy + 300)
   })
 })

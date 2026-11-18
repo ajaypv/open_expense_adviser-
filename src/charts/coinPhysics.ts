@@ -39,6 +39,8 @@ export interface CoinWorld {
   box: Box
   /** Seconds since the pour began. */
   time: number
+  /** Unsimulated time carried into the next fixed physics step. */
+  accumulator: number
   rand: () => number
 }
 
@@ -48,10 +50,10 @@ export const GRAVITY = 880
 export const PUSH_SCALE = GRAVITY / 9.8
 
 const RESTITUTION = 0.38
-const FRICTION = 0.5
+const FRICTION = 0.32
 /** Below this speed into a surface a coin does not bounce at all, so a pile can come to rest instead of trembling forever. */
 const BOUNCE_FLOOR = 40
-const SUBSTEPS = 5
+const STEP = 1 / 300
 const PASSES = 3
 const MAX_SPEED = 1400
 /** A little of the speed lost to the air and to the coins' own softness each second. */
@@ -100,7 +102,7 @@ export function pour(count: number, box: Box, seed = 7): CoinWorld {
     coins.push({ x, y, vx: (rand() - 0.5) * 50, vy: 40 + rand() * 60, r, a: rand() * Math.PI * 2, w: (rand() - 0.5) * 8, at: i * 0.05, inside: false })
   }
   // The pour starts a moment before the first coin, which is the time it takes the lid to lift.
-  return { coins, box, time: -0.4, rand }
+  return { coins, box, time: -0.4, accumulator: 0, rand }
 }
 
 /** The radii of the coins a pour of this many has, in order. */
@@ -186,16 +188,18 @@ export interface Pull {
 /** Moves the coins on by `dt` seconds. A long gap is taken as several short ones, so a slow frame cannot push a coin through another. */
 export function step(world: CoinWorld, dt: number, pull: Pull) {
   const { coins, box, rand } = world
-  const frame = Math.min(dt, 1 / 20)
-  const h = frame / SUBSTEPS
+  world.accumulator += Math.max(0, Math.min(dt, 1 / 20))
+  const steps = Math.floor((world.accumulator + 1e-10) / STEP)
+  world.accumulator = Math.max(0, world.accumulator - steps * STEP)
+  const h = STEP
   const shake = pull.shake ?? 0
-  for (let s = 0; s < SUBSTEPS; s++) {
+  for (let s = 0; s < steps; s++) {
     world.time += h
     const live = coins.filter((c) => c.at <= world.time)
+    // Inertia moves the whole pile together; contacts, not unrelated forces, scatter individual coins.
+    const ax = pull.gx + (shake > 0 ? (rand() * 2 - 1) * shake * 2600 : 0)
+    const ay = pull.gy + (shake > 0 ? (rand() * 2 - 1) * shake * 2200 - shake * 1000 : 0)
     for (const c of live) {
-      // A shake is the box thrown about: every coin feels it, each a little differently.
-      const ax = pull.gx + (shake > 0 ? (rand() * 2 - 1) * shake * 5200 : 0)
-      const ay = pull.gy + (shake > 0 ? (rand() * 2 - 1) * shake * 4200 - shake * 1400 : 0)
       c.vx += ax * h
       c.vy += ay * h
       const drag = Math.max(0, 1 - DRAG * h)
@@ -251,14 +255,14 @@ export function worstOverlap(world: CoinWorld): number {
  * Which way the coins are pulled, from how the phone is held: gravity along the screen is what lies along the screen of the pull
  * of the earth, so rolled to the right the coins slide right, and tipped down they fall. `roll` and `beta` are in radians (the
  * roll is the sideways tilt, beta how far the phone is from lying flat), `push` is how hard the phone is being pushed to the right in
- * m/s², which the coins feel the other way, and `live` whether any sensor is sending. With no sensor they simply fall.
+ * m/s², which the coins feel the other way; `heave` is the push down the screen. With no sensor they simply fall.
  */
-export function pullFrom(tilt: { live: boolean; roll: number; pitch: number; push: number }): Pull {
+export function pullFrom(tilt: { live: boolean; roll: number; pitch: number; push: number; heave?: number }): Pull {
   if (!tilt.live) return { gx: 0, gy: GRAVITY }
   const READING = (55 * Math.PI) / 180
   const beta = tilt.pitch + READING
   // Never so little that the coins hover when a phone is read lying back.
-  const gy = GRAVITY * Math.max(0.3, Math.min(1, Math.sin(Math.max(0, beta)) * Math.cos(tilt.roll)))
-  const gx = GRAVITY * Math.sin(tilt.roll) - tilt.push * PUSH_SCALE * 0.6
+  const gy = GRAVITY * Math.max(0.3, Math.sin(beta)) - (tilt.heave ?? 0) * PUSH_SCALE * 0.6
+  const gx = GRAVITY * Math.cos(beta) * Math.sin(tilt.roll) - tilt.push * PUSH_SCALE * 0.6
   return { gx, gy }
 }

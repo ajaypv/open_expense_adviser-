@@ -3,6 +3,7 @@ import '../test/dom'
 import { act, fireEvent, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DuckPond } from './DuckPond'
+import { Bottle } from './Water'
 import { tilt } from './useTilt'
 
 const realMatchMedia = window.matchMedia
@@ -55,6 +56,32 @@ describe('DuckPond', () => {
     expect(duck()).not.toBeNull()
     expect(pond.querySelector('polygon')).not.toBeNull()
     expect(pond.textContent).toBe('')
+  })
+
+  describe('The water shared with the timeline bar', () => {
+    it('pours in smoothly, follows the phone tilt, and keeps the category pieces inside the water', () => {
+      vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(320)
+      vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(32)
+      const { container, unmount } = render(<Bottle><span data-piece="food" /></Bottle>)
+      const water = container.querySelector('[data-water]')!.firstElementChild as HTMLElement
+      const foam = container.querySelectorAll('polyline')[1]
+      const points = () => foam.getAttribute('points')!.split(' ').map((p) => p.split(',').map(Number))
+      play(2)
+      expect(points().every(([, y]) => y === 32)).toBe(true)
+      play(240)
+      expect(points().some(([, y]) => y < 16)).toBe(true)
+      expect(water.querySelector('[data-piece="food"]')).not.toBeNull()
+      const initial = water.style.clipPath
+      orient(30)
+      play(120)
+      expect(water.style.clipPath).not.toBe(initial)
+      const tilted = points()
+      expect(tilted.at(-1)![1]).toBeLessThan(tilted[0][1])
+      expect(tilted.every(([x, y]) => x >= 0 && x <= 320 && y >= 0 && y <= 32)).toBe(true)
+      for (const [x, y] of tilted) expect(water.style.clipPath).toContain(`${x.toFixed(1)}px ${y.toFixed(1)}px`)
+      unmount()
+      expect(tilt.live).toBe(false)
+    })
   })
 
   it('drops in when it first comes into view, and lands on the water with a splash', () => {
@@ -159,6 +186,36 @@ describe('DuckPond', () => {
     expect(tilt.live).toBe(false)
   })
 
+  it('keeps a wake on the surface and spreads a fading ring from a landing', () => {
+    const { container } = render(<DuckPond />)
+    orient(0)
+    play(240)
+    const wake = container.querySelector('[data-wake]')!
+    const ring = container.querySelector('[data-landing-ripple]')!
+    expect(wake).not.toBeNull()
+    expect(ring).not.toBeNull()
+    const before = wake.getAttribute('transform')
+    play(30)
+    expect(wake.getAttribute('transform')).not.toBe(before)
+    fireEvent.pointerDown(container.querySelector('[data-duck-pond]')!)
+    let landed = false
+    for (let i = 0; i < 120; i++) {
+      play(1)
+      if (Number(ring.getAttribute('opacity')) > 0.1) {
+        landed = true
+        break
+      }
+    }
+    expect(landed).toBe(true)
+    const radius = Number(ring.getAttribute('rx'))
+    const opacity = Number(ring.getAttribute('opacity'))
+    play(15)
+    expect(Number(ring.getAttribute('rx'))).toBeGreaterThan(radius)
+    expect(Number(ring.getAttribute('opacity'))).toBeLessThan(opacity)
+    play(120)
+    expect(ring).toHaveAttribute('opacity', '0.00')
+  })
+
   it('listens to the sensors only while it is on the page', () => {
     const { unmount } = render(<DuckPond />)
     play(5)
@@ -177,5 +234,7 @@ describe('DuckPond', () => {
     expect(tilt.live).toBe(false)
     expect(where().x).toBe(160)
     expect(visibleDrops()).toBe(0)
+    expect(document.querySelector('[data-landing-ripple]')).toHaveAttribute('opacity', '0')
+    expect(document.querySelector('[data-wake]')).toHaveAttribute('transform', 'translate(160 73) rotate(0)')
   })
 })

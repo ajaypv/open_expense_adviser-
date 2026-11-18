@@ -129,7 +129,7 @@ describe('Intro: the cards', () => {
   it('has the duck of an empty day on one of the cards, and the ribbons of the money flow on another', () => {
     mount()
     expect(document.body.textContent).toContain('Nothing spent yet')
-    expect(document.querySelector('.intro-card ellipse[fill="#FFD23F"]')).not.toBeNull()
+    expect(document.querySelector('.intro-card [data-duck-eye]')).not.toBeNull()
     expect(document.querySelector('.intro-card path[stroke="#34d399"]')).not.toBeNull()
   })
 

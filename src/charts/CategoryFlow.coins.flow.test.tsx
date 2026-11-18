@@ -37,6 +37,12 @@ function play(n: number) {
   })
 }
 const orient = (gamma: number, beta = 55) => window.dispatchEvent(Object.assign(new Event('deviceorientation'), { gamma, beta, alpha: 0 }))
+const rollPhone = (degrees: number) => {
+  const roll = degrees * Math.PI / 180
+  const reading = 55 * Math.PI / 180
+  // Rotating a held screen sideways changes both Euler angles, not gamma alone.
+  orient(Math.atan2(Math.sin(reading) * Math.sin(roll), Math.cos(reading)) * 180 / Math.PI, Math.asin(Math.sin(reading) * Math.cos(roll)) * 180 / Math.PI)
+}
 const motion = (x: number, y = 0, z = 0) => window.dispatchEvent(Object.assign(new Event('devicemotion'), { acceleration: { x, y, z } }))
 const mount = (over: Record<string, unknown> = {}) => render(<CategoryFlow totals={totals} categoryById={categoryById} currency="INR" sourceLabel="Spent in October" {...over} />)
 const root = () => document.querySelector<HTMLElement>('[data-flow]')!
@@ -114,11 +120,11 @@ describe('CategoryFlow: gold coins with real physics', () => {
     orient(0)
     play(360)
     const level = meanX()
-    orient(45)
+    rollPhone(45)
     play(240)
     const right = meanX()
     expect(right).toBeGreaterThan(level + 12)
-    orient(-45)
+    rollPhone(-45)
     play(300)
     expect(meanX()).toBeLessThan(right - 25)
   })
@@ -129,7 +135,8 @@ describe('CategoryFlow: gold coins with real physics', () => {
     play(360)
     const rest = coins()
     for (let i = 0; i < 10; i++) {
-      motion(i % 2 ? 24 : -24, 9, 5)
+      const direction = i % 2 ? 1 : -1
+      motion(direction * 24, direction * 9, direction * 5)
       play(2)
     }
     const thrown = coins()

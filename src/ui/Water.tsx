@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { tilt, watchTilt } from './useTilt'
-import { COLUMNS, REST_LEVEL, idleLean, leanFor, pour, stepLean, surfaceLine, type Lean } from './waterSurface'
+import { readTilt, watchTilt } from './useTilt'
+import { COLUMNS, REST_LEVEL, idleLean, leanFor, pour, stepLean, surfaceLine, waveLine, type Lean } from './waterSurface'
 
 /** Where the surface sits, as a share of the height, before anything has been worked out (and for reduced motion): level, a little under the top. */
 const FLAT = `inset(${((1 - REST_LEVEL) * 100).toFixed(1)}% 0 0 0)`
@@ -50,20 +50,22 @@ export function Bottle({ children }: { children: ReactNode }) {
         lean = { angle: 0, speed: 2.4 }
       }
       const level = REST_LEVEL * height * pour((seconds - began - WAIT) / POUR)
-      lean = stepLean(lean, tilt.live ? leanFor(tilt.roll, tilt.push) : idleLean(seconds), dt)
+      const sensors = readTilt(now)
+      lean = stepLean(lean, sensors.live ? leanFor(sensors.roll, sensors.push) : idleLean(seconds), dt)
       // Waves ride on the surface: small when calm, taller while the water is rocking hard.
       const swell = 0.9 + Math.min(Math.abs(lean.speed), 2.5) * 0.9
       const line = surfaceLine(width, height, level, lean.angle)
-      const wave = (i: number, shift: number, scale: number) => Math.min(height, Math.max(0, line[i] + Math.sin((i / COLUMNS) * Math.PI * 2 * Math.max(1, width / 40) + seconds * 3 + shift) * swell * scale))
+      const waves = waveLine(line, height, seconds, swell)
+      const ripples = waveLine(line, height, seconds, swell * 0.65, 2)
       const top: string[] = []
       const foamPoints: string[] = []
       const ripplePoints: string[] = []
       for (let i = 0; i <= COLUMNS; i++) {
         const x = ((i / COLUMNS) * width).toFixed(1)
-        const y = wave(i, 0, 1)
+        const y = waves[i]
         top.push(`${x}px ${y.toFixed(1)}px`)
         foamPoints.push(`${x},${y.toFixed(1)}`)
-        ripplePoints.push(`${x},${Math.min(height, wave(i, 2, 0.8) + 3).toFixed(1)}`)
+        ripplePoints.push(`${x},${Math.min(height, ripples[i] + 3).toFixed(1)}`)
       }
       inside.style.clipPath = `polygon(${top.join(',')},${width}px ${height}px,0px ${height}px)`
       foam.current?.setAttribute('points', foamPoints.join(' '))
@@ -99,13 +101,15 @@ export function Bottle({ children }: { children: ReactNode }) {
 
   return (
     <span ref={box} data-water className="relative block h-full w-full">
-      <span ref={water} className="block h-full" style={{ clipPath: FLAT }}>
+      <span ref={water} className="relative block h-full" style={{ clipPath: FLAT }}>
         {children}
+        <span aria-hidden="true" className="water-depth pointer-events-none absolute inset-0" />
       </span>
+      <span aria-hidden="true" className="water-glass pointer-events-none absolute inset-0 rounded-full" />
       {/* A thin light line along the surface, and a fainter one just under it, so it reads as water and not as a cut edge. */}
       <svg aria-hidden="true" className="pointer-events-none absolute inset-0 size-full overflow-visible">
-        <polyline ref={ripple} fill="none" stroke="white" strokeOpacity="0.18" strokeWidth="1" strokeLinejoin="round" />
-        <polyline ref={foam} fill="none" stroke="white" strokeOpacity="0.5" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+        <polyline ref={ripple} fill="none" stroke="white" strokeOpacity="0.22" strokeWidth="1" strokeLinejoin="round" />
+        <polyline ref={foam} fill="none" stroke="white" strokeOpacity="0.65" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round" />
       </svg>
     </span>
   )

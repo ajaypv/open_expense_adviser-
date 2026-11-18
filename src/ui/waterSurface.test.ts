@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { COLUMNS, MAX_LEAN, REST_LEVEL, idleLean, leanFor, pour, stepLean, surfaceLine } from './waterSurface'
+import { COLUMNS, MAX_LEAN, REST_LEVEL, idleLean, leanFor, pour, stepLean, surfaceLine, waveLine } from './waterSurface'
 
 const W = 100
 const H = 32
@@ -48,6 +48,39 @@ describe('surfaceLine', () => {
 
   it('does not lean further than the limit', () => {
     expect(surfaceLine(W, H, 20, 3)).toEqual(surfaceLine(W, H, 20, MAX_LEAN))
+  })
+})
+
+describe('surface waves', () => {
+  it('travels smoothly without sharp corners, even across a wide pond', () => {
+    const line = surfaceLine(440, H, 20, 0)
+    const first = waveLine(line, H, 0, 3)
+    const later = waveLine(line, H, 0.5, 3)
+    expect(later).not.toEqual(first)
+    expect(Math.max(...first) - Math.min(...first)).toBeGreaterThan(2)
+    for (let i = 1; i < first.length - 1; i++) {
+      expect(Math.abs(first[i - 1] - 2 * first[i] + first[i + 1])).toBeLessThan(0.5)
+      expect(Math.abs(later[i] - first[i])).toBeLessThan(4)
+    }
+  })
+
+  it('keeps waves inside tilted water and never creates water in an empty bottle', () => {
+    for (const depth of [0, 1, 20, H]) {
+      for (const lean of [-1, 0, 1]) {
+        const line = surfaceLine(W, H, depth, lean)
+        const waves = waveLine(line, H, 3, 8)
+        expect(waves.every((y) => y >= 0 && y <= H)).toBe(true)
+        if (depth === 0 || depth === H) expect(waves).toEqual(line)
+      }
+    }
+  })
+
+  it('can draw a quieter layer out of phase without changing the original surface', () => {
+    const line = surfaceLine(W, H, 20, 0)
+    const copy = [...line]
+    expect(waveLine(line, H, 1, 0)).toEqual(line)
+    expect(waveLine(line, H, 1, 2, 2)).not.toEqual(waveLine(line, H, 1, 2))
+    expect(line).toEqual(copy)
   })
 })
 

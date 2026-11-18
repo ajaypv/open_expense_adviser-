@@ -5,7 +5,7 @@
  */
 
 /** How many columns the surface is worked out in. */
-export const COLUMNS = 24
+export const COLUMNS = 64
 
 /** How full the bar is at rest, as a share of its height: the rest is air, so the water has room to move. */
 export const REST_LEVEL = 0.72
@@ -43,6 +43,18 @@ export function surfaceLine(width: number, height: number, depth: number, lean: 
   }
   const mid = (lo + hi) / 2
   return Array.from({ length: n + 1 }, (_, i) => at(mid, i))
+}
+
+/** Long swells and smaller counter-waves, fading out where the water meets the floor or ceiling. */
+export function waveLine(line: number[], height: number, seconds: number, swell: number, phase = 0): number[] {
+  return line.map((y, i) => {
+    const x = (i / (line.length - 1)) * Math.PI * 2
+    const wave = Math.sin(x * 1.5 - seconds * 1.8 + phase) * 0.65
+      + Math.sin(x * 2.5 + seconds * 1.25 + phase) * 0.25
+      + Math.sin(x * 4 - seconds * 2.4 + phase) * 0.1
+    const room = Math.min(1, y / 4, (height - y) / 4)
+    return clamp(y + wave * swell * room, 0, height)
+  })
 }
 
 /** A spring that is let go loosely, so it overshoots and rocks a few times before it settles: the water's lean. */

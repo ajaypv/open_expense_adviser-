@@ -1,5 +1,5 @@
 import { useEffect, useRef, type RefObject } from 'react'
-import { tilt, watchTilt } from './useTilt'
+import { readTilt, watchTilt, type Tilt } from './useTilt'
 
 const clamp = (n: number, low: number, high: number) => Math.min(high, Math.max(low, n))
 const motionAllowed = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: no-preference)').matches === true
@@ -14,6 +14,7 @@ export interface SwayState {
   shake: number
   /** The clock of the frame, in seconds. */
   seconds: number
+  sensors: Readonly<Tilt>
 }
 
 interface Options {
@@ -55,20 +56,21 @@ export function useSway(box: RefObject<HTMLElement | null>, { active = true, key
       const seconds = now / 1000
       const dt = last ? Math.min(seconds - last, 0.1) : 1 / 60
       last = seconds
-      const aimX = tilt.live ? clamp(-tilt.roll / 0.5 - tilt.push / 14, -1.2, 1.2) : idle ? Math.sin(seconds * 0.7) * 0.35 : 0
-      const aimY = tilt.live ? clamp(tilt.pitch / 0.5, -1, 1) : idle ? Math.cos(seconds * 0.5) * 0.2 : 0
-      const ease = Math.min(1, dt * 6)
+      const sensors = readTilt(now)
+      const aimX = sensors.live ? clamp(-sensors.roll / 0.5 - sensors.push / 14, -1.2, 1.2) : idle ? Math.sin(seconds * 0.7) * 0.35 : 0
+      const aimY = sensors.live ? clamp(sensors.pitch / 0.5 - sensors.heave / 14, -1, 1) : idle ? Math.cos(seconds * 0.5) * 0.2 : 0
+      const ease = 1 - Math.exp(-dt * 6)
       x += (aimX - x) * ease
       y += (aimY - y) * ease
       // A shake is a jolt well above carrying the phone about; it throws things and fades.
-      if (tilt.jolt > 9 && now - tilt.movedAt < 250) shake = Math.max(shake, clamp((tilt.jolt - 9) / 10, 0.3, 1))
+      if (sensors.jolt > 9 && now - sensors.movedAt < 250) shake = Math.max(shake, clamp((sensors.jolt - 9) / 10, 0.3, 1))
       shake *= Math.pow(0.05, dt)
       if (shake < 0.01) shake = 0
       el.style.setProperty('--tx', x.toFixed(3))
       el.style.setProperty('--ty', y.toFixed(3))
       el.style.setProperty('--shake', shake.toFixed(3))
       el.style.setProperty('--jx', (Math.sin(seconds * 70) * shake * 4).toFixed(2))
-      onFrame?.({ x, y, shake, seconds })
+      onFrame?.({ x, y, shake, seconds, sensors })
     }
 
     const run = () => {

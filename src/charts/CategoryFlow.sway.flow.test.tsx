@@ -82,14 +82,18 @@ describe('CategoryFlow: the lines hang from the chest and sway with the phone', 
     expect(vars().ty).toBeLessThan(-0.4)
   })
 
-  it('lets a push (the accelerometer) swing them back, the way a rope lags', () => {
+  it('lets a push swing them back, then settles when the sensor stops sending movement', () => {
     mount()
     orient(0)
     play(60)
     const before = vars().tx
-    for (let i = 0; i < 10; i++) motion(8)
-    play(60)
+    for (let i = 0; i < 30; i++) {
+      motion(8)
+      play(1)
+    }
     expect(vars().tx).toBeLessThan(before - 0.2)
+    play(120)
+    expect(vars().tx).toBeCloseTo(before, 2)
   })
 
   it('keeps where the lines leave the chest and where they land, and swings only the middle', () => {

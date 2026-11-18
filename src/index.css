@@ -1258,8 +1258,17 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
   }
 }
 
-/* Today's bar is a little bottle of water; it is drawn in src/ui/Water.tsx (a clip and a surface line worked out every frame from how the
-   phone is held), so it has no styles of its own. */
+/* Reflections stay inside the water clip, preserving the category colours underneath. */
+.water-depth {
+  background:
+    linear-gradient(115deg, transparent 15%, #fff3 32%, transparent 46%),
+    linear-gradient(to bottom, #fff4, transparent 48%, #082e542e);
+  box-shadow: inset 0 -2px 4px #082e5420;
+}
+.water-glass {
+  box-shadow: inset 0 1px 1px #ffffff24, inset 0 -1px 2px #082e541a;
+  background: linear-gradient(to bottom, #ffffff12, transparent 30%);
+}
 
 /* ---------- Your year as reels ---------- */
 
