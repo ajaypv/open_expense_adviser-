@@ -1352,109 +1352,131 @@ html:active-view-transition-type(backward)::view-transition-new(tab) {
 
 /* ---------- The first screen a new person sees ---------- */
 
-/* Little cards flow from the right to the left in four lanes, each at its own pace (--t), the one behind slower and smaller; a lane's content
-   is the same sequence drawn four times, so moving a quarter of it along lands exactly where it began, and each lane starts part of the way
-   round (--o, a share of the cycle) so the cards are not in step. Each card also bobs a little on its own. When the screen opens each lane
-   slides in from the right, one after another (--e), and the mark pops. The arrow button leans into its arrow now and then, and a ring
-   spreads from it, to say it is the way on. */
-@keyframes intro-drift {
-  to {
-    transform: translateX(-25%);
-  }
-}
-@keyframes intro-bob {
-  from {
-    transform: translateY(-7px) rotate(-1.2deg);
-  }
-  to {
-    transform: translateY(9px) rotate(1.2deg);
-  }
-}
-@keyframes intro-in {
-  from {
-    opacity: 0;
-  }
-}
-@keyframes intro-enter {
-  from {
-    opacity: 0;
-    transform: translateX(70%);
-  }
-}
 @keyframes intro-rise {
   from {
     opacity: 0;
     transform: translateY(1rem);
   }
 }
-@keyframes intro-pop {
+@keyframes intro-unfold {
   from {
     opacity: 0;
-    transform: scale(0.6) rotate(-25deg);
+    transform: translateY(12px) scale(0.88) rotate(-30deg);
   }
 }
-@keyframes intro-nudge {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  50% {
-    transform: translateX(6px);
-  }
-}
-@keyframes intro-halo {
+@keyframes intro-bloom {
   from {
-    opacity: 0.5;
-    transform: scale(1);
-  }
-  to {
     opacity: 0;
-    transform: scale(1.65);
+    transform: scale(0.7);
   }
 }
-.intro-lane {
-  animation: intro-drift var(--t, 90s) linear calc(var(--t, 90s) * var(--o, 0)) infinite;
+.app-mark {
+  display: block;
+  flex-shrink: 0;
+  background: currentColor;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
 }
-.intro-card {
-  animation: intro-bob var(--b, 7s) ease-in-out var(--bd, 0s) infinite alternate;
+.intro-welcome {
+  display: flex;
+  min-height: 100dvh;
+  max-width: 40rem;
+  margin-inline: auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: max(1.5rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right)) max(1.75rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
 }
-.intro-field {
-  animation: intro-in 0.8s ease-out both;
+.intro-topbar {
+  display: flex;
+  min-height: 3rem;
+  flex-shrink: 0;
+  justify-content: center;
 }
-.intro-enter {
-  animation: intro-enter 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) var(--e, 0ms) both;
-  /* The phone moves the lanes: the field has --tx and --ty (about -1 to 1) and --jx (a shaking jitter) written on it, and each lane takes
-     them in proportion to its depth (--k), so the nearest slides furthest. The separate translate does not meet the flowing and arriving. */
-  translate: calc((var(--tx, 0) * 16px + var(--jx, 0) * 1px) * var(--k, 1)) calc(var(--ty, 0) * 9px * var(--k, 1));
+.intro-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-block: clamp(0.5rem, 3vh, 2rem);
+}
+.intro-emblem {
+  position: relative;
+  display: grid;
+  width: 14rem;
+  height: 13.5rem;
+  margin-bottom: 1rem;
+  place-items: center;
+}
+.intro-aura {
+  position: absolute;
+  inset: -2rem;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 32% 42%, color-mix(in oklab, var(--s3) 18%, transparent), transparent 62%),
+    radial-gradient(ellipse at 70% 65%, color-mix(in oklab, var(--s4) 14%, transparent), transparent 60%);
+  animation: intro-bloom 1.4s ease-out both;
+}
+.intro-eyebrow {
+  font-size: 0.875rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+.intro-title {
+  margin-top: 1rem;
+  font-size: clamp(2rem, 8vw, 3.15rem);
+  font-weight: 550;
+  line-height: 1.1;
+  letter-spacing: -0.055em;
+}
+.intro-description {
+  margin-top: 1.25rem;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+.intro-actions {
+  width: 100%;
+  max-width: 20rem;
+  flex-shrink: 0;
+  animation-delay: 0.3s;
 }
 .intro-rise {
   animation: intro-rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s both;
 }
 .intro-mark {
-  animation: intro-pop 0.7s cubic-bezier(0.2, 1.3, 0.3, 1) 0.15s both;
+  position: relative;
+  animation: intro-unfold 1.1s cubic-bezier(0.16, 1, 0.3, 1) both, brand-turn 6s linear infinite;
 }
-.intro-go::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  border: 2px solid var(--btn);
-  pointer-events: none;
-  animation: intro-halo 2.4s ease-out 1.4s infinite backwards;
+.intro-go {
+  transition: transform 180ms ease, box-shadow 180ms ease;
 }
-.intro-go > svg {
-  animation: intro-nudge 1.6s ease-in-out 1.4s infinite;
+.intro-go:hover {
+  box-shadow: 0 6px 20px color-mix(in oklab, var(--ink) 12%, transparent);
+}
+.intro-go:active {
+  transform: scale(0.98);
+}
+@media (max-height: 700px) {
+  .intro-emblem {
+    height: 9rem;
+  }
+  .intro-title {
+    font-size: clamp(2rem, 8vw, 2.6rem);
+  }
+  .intro-content {
+    padding-block: 0.5rem;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .intro-lane,
-  .intro-card,
-  .intro-field,
-  .intro-enter,
   .intro-rise,
   .intro-mark,
-  .intro-go::after,
-  .intro-go > svg {
+  .intro-aura {
     animation: none;
+  }
+  .intro-go {
+    transition: none;
+    transform: none;
   }
 }
 

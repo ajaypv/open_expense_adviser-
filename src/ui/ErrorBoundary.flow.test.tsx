@@ -25,14 +25,16 @@ describe('ErrorBoundary', () => {
   })
 
   it('shows a message, and says the data is safe, instead of a blank screen', () => {
+    const onError = vi.fn()
     render(
-      <ErrorBoundary>
+      <ErrorBoundary onError={onError}>
         <Boom />
       </ErrorBoundary>,
     )
     expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong')
     expect(screen.getByRole('alert')).toHaveTextContent('Your data is safe on this device')
     expect(screen.getByRole('button', { name: 'Reload the app' })).toBeInTheDocument()
+    expect(onError).toHaveBeenCalledOnce()
   })
 
   it('reloads the page when asked', async () => {

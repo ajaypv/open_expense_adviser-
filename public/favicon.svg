@@ -1,17 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" color="#f4f1e8">
+  <rect width="512" height="512" rx="112" fill="#173f35"/>
+  <svg x="0" y="0" width="512" height="512" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
   <defs>
-    <radialGradient id="bg" cx="0.3" cy="0.22" r="0.95">
-      <stop offset="0" stop-color="#2a2925"/>
-      <stop offset="0.55" stop-color="#151514"/>
-      <stop offset="1" stop-color="#0d0d0d"/>
-    </radialGradient>
+    <path id="fold" d="M64 22C83.8 22 100.4 35.7 104.8 54.2C106 59.2 102.2 64 97 64H78"/>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <g transform="translate(5 5)">
-    <circle cx="256" cy="256" r="112" fill="none" stroke="#3987e5" stroke-width="80" stroke-linecap="butt" stroke-dasharray="258.41 445.30" stroke-dashoffset="-4.50" transform="translate(0.00 0.00) rotate(-90 256 256)"/>
-    <circle cx="256" cy="256" r="112" fill="none" stroke="#199e70" stroke-width="80" stroke-linecap="butt" stroke-dasharray="159.89 543.82" stroke-dashoffset="-271.91" transform="translate(0.00 0.00) rotate(-90 256 256)"/>
-    <circle cx="256" cy="256" r="112" fill="none" stroke="#c98500" stroke-width="80" stroke-linecap="butt" stroke-dasharray="103.59 600.12" stroke-dashoffset="-440.80" transform="translate(0.00 0.00) rotate(-90 256 256)"/>
-    <circle cx="256" cy="256" r="112" fill="none" stroke="#d95926" stroke-width="80" stroke-linecap="butt" stroke-dasharray="145.82 557.90" stroke-dashoffset="-553.40" transform="translate(-19.12 -23.12) rotate(-90 256 256)"/>
-    <circle cx="256" cy="256" r="34" fill="#f0efec"/>
+  <g fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <use href="#fold"/>
+    <use href="#fold" transform="rotate(120 64 64)"/>
+    <use href="#fold" transform="rotate(240 64 64)"/>
   </g>
+</svg>
+
 </svg>

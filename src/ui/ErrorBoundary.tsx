@@ -4,6 +4,8 @@ interface Props {
   children: ReactNode
   /** Reloads the page; replaceable so tests don't have to. */
   onReload?: () => void
+  /** Exposes the recovery screen if startup artwork is still covering it. */
+  onError?: () => void
 }
 
 /**
@@ -19,6 +21,7 @@ export class ErrorBoundary extends Component<Props, { failed: boolean }> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('The app stopped:', error, info.componentStack)
+    this.props.onError?.()
   }
 
   render() {

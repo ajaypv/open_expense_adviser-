@@ -9,6 +9,7 @@ Type what you spent or received in the bar at the bottom, as you would say it: `
 - Chat-bar logging with an offline parser, plus a full add form
 - Money sent and received, with an estimated balance that stays hidden until you reveal it
 - Home, Activity, Insights and Settings screens, in light and dark themes
+- A cinematic launch: the original three-fold logo fades/scales in, expands into a full-screen green light bloom, then dissolves into the ready app. A cold launch takes about 2.5 seconds; repeat loads in the same tab and reduced-motion users get a short fade. The minimal welcome keeps its clearly labelled Continue button.
 - Home's Timeline has softly layered water and a shaded duck on quiet days, with a floating wake and landing ripples when tapped. Insights has detailed gold coins in a dimensional wood-and-brass treasure chest with a raised, hinged lid, wood grain and soft shadows; tilt your phone or drag through the coins to move them. These illustrations stay still with reduced motion enabled.
 - Spending by category as bubbles sized by share, a donut with a legend, or a ranked list; the last 12 months as hatched pill bars with the change from the month before
 - Spending pace (scroll through months and compare up to three), daily, category and weekday charts
@@ -76,6 +77,34 @@ npm run dev        # development
 npm test           # unit tests
 npm run build && npm run preview   # production build, installable as a PWA
 ```
+
+### App identity
+
+The original three-fold logo lives in [`public/brand-mark.svg`](public/brand-mark.svg). The welcome screen uses that vector directly in the current theme's ink. After editing it, run `npm run icons:generate` to regenerate the cream-on-green favicon, 192/512 px app icons, 512 px maskable icon, and 180 px Apple touch icon. The local SVG renderer is a development dependency; no remote assets or rendering services are used.
+
+The maskable mark fits inside the central 80%-diameter safe circle. Maskable and Apple icons have opaque square backgrounds so the operating system can apply its own shape. Installed icons may take time to refresh after a PWA update, or require reinstalling the shortcut.
+
+### Launch animation
+
+The web splash is in [`index.html`](index.html), outside the React root so it does not restart when JavaScript mounts. [`src/ui/launchSplash.ts`](src/ui/launchSplash.ts) coordinates it with the first ready screen, including onboarding and the PIN lock. The bloom uses a small gradient texture and only animates transforms/opacity, targeting 60fps without per-frame JavaScript or layout changes.
+
+Tweak these commented CSS variables on `.launch-screen` in `index.html`:
+
+| Variable | Default | Controls |
+| --- | --- | --- |
+| `--launch-intro` | `1100ms` | Logo reveal and brief hold (reveal completes at 70%) |
+| `--launch-expand` | `950ms` | Logo-to-full-screen bloom |
+| `--launch-dissolve` | `450ms` | Crossfade into the app |
+| `--launch-short` | `180ms` | Warm-load/reduced-motion fade |
+| `--launch-reveal-ease`, `--launch-expand-ease`, `--launch-fade-ease` | See CSS | Reveal, expansion and dissolve easing |
+| `--launch-primary`, `--launch-secondary`, `--launch-glow`, `--launch-logo` | Forest, green, sage, cream | Brand artwork and bloom colors |
+| `--launch-bg`, `--launch-ink` | Theme-aware | Starting background and wordmark |
+
+Durations accept `ms` or `s`. Replace the shared vector in `public/brand-mark.svg` to change the logo and regenerate icons as above. The animation covers portrait/landscape corners, stays centered away from notches, and restores keyboard focus after dissolving. A slow startup holds the logo until the real first screen is ready, so total time can exceed 2.5 seconds on a slow device. Errors expose the recovery screen immediately; a stalled startup removes the overlay after 12 seconds with a console warning.
+
+Successful launches set only a `launch-complete` flag in session storage. Reloading the same tab uses the short fade; switching back to an already open app does not replay the splash. To preview a cold launch, use an isolated browser profile/tab or remove only that session-storage flag, not app data. If session storage is unavailable, the full sequence still works and reports a warning.
+
+Validation: `npm test -- src/ui/launchSplash.test.ts src/ui/ErrorBoundary.flow.test.tsx src/ui/Intro.flow.test.tsx src/app.flow.test.tsx`, then `npm run build`. Check actual mobile frame pacing on target devices before release.
 
 ## Roadmap
 

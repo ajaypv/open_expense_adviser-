@@ -25,7 +25,7 @@ const onboard = () =>
     { key: 'lastSeenVersion', value: APP_VERSION },
   ])
 
-/** Someone who has been through the cards at the start, and comes to the welcome questions. */
+/** Someone who has been through the intro and comes to the welcome questions. */
 const seeIntro = () => db.settings.put({ key: 'introSeen', value: true })
 
 const tx = (over: Record<string, unknown> = {}) =>
@@ -43,10 +43,12 @@ const open = async () => {
 const nav = (name: string) => screen.getByRole('navigation', { name: 'Main' }).querySelector<HTMLButtonElement>(`button:has(span.short\\:sr-only)`)!.parentElement && within(screen.getByRole('navigation', { name: 'Main' })).getByRole('button', { name })
 
 describe('First launch', () => {
-  it('shows a new person the cards first, and the welcome questions after them', async () => {
+  it('shows a new person the branded intro first, and the welcome questions after it', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    const onReady = vi.fn(() => expect(screen.getByRole('dialog', { name: /Know where your money goes/ })).toBeInTheDocument())
+    render(<App onReady={onReady} />)
     expect(await screen.findByRole('dialog', { name: /Know where your money goes/ })).toBeInTheDocument()
+    await waitFor(() => expect(onReady).toHaveBeenCalled())
     expect(screen.queryByRole('dialog', { name: /Welcome/ })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Continue' }))
     // A browser with no notifications has nothing to ask for, so it goes straight on to the questions.
@@ -323,8 +325,10 @@ describe('App lock', () => {
     await enableLock('1234', 60)
     lockNow()
     const user = userEvent.setup()
-    render(<App />)
+    const onReady = vi.fn()
+    render(<App onReady={onReady} />)
     expect(await screen.findByRole('heading', { name: 'Enter your PIN' })).toBeInTheDocument()
+    expect(onReady).toHaveBeenCalled()
     expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull()
     expect(screen.queryByText('Recent transactions')).toBeNull()
     await user.type(screen.getByLabelText('PIN'), '1234')

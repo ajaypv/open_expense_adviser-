@@ -67,10 +67,14 @@ const loadSettings = () => import('./screens/Settings').then((m) => ({ default: 
 const Insights = lazy(loadInsights)
 const Settings = lazy(loadSettings)
 
-export default function App() {
+interface StartupProps {
+  onReady?: () => void
+}
+
+export default function App({ onReady }: StartupProps) {
   return (
     <ToastProvider>
-      <Gate />
+      <Gate onReady={onReady} />
     </ToastProvider>
   )
 }
@@ -79,17 +83,20 @@ export default function App() {
  * With the app lock on, nothing but the PIN screen is rendered until it is unlocked, so there is
  * nothing on screen (and nothing queried) for someone else to see.
  */
-function Gate() {
+function Gate({ onReady }: StartupProps) {
   const lock = useLockState()
   useEffect(() => watchVisibility(), [])
-  return lock.locked ? <LockScreen /> : <Shell />
+  useEffect(() => {
+    if (lock.locked) onReady?.()
+  }, [lock.locked, onReady])
+  return lock.locked ? <LockScreen /> : <Shell onReady={onReady} />
 }
 
 type Sheet = { open: boolean; editing: LedgerTx | null; prefill: Suggestion | null; startKind: Transaction['kind'] }
 /** `n` changes each time a goal sheet opens, so its form starts fresh from the goal it was opened for. */
 type GoalSheetState = { open: boolean; goal: Goal | null; n: number }
 
-function Shell() {
+function Shell({ onReady }: StartupProps) {
   const pwa = usePwa()
   const ledger = useLedger()
   // Where the Windows Widgets Board can show the app's widget, keep its figures current. Nothing on a phone.
@@ -182,6 +189,10 @@ function Shell() {
   const onboarded = useOnboarded()
   const seenVersion = useSeenVersion()
   const introSeen = useIntroSeen()
+  const ready = !ledger.loading && onboarded !== undefined && seenVersion !== undefined && introSeen !== undefined
+  useEffect(() => {
+    if (ready) onReady?.()
+  }, [ready, onReady])
   const notice = startupNotice({
     loading: ledger.loading,
     hasData: ledger.txs.length > 0 || ledger.trash.length > 0,
@@ -627,7 +638,7 @@ function Shell() {
       <GoalSheet key={`goal-${goalSheet.n}`} open={goalSheet.open} goal={goalSheet.goal} today={today} onClose={closeGoalSheet} />
       <GoalMoneySheet key={`money-${moneySheet.n}`} open={moneySheet.open} goal={moneySheet.goal} currency={ledger.currency} onClose={closeMoneySheet} />
 
-      {/* A new person sees the cards and the ask for notifications first, then the three questions. */}
+      {/* The branded welcome and optional notification setup come before the three questions. */}
       <Intro open={notice === 'welcome' && introSeen === false} onDone={() => void markIntroSeen()} theme={theme.pref} onTheme={theme.setPref} />
       <Welcome open={notice === 'welcome' && introSeen === true} currency={ledger.currency} accounts={ledger.accounts} />
       <WhatsNew open={notice === 'whats-new' || whatsNewByHand} onClose={closeWhatsNew} />

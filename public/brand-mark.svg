@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <path id="fold" d="M64 22C83.8 22 100.4 35.7 104.8 54.2C106 59.2 102.2 64 97 64H78"/>
+  </defs>
+  <g fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <use href="#fold"/>
+    <use href="#fold" transform="rotate(120 64 64)"/>
+    <use href="#fold" transform="rotate(240 64 64)"/>
+  </g>
+</svg>

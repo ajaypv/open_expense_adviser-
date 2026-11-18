@@ -18,6 +18,129 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Expenses" />
     <title>Expense Tracker</title>
+    <style>
+      .launch-screen {
+        /* Timing: 1.1s reveal/hold + .95s expansion + .45s dissolve = 2.5s on a ready cold launch. */
+        --launch-intro: 1100ms;
+        --launch-expand: 950ms;
+        --launch-dissolve: 450ms;
+        --launch-short: 180ms;
+        --launch-reveal-ease: cubic-bezier(0.16, 1, 0.3, 1);
+        --launch-expand-ease: cubic-bezier(0.65, 0, 0.35, 1);
+        --launch-fade-ease: ease-in-out;
+        /* Brand colors; the theme changes only the starting background and wordmark. */
+        --launch-bg: #f2f1ed;
+        --launch-ink: #173f35;
+        --launch-primary: #173f35;
+        --launch-secondary: #376b56;
+        --launch-glow: #a5c4aa;
+        --launch-logo: #f4f1e8;
+        position: fixed;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100dvh;
+        max-width: none;
+        max-height: none;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        overflow: hidden;
+        background: var(--launch-bg);
+        color: var(--launch-ink);
+        font: 600 15px/1.5 system-ui, sans-serif;
+      }
+      .launch-screen::backdrop { background: transparent; }
+      .launch-emblem, .launch-bloom {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        translate: -50% -50%;
+        will-change: transform, opacity;
+      }
+      .launch-emblem {
+        width: clamp(72px, 18vmin, 104px);
+        aspect-ratio: 1;
+        border-radius: 23%;
+        background: var(--launch-primary);
+        animation: launch-reveal var(--launch-intro) var(--launch-reveal-ease) both;
+      }
+      .launch-mark {
+        display: block;
+        width: 100%;
+        height: 100%;
+        background: var(--launch-logo);
+        mask: url('/brand-mark.svg') center / contain no-repeat;
+      }
+      .launch-bloom {
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        opacity: 0;
+        transform: scale(0.35);
+        background: radial-gradient(circle at 35% 30%, var(--launch-glow), var(--launch-secondary) 48%, var(--launch-primary) 80%);
+      }
+      .launch-name {
+        position: absolute;
+        top: calc(50% + 4.5rem);
+        inset-inline: max(1.5rem, env(safe-area-inset-left)) max(1.5rem, env(safe-area-inset-right));
+        margin: 0;
+        text-align: center;
+        animation: launch-label var(--launch-intro) ease both;
+      }
+      .launch-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+      .launch-screen noscript { position: absolute; inset: auto 1.5rem max(2rem, env(safe-area-inset-bottom)); text-align: center; }
+      .launch-screen:is([data-phase="expand"], [data-phase="fade"]) .launch-bloom {
+        animation: launch-expand var(--launch-expand) var(--launch-expand-ease) forwards;
+      }
+      .launch-screen:is([data-phase="expand"], [data-phase="fade"]) .launch-emblem {
+        animation: launch-morph var(--launch-expand) var(--launch-expand-ease) forwards;
+      }
+      .launch-screen:is([data-phase="expand"], [data-phase="fade"]) .launch-name {
+        animation: launch-dissolve var(--launch-short) ease forwards;
+      }
+      .launch-screen[data-phase="fade"] {
+        animation: launch-dissolve var(--launch-dissolve) var(--launch-fade-ease) forwards;
+      }
+      .launch-screen[data-mode="short"] .launch-bloom { display: none; }
+      .launch-screen[data-mode="short"] :is(.launch-emblem, .launch-name) { animation: none; }
+      .launch-screen[data-mode="short"][data-phase="fade"] { animation-duration: var(--launch-short); }
+      [data-theme="dark"] .launch-screen { --launch-bg: #121314; --launch-ink: #f4f1e8; }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .launch-screen { --launch-bg: #121314; --launch-ink: #f4f1e8; }
+      }
+      @keyframes launch-reveal {
+        from { opacity: 0; transform: translateY(8px) scale(0.78); }
+        70%, to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      @keyframes launch-label {
+        from, 20% { opacity: 0; }
+        70%, to { opacity: 1; }
+      }
+      @keyframes launch-expand {
+        from { opacity: 0; transform: scale(0.35); }
+        18% { opacity: 1; }
+        to { opacity: 1; transform: scale(var(--launch-cover)); }
+      }
+      @keyframes launch-morph {
+        from { opacity: 1; transform: scale(1); }
+        75%, to { opacity: 0; transform: scale(4); }
+      }
+      @keyframes launch-dissolve {
+        from { opacity: 1; }
+        to { opacity: 0; }
+      }
+      /* The welcome screen keeps the gentle logo motion after launch. */
+      @keyframes brand-turn {
+        from { rotate: 0deg; }
+        to { rotate: 120deg; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .launch-screen .launch-bloom { display: none; }
+        .launch-screen :is(.launch-emblem, .launch-name) { animation: none; }
+        .launch-screen[data-phase="fade"] { animation-duration: var(--launch-short); }
+      }
+    </style>
     <script>
       // Apply a saved theme and colours before first paint to avoid a flash of the wrong ones.
       try {
@@ -37,6 +160,16 @@
   </head>
   <body>
     <div id="root"></div>
+    <dialog id="launch-splash" class="launch-screen" open aria-labelledby="launch-title">
+      <div class="launch-bloom" aria-hidden="true"></div>
+      <div class="launch-emblem" aria-hidden="true"><span class="launch-mark"></span></div>
+      <p class="launch-name" id="launch-title">Expense Tracker</p>
+      <span class="launch-status" role="status">Opening Expense Tracker</span>
+      <noscript>Enable JavaScript to open Expense Tracker.</noscript>
+    </dialog>
+    <script>
+      document.getElementById('launch-splash').dataset.startedAt = String(performance.now())
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
