@@ -25,6 +25,7 @@
         --launch-expand: 950ms;
         --launch-dissolve: 450ms;
         --launch-short: 180ms;
+        --launch-rotation: 3s;
         --launch-reveal-ease: cubic-bezier(0.16, 1, 0.3, 1);
         --launch-expand-ease: cubic-bezier(0.65, 0, 0.35, 1);
         --launch-fade-ease: ease-in-out;
@@ -71,6 +72,7 @@
         height: 100%;
         background: var(--launch-logo);
         mask: url('/brand-mark.svg') center / contain no-repeat;
+        animation: brand-turn var(--launch-rotation) linear infinite;
       }
       .launch-bloom {
         width: 160px;
@@ -103,7 +105,7 @@
         animation: launch-dissolve var(--launch-dissolve) var(--launch-fade-ease) forwards;
       }
       .launch-screen[data-mode="short"] .launch-bloom { display: none; }
-      .launch-screen[data-mode="short"] :is(.launch-emblem, .launch-name) { animation: none; }
+      .launch-screen[data-mode="short"] :is(.launch-emblem, .launch-mark, .launch-name) { animation: none; }
       .launch-screen[data-mode="short"][data-phase="fade"] { animation-duration: var(--launch-short); }
       [data-theme="dark"] .launch-screen { --launch-bg: #121314; --launch-ink: #f4f1e8; }
       @media (prefers-color-scheme: dark) {
@@ -130,14 +132,14 @@
         from { opacity: 1; }
         to { opacity: 0; }
       }
-      /* The welcome screen keeps the gentle logo motion after launch. */
+      /* Shared with the welcome logo; three-fold symmetry makes each 120-degree loop seamless. */
       @keyframes brand-turn {
         from { rotate: 0deg; }
         to { rotate: 120deg; }
       }
       @media (prefers-reduced-motion: reduce) {
         .launch-screen .launch-bloom { display: none; }
-        .launch-screen :is(.launch-emblem, .launch-name) { animation: none; }
+        .launch-screen :is(.launch-emblem, .launch-mark, .launch-name) { animation: none; }
         .launch-screen[data-phase="fade"] { animation-duration: var(--launch-short); }
       }
     </style>

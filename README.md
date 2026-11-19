@@ -88,6 +88,8 @@ The maskable mark fits inside the central 80%-diameter safe circle. Maskable and
 
 The web splash is in [`index.html`](index.html), outside the React root so it does not restart when JavaScript mounts. [`src/ui/launchSplash.ts`](src/ui/launchSplash.ts) coordinates it with the first ready screen, including onboarding and the PIN lock. The bloom uses a small gradient texture and only animates transforms/opacity, targeting 60fps without per-frame JavaScript or layout changes.
 
+The logo rotates smoothly clockwise during the reveal and expansion, independently of its background tile. The three-fold mark loops seamlessly every 120 degrees. Warm loads and reduced motion keep it still and use only the short fade.
+
 Tweak these commented CSS variables on `.launch-screen` in `index.html`:
 
 | Variable | Default | Controls |
@@ -96,6 +98,7 @@ Tweak these commented CSS variables on `.launch-screen` in `index.html`:
 | `--launch-expand` | `950ms` | Logo-to-full-screen bloom |
 | `--launch-dissolve` | `450ms` | Crossfade into the app |
 | `--launch-short` | `180ms` | Warm-load/reduced-motion fade |
+| `--launch-rotation` | `3s` | Time per 120-degree logo turn; increase to slow rotation |
 | `--launch-reveal-ease`, `--launch-expand-ease`, `--launch-fade-ease` | See CSS | Reveal, expansion and dissolve easing |
 | `--launch-primary`, `--launch-secondary`, `--launch-glow`, `--launch-logo` | Forest, green, sage, cream | Brand artwork and bloom colors |
 | `--launch-bg`, `--launch-ink` | Theme-aware | Starting background and wordmark |
